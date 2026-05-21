@@ -1,0 +1,82 @@
+:host {
+  display: block;
+}
+
+.row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--uc-ai-background);
+  border: 1px solid var(--uc-ai-border);
+  border-radius: var(--uc-ai-radius-input);
+  padding: 5px;
+  min-height: 42px;
+}
+
+.icon-btn {
+  flex: 0 0 var(--uc-ai-button-size);
+  width: var(--uc-ai-button-size);
+  height: var(--uc-ai-button-size);
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--uc-ai-radius-button);
+  cursor: pointer;
+  color: var(--uc-ai-muted-foreground);
+  transition:
+    background var(--uc-ai-transition),
+    color var(--uc-ai-transition);
+  padding: 0;
+}
+
+.icon-btn:hover,
+.icon-btn[aria-expanded="true"] {
+  background: var(--uc-ai-secondary-hover);
+  color: var(--uc-ai-foreground);
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-btn--primary {
+  background: var(--uc-ai-primary);
+  color: var(--uc-ai-primary-foreground);
+}
+
+.icon-btn--primary:hover {
+  background: var(--uc-ai-primary-hover);
+  color: var(--uc-ai-primary-foreground);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.divider {
+  flex: 0 0 1px;
+  align-self: stretch;
+  margin: 8px 0;
+  background: var(--uc-ai-border);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--uc-ai-font-size);
+  color: var(--uc-ai-foreground);
+  outline: none;
+  padding: 0 5px;
+  height: 30px;
+}
+
+.input::placeholder {
+  color: var(--uc-ai-muted-foreground);
+}

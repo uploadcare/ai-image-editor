@@ -1,0 +1,54 @@
+{
+  "name": "@uploadcare/react-ai-enhancer",
+  "version": "0.1.0",
+  "description": "React wrapper for @uploadcare/ai-enhancer",
+  "type": "module",
+  "files": ["dist"],
+  "main": "./dist/react-ai-enhancer.cjs",
+  "module": "./dist/react-ai-enhancer.js",
+  "types": "./dist/react-ai-enhancer.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/react-ai-enhancer.d.ts",
+      "import": "./dist/react-ai-enhancer.js",
+      "require": "./dist/react-ai-enhancer.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@uploadcare/ai-enhancer": "^0.1.0",
+    "@uploadcare/react-adapter": "^0.4.0"
+  },
+  "peerDependencies": {
+    "@types/react": ">= 17.0.0",
+    "react": ">= 17.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "keywords": [
+    "uploadcare",
+    "ai",
+    "react",
+    "react-component",
+    "image-generation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uploadcare/ai-enhancer.git",
+    "directory": "packages/react-ai-enhancer"
+  },
+  "author": "Uploadcare",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,55 @@
+:host {
+  display: block;
+}
+
+.row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--uc-ai-border) transparent;
+}
+
+.row::-webkit-scrollbar {
+  height: 4px;
+}
+
+.row::-webkit-scrollbar-thumb {
+  background: var(--uc-ai-border);
+  border-radius: 4px;
+}
+
+.chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: var(--uc-ai-button-size);
+  padding: 0 10px;
+  background: transparent;
+  color: var(--uc-ai-foreground);
+  border: 1px solid var(--uc-ai-border);
+  border-radius: var(--uc-ai-radius-button);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background var(--uc-ai-transition),
+    border-color var(--uc-ai-transition);
+  white-space: nowrap;
+}
+
+.chip:hover {
+  background: var(--uc-ai-secondary);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--uc-ai-primary);
+  color: var(--uc-ai-primary-foreground);
+  border-color: var(--uc-ai-primary);
+}
+
+.chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
