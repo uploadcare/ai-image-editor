@@ -1,0 +1,44 @@
+{
+  "name": "@uploadcare/ai-enhancer-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI image generation and editing web component + React wrapper for Uploadcare",
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run dev --workspace @uploadcare/ai-enhancer",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "prepare": "husky install"
+  },
+  "workspaces": [
+    "packages/ai-enhancer",
+    "packages/react-ai-enhancer"
+  ],
+  "devDependencies": {
+    "@biomejs/biome": "2.2.6",
+    "@vitest/browser": "^3.0.9",
+    "happy-dom": "^20.9.0",
+    "husky": "^9.0.11",
+    "lerna": "^9.0.3",
+    "lint-staged": "^15.2.2",
+    "typescript": "^5.6.0",
+    "vite": "^6.2.3",
+    "vite-plugin-dts": "^4.5.0",
+    "vitest": "^3.0.9"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "author": "Uploadcare",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uploadcare/ai-enhancer.git"
+  },
+  "homepage": "https://github.com/uploadcare/ai-enhancer#readme",
+  "bugs": {
+    "url": "https://github.com/uploadcare/ai-enhancer/issues"
+  }
+}

@@ -1,0 +1,61 @@
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--uc-ai-padding);
+  background: var(--uc-ai-background);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--uc-ai-button-size);
+  padding: 0 14px;
+  background: var(--uc-ai-secondary);
+  color: var(--uc-ai-secondary-foreground);
+  border: 0;
+  border-radius: var(--uc-ai-radius-button);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition:
+    background var(--uc-ai-transition),
+    color var(--uc-ai-transition);
+}
+
+.btn:hover {
+  background: var(--uc-ai-secondary-hover);
+}
+
+.btn--primary {
+  background: var(--uc-ai-primary);
+  color: var(--uc-ai-primary-foreground);
+}
+
+.btn--primary:hover {
+  background: var(--uc-ai-primary-hover);
+}
+
+.btn--primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--uc-ai-primary);
+}
+
+.btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+@container (max-width: 380px) {
+  .footer {
+    padding: 8px var(--uc-ai-padding);
+  }
+}

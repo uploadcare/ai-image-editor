@@ -1,0 +1,64 @@
+{
+  "name": "@uploadcare/ai-enhancer",
+  "version": "0.1.0",
+  "description": "AI image generation and editing web component for Uploadcare",
+  "type": "module",
+  "files": ["dist"],
+  "main": "./dist/ai-enhancer.cjs",
+  "module": "./dist/ai-enhancer.js",
+  "types": "./dist/ai-enhancer.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/ai-enhancer.d.ts",
+      "import": "./dist/ai-enhancer.js",
+      "require": "./dist/ai-enhancer.cjs"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "import": "./dist/plugin.js",
+      "require": "./dist/plugin.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "lit": "^3.2.1"
+  },
+  "peerDependencies": {
+    "@uploadcare/file-uploader": ">=1.29.0"
+  },
+  "peerDependenciesMeta": {
+    "@uploadcare/file-uploader": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@uploadcare/file-uploader": "^1.29.0",
+    "@vitest/browser": "^3.0.9",
+    "playwright": "^1.49.0"
+  },
+  "keywords": [
+    "uploadcare",
+    "ai",
+    "image-generation",
+    "image-editing",
+    "web-component",
+    "lit",
+    "uploader-plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uploadcare/ai-enhancer.git",
+    "directory": "packages/ai-enhancer"
+  },
+  "author": "Uploadcare",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

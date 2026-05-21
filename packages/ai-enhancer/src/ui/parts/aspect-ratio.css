@@ -1,0 +1,119 @@
+:host {
+  display: inline-flex;
+  position: relative;
+}
+
+.trigger {
+  anchor-name: --ai-aspect-anchor;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--uc-ai-button-size);
+  padding: 0 10px;
+  background: var(--uc-ai-secondary);
+  border: 0;
+  border-radius: var(--uc-ai-radius-button);
+  color: var(--uc-ai-foreground);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    background var(--uc-ai-transition),
+    color var(--uc-ai-transition);
+}
+
+.trigger:hover,
+.trigger[aria-expanded="true"] {
+  background: var(--uc-ai-secondary-hover);
+}
+
+.trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.trigger svg {
+  width: 14px;
+  height: 14px;
+  color: var(--uc-ai-muted-foreground);
+}
+
+.trigger-label {
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.popover {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+  width: 180px;
+  position-anchor: --ai-aspect-anchor;
+  inset: auto;
+  bottom: anchor(top);
+  right: anchor(right);
+  margin-bottom: 6px;
+}
+
+.popover:not(:popover-open) {
+  display: none;
+}
+
+.popover-inner {
+  background: var(--uc-ai-background);
+  border: 1px solid var(--uc-ai-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.25);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--uc-ai-foreground);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+
+.option:hover {
+  background: var(--uc-ai-secondary);
+}
+
+.option[aria-selected="true"] {
+  background: var(--uc-ai-secondary-hover);
+}
+
+.option svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  color: var(--uc-ai-foreground);
+}
+
+.option-ratio {
+  flex: 0 0 36px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--uc-ai-foreground);
+}
+
+.option-label {
+  flex: 1;
+  color: var(--uc-ai-muted-foreground);
+}
