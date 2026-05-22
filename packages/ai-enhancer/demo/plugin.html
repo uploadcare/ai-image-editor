@@ -5,22 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI Enhancer — File Uploader Plugin</title>
   <style>
-    @media (prefers-color-scheme: dark) {
-      body { background-color: #121213; color: #fff; }
+    :root {
+      color-scheme: light dark;
     }
+    .uc-light { color-scheme: light; }
+    .uc-dark { color-scheme: dark; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
       padding: 24px;
       max-width: 720px;
       margin: 0 auto;
+      background: light-dark(#ffffff, #121213);
+      color: light-dark(#181818, #ffffff);
     }
     h1 { font-weight: 500; }
     p { color: light-dark(#4b5563, #9ca3af); }
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin: 0 0 16px;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
   <h1>AI Enhancer — File Uploader Plugin</h1>
   <p>Click <strong>Generate image</strong> as an upload source, or click the AI icon next to an uploaded image to edit it.</p>
+
+  <div class="toolbar">
+    <label>
+      Theme
+      <select id="theme">
+        <option value="auto">auto (system)</option>
+        <option value="light">light</option>
+        <option value="dark">dark</option>
+      </select>
+    </label>
+  </div>
+
+  <script type="module">
+    document.getElementById('theme').addEventListener('change', (e) => {
+      document.body.classList.remove('uc-light', 'uc-dark');
+      if (e.target.value !== 'auto') document.body.classList.add(`uc-${e.target.value}`);
+    });
+  </script>
 
   <script type="module">
     import '@uploadcare/file-uploader/web/uc-file-uploader-regular.min.css';
