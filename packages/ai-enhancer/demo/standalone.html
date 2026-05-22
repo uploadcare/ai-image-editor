@@ -8,6 +8,8 @@
     :root {
       color-scheme: light dark;
     }
+    .uc-light { color-scheme: light; }
+    .uc-dark { color-scheme: dark; }
     body {
       margin: 0;
       padding: 24px;
@@ -99,6 +101,14 @@
       <input id="pubkey" type="text" size="20" placeholder="demopublickey" />
     </label>
     <label>
+      Theme
+      <select id="theme">
+        <option value="auto">auto (system)</option>
+        <option value="light">light</option>
+        <option value="dark">dark</option>
+      </select>
+    </label>
+    <label>
       <input id="branded" type="checkbox" /> Brand-themed
     </label>
   </div>
@@ -138,6 +148,11 @@
       document.getElementById('stage').classList.toggle('brand-overrides', e.target.checked);
       append(`brand-themed: ${e.target.checked}`);
     });
+    document.getElementById('theme').addEventListener('change', (e) => {
+      document.body.classList.remove('uc-light', 'uc-dark');
+      if (e.target.value !== 'auto') document.body.classList.add(`uc-${e.target.value}`);
+      append(`theme → ${e.target.value}`);
+    });
     document.getElementById('pubkey').addEventListener('change', (e) => {
       const key = e.target.value.trim();
       if (key) {
@@ -149,8 +164,8 @@
       }
     });
 
-    editor.addEventListener('uc:apply', (e) => {
-      append(`uc:apply: ${JSON.stringify(e.detail)}`);
+    editor.addEventListener('uc:done', (e) => {
+      append(`uc:done: ${JSON.stringify(e.detail)}`);
     });
     editor.addEventListener('uc:cancel', () => append('uc:cancel'));
     editor.addEventListener('uc:error', (e) => append(`uc:error: ${e.detail.error?.message ?? e.detail.error}`));

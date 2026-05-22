@@ -111,32 +111,32 @@ describe('<uc-ai-editor>', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('dispatches uc:apply with the current url + prompt + capability when Done is clicked in edit mode', async () => {
+  it('dispatches uc:done with the current url + prompt + capability when Done is clicked in edit mode', async () => {
     const el = mount();
     el.mode = 'edit';
     el.src = 'https://example.com/source.jpg';
     await el.updateComplete;
-    const onApply = vi.fn();
-    el.addEventListener('uc:apply', onApply);
+    const onDone = vi.fn();
+    el.addEventListener('uc:done', onDone);
     const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
     const primary = footer.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement;
     primary.click();
-    expect(onApply).toHaveBeenCalledTimes(1);
-    const detail = onApply.mock.calls[0]![0].detail;
+    expect(onDone).toHaveBeenCalledTimes(1);
+    const detail = onDone.mock.calls[0]![0].detail;
     expect(detail).toMatchObject({ url: 'https://example.com/source.jpg', capability: 'object-remove' });
   });
 
-  it('does not dispatch uc:apply when there is no displayable image (edit mode without src)', async () => {
+  it('does not dispatch uc:done when there is no displayable image (edit mode without src)', async () => {
     const el = mount();
     el.mode = 'edit';
     await el.updateComplete;
-    const onApply = vi.fn();
-    el.addEventListener('uc:apply', onApply);
+    const onDone = vi.fn();
+    el.addEventListener('uc:done', onDone);
     const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
     const primary = footer.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement;
     expect(primary.disabled).toBe(true);
     primary.click();
-    expect(onApply).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
   });
 
   it('populates history after a successful generation', async () => {

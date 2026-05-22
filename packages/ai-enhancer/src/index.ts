@@ -9,7 +9,7 @@ export {
   parseAspectRatioList,
   POPULAR_ASPECT_RATIOS,
   toAspectRatioOption,
-} from './aspect-ratio';
+} from './entities/aspect-ratio';
 export {
   type AiCapability,
   type AiEditorMode,
@@ -17,24 +17,24 @@ export {
   CAPABILITIES,
   CAPABILITIES_FOR_MODE,
   type CapabilityMeta,
-} from './capabilities';
-export { GenerationController } from './controllers/GenerationController';
-export { enLocale } from './locales/en';
-export { translate } from './locales/translate';
-export { createMockBflProvider, type MockBflOptions, mockBflProvider } from './providers/mockBfl';
-export type { AiProvider, AiProviderRequest, AiProviderResult } from './providers/types';
+} from './entities/capability';
 export {
+  type AiProvider,
+  type AiProviderRequest,
+  type AiProviderResult,
+  createMockBflProvider,
   createUploadcareGenerateProvider,
+  type MockBflOptions,
+  mockBflProvider,
   type UploadcareGenerateOptions,
   type UploadcareGenerateResponse,
-} from './providers/uploadcareGenerate';
-export type { ApplyDetail, HistoryEntry } from './UcAiEditor';
-export { UcAiEditor } from './UcAiEditor';
-
-// Sub-elements (also auto-registered when imported)
-export { type AspectRatioSelectDetail, UcAiAspectRatio } from './ui/parts/UcAiAspectRatio';
-export { UcAiCanvas } from './ui/parts/UcAiCanvas';
-export { type TemplateSelectDetail, UcAiChips } from './ui/parts/UcAiChips';
-export { UcAiFooter } from './ui/parts/UcAiFooter';
-export { type HistorySelectDetail, UcAiHistoryPopover } from './ui/parts/UcAiHistoryPopover';
-export { type PromptInputDetail, UcAiPromptRow } from './ui/parts/UcAiPromptRow';
+} from './entities/provider';
+export { GenerationController, type HistoryEntry } from './features/generation';
+export { type AspectRatioSelectDetail, UcAiAspectRatio } from './features/aspect-ratio-select';
+export { type HistorySelectDetail, UcAiHistoryPopover } from './features/prompt-history';
+export { type PromptInputDetail, UcAiPromptRow } from './features/prompt-input';
+export { type TemplateSelectDetail, UcAiChips } from './features/template-chips';
+export { enLocale, translate } from './shared/i18n';
+export { UcAiCanvas } from './shared/ui/canvas';
+export { UcAiFooter } from './shared/ui/footer';
+export { type DoneDetail, UcAiEditor } from './widgets/ai-editor';

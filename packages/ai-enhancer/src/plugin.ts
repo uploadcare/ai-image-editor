@@ -1,1 +1,5 @@
-export { aspectRatiosFromCropPreset, type AiEditorActivityParams, AiEnhancerPlugin } from './plugin/AiEnhancerPlugin';
+export {
+  aspectRatiosFromCropPreset,
+  type AiEditorActivityParams,
+  AiEnhancerPlugin,
+} from './widgets/ai-enhancer-plugin';
