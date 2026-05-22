@@ -2,8 +2,8 @@ import {
   type AiCapability,
   type AiEditorMode,
   type AiProvider,
-  type ApplyDetail,
   type AspectRatio,
+  type DoneDetail,
   UcAiEditor,
 } from '@uploadcare/ai-enhancer';
 import { customElementToReactComponent } from '@uploadcare/react-adapter';
@@ -26,7 +26,7 @@ export type AiEnhancerProps = {
   l10n?: Record<string, string>;
   className?: string;
   apiRef?: Ref<UcAiEditor>;
-  onApply?: (detail: ApplyDetail) => void;
+  onDone?: (detail: DoneDetail) => void;
   onCancel?: () => void;
   onError?: (error: unknown) => void;
 };
@@ -34,18 +34,18 @@ export type AiEnhancerProps = {
 export const AiEnhancer: FC<AiEnhancerProps> = ({
   apiRef,
   className,
-  onApply,
+  onDone,
   onCancel,
   onError,
   ...props
 }) => {
   const handlers = useMemo(
     () => ({
-      'uc:apply': (e: CustomEvent<ApplyDetail>) => onApply?.(e.detail),
+      'uc:done': (e: CustomEvent<DoneDetail>) => onDone?.(e.detail),
       'uc:cancel': () => onCancel?.(),
       'uc:error': (e: CustomEvent<{ error: unknown }>) => onError?.(e.detail.error),
     }),
-    [onApply, onCancel, onError],
+    [onDone, onCancel, onError],
   );
 
   return (
