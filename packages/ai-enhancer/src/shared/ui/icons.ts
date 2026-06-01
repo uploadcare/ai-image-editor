@@ -19,4 +19,3 @@ export const ICON_HISTORY = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://
 export const ICON_ARROW_THICK = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <path d="M3 6.74251L8 2L13 6.74251M7.99961 14V2.10636" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
-

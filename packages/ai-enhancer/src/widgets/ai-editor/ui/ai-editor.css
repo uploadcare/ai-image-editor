@@ -4,27 +4,28 @@
    * override them via CSS custom properties. Defaults come from the Figma
    * design system.
    */
-  --uc-ai-foreground:           light-dark(#181818, #ffffff);
-  --uc-ai-background:           light-dark(#ffffff, #1b1b1b);
-  --uc-ai-muted:                light-dark(#f5f5f5, #242424);
-  --uc-ai-muted-foreground:     light-dark(#717171, #989898);
-  --uc-ai-primary:              light-dark(#174bd7, #579aff);
-  --uc-ai-primary-hover:        light-dark(#1141c0, #4a8aef);
-  --uc-ai-primary-foreground:   light-dark(#ffffff, #000000);
-  --uc-ai-secondary:            light-dark(#f0f0f0, rgba(255, 255, 255, 0.07));
-  --uc-ai-secondary-hover:      light-dark(#e6e6e6, rgba(255, 255, 255, 0.12));
+  --uc-ai-foreground: light-dark(#181818, #ffffff);
+  --uc-ai-background: light-dark(#ffffff, #1b1b1b);
+  --uc-ai-muted: light-dark(#f5f5f5, #242424);
+  --uc-ai-muted-foreground: light-dark(#717171, #989898);
+  --uc-ai-primary: light-dark(#174bd7, #579aff);
+  --uc-ai-primary-hover: light-dark(#1141c0, #4a8aef);
+  --uc-ai-primary-foreground: light-dark(#ffffff, #000000);
+  --uc-ai-secondary: light-dark(#f0f0f0, rgba(255, 255, 255, 0.07));
+  --uc-ai-secondary-hover: light-dark(#e6e6e6, rgba(255, 255, 255, 0.12));
   --uc-ai-secondary-foreground: light-dark(#181818, #ffffff);
-  --uc-ai-border:               light-dark(#e6e6e6, #3d3d3d);
-  --uc-ai-destructive:          #d8473e;
-  --uc-ai-radius:               14px;
-  --uc-ai-radius-input:         12px;
-  --uc-ai-radius-button:        8px;
-  --uc-ai-padding:              10px;
-  --uc-ai-button-size:          32px;
-  --uc-ai-font-family:          system-ui, -apple-system, sans-serif;
-  --uc-ai-font-size:            14px;
-  --uc-ai-transition:           0.2s ease;
-  --uc-ai-dialog-width:         583px;
+  --uc-ai-border: light-dark(#e6e6e6, #3d3d3d);
+  --uc-ai-shadow-color: light-dark(rgba(24, 24, 24, 0.18), rgba(0, 0, 0, 0.5));
+  --uc-ai-destructive: #d8473e;
+  --uc-ai-radius: 14px;
+  --uc-ai-radius-input: 12px;
+  --uc-ai-radius-button: 8px;
+  --uc-ai-padding: 10px;
+  --uc-ai-button-size: 32px;
+  --uc-ai-font-family: system-ui, -apple-system, sans-serif;
+  --uc-ai-font-size: 14px;
+  --uc-ai-transition: 0.2s ease;
+  --uc-ai-dialog-width: 583px;
 
   display: block;
   width: 100%;

@@ -59,4 +59,3 @@ export class UcAiChips extends LitElement {
     `;
   }
 }
-

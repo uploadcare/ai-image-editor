@@ -3,15 +3,20 @@ import { customElement, property, query, state } from 'lit/decorators.js';
 
 import {
   type AspectRatio,
-  aspectRatioEquals,
   type AspectRatioOption,
+  aspectRatioEquals,
   isValidAspectRatio,
-  parseAspectRatioList,
   POPULAR_ASPECT_RATIOS,
+  parseAspectRatioList,
   toAspectRatioOption,
 } from '../../../entities/aspect-ratio';
-import { type AiCapability, type AiEditorMode, CAPABILITIES, CAPABILITIES_FOR_MODE } from '../../../entities/capability';
-import { type AiProvider, mockBflProvider } from '../../../entities/provider';
+import {
+  type AiCapability,
+  type AiEditorMode,
+  CAPABILITIES,
+  CAPABILITIES_FOR_MODE,
+} from '../../../entities/capability';
+import { UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
 import { type enLocale, translate } from '../../../shared/i18n';
 import '../../../features/aspect-ratio-select';
@@ -50,8 +55,21 @@ export class UcAiEditor extends LitElement {
   @property({ reflect: true })
   public capability: AiCapability = 'generate';
 
-  @property({ attribute: false })
-  public provider: AiProvider = mockBflProvider;
+  /** Uploadcare public key. Required to enable generate/edit. */
+  @property()
+  public pubkey = '';
+
+  /** Upload API base URL. Defaults to the provider's default. */
+  @property({ attribute: 'base-url' })
+  public baseUrl?: string;
+
+  /** CDN cname for resolving results (maps to the provider's `cdnBaseUrl`). */
+  @property({ attribute: 'cdn-cname' })
+  public cdnCname?: string;
+
+  /** Base domain for public-key-prefixed CDN URLs. */
+  @property({ attribute: 'cdn-cname-prefixed' })
+  public cdnCnamePrefixed?: string;
 
   /**
    * Available aspect ratios for the generate flow. When set as an attribute
@@ -77,8 +95,19 @@ export class UcAiEditor extends LitElement {
   private _promptRow?: UcAiPromptRow;
 
   private readonly _gen = new GenerationController(this);
+  private _provider?: UploadcareDerivativeApi;
 
   public override willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has('pubkey') || changed.has('baseUrl') || changed.has('cdnCname') || changed.has('cdnCnamePrefixed')) {
+      this._provider = this.pubkey
+        ? new UploadcareDerivativeApi({
+            publicKey: this.pubkey,
+            baseUrl: this.baseUrl,
+            cdnBaseUrl: this.cdnCname,
+            cdnCnamePrefixed: this.cdnCnamePrefixed,
+          })
+        : undefined;
+    }
     if (changed.has('mode')) {
       const allowed = CAPABILITIES_FOR_MODE[this.mode];
       if (!allowed.includes(this.capability)) {
@@ -119,11 +148,12 @@ export class UcAiEditor extends LitElement {
 
   private async _generate(): Promise<void> {
     const prompt = this._prompt.trim();
-    if (!prompt) return;
+    const provider = this._provider;
+    if (!prompt || !provider) return;
     const useRatio = CAPABILITIES_USING_ASPECT_RATIO.has(this.capability);
     try {
       await this._gen.run({
-        provider: this.provider,
+        provider,
         prompt,
         capability: this.capability,
         aspectRatio: useRatio && this._selectedRatio ? this._selectedRatio : undefined,
@@ -182,9 +212,7 @@ export class UcAiEditor extends LitElement {
         prompt: this._prompt,
         capability: this.capability,
         aspectRatio:
-          CAPABILITIES_USING_ASPECT_RATIO.has(this.capability) && this._selectedRatio
-            ? this._selectedRatio
-            : undefined,
+          CAPABILITIES_USING_ASPECT_RATIO.has(this.capability) && this._selectedRatio ? this._selectedRatio : undefined,
       };
       this.dispatchEvent(new CustomEvent('uc:done', { detail, bubbles: true, composed: true }));
     } else {
@@ -219,6 +247,7 @@ export class UcAiEditor extends LitElement {
               .busy=${this._gen.busy}
               .alt=${this._prompt}
               busy-label="${this._l('ai-enhancer-busy')}"
+              error-label="${this._l('ai-enhancer-error')}"
             ></uc-ai-canvas>
             ${this._gen.error ? html`<div class="error-banner" role="alert">${this._gen.error}</div>` : nothing}
             <div class="bottom">
@@ -280,4 +309,3 @@ export class UcAiEditor extends LitElement {
     `;
   }
 }
-

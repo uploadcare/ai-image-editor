@@ -23,3 +23,6 @@ export const enLocale = {
 };
 
 export type AiEnhancerLocaleKey = keyof typeof enLocale;
+
+/** A full set of ai-enhancer strings for a single locale. */
+export type AiEnhancerLocale = Record<AiEnhancerLocaleKey, string>;

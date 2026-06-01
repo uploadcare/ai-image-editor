@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { page } from '@vitest/browser/context';
-import type { AiProvider, AiProviderResult, UcAiEditor as UcAiEditorType } from '../src/index';
+import type { UcAiEditor as UcAiEditorType } from '../src/index';
 import { cleanup } from './test-renderer';
 
 let UcAiEditorCtor: CustomElementConstructor;
@@ -11,20 +11,41 @@ beforeAll(async () => {
   UcAiEditorCtor = mod.UcAiEditor;
 });
 
+let restoreFetch: (() => void) | null = null;
+
 afterEach(() => {
+  restoreFetch?.();
+  restoreFetch = null;
   cleanup();
 });
 
-/** Instant-resolving fake provider with controllable result. */
-function fakeProvider(result?: Partial<AiProviderResult>): AiProvider {
-  return {
-    id: 'fake',
-    generate: async ({ prompt, capability }) => ({
-      url: result?.url ?? `https://example.com/${prompt}.jpg`,
-      prompt: result?.prompt ?? prompt,
-      capability: result?.capability ?? capability,
-    }),
+const jsonResponse = (body: unknown): Response =>
+  new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+/**
+ * Stub `globalThis.fetch` to drive the now-internal UploadcareDerivativeApi:
+ * the generate POST returns a job, the status GET returns success (or a custom
+ * handler). Captures the POST bodies for assertions. The provider binds
+ * `globalThis.fetch` at construction, so install this BEFORE setting `pubkey`.
+ */
+function stubFetch(
+  opts: { uuid?: string; status?: (signal?: AbortSignal) => Promise<Response> } = {},
+): { generateBodies: Array<Record<string, unknown>> } {
+  const real = globalThis.fetch;
+  const generateBodies: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const method = (init?.method ?? 'GET').toUpperCase();
+    if (method === 'POST') {
+      generateBodies.push(JSON.parse((init?.body as string) ?? '{}'));
+      return jsonResponse({ type: 'job', job_id: 'job-1' });
+    }
+    if (opts.status) return opts.status(init?.signal ?? undefined);
+    return jsonResponse({ status: 'success', uuid: opts.uuid ?? 'result' });
+  }) as typeof fetch;
+  restoreFetch = () => {
+    globalThis.fetch = real;
   };
+  return { generateBodies };
 }
 
 function mount(attrs: Record<string, string> = {}): UcAiEditorType {
@@ -33,6 +54,22 @@ function mount(attrs: Record<string, string> = {}): UcAiEditorType {
   page.render(el);
   return el;
 }
+
+const STAGING = { pubkey: 'demopublickey', 'cdn-cname': 'https://cdn.example.com' };
+
+function typePrompt(el: UcAiEditorType, value: string): void {
+  const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('input')!;
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function clickPrimary(el: UcAiEditorType): void {
+  const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
+  (footer.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement).click();
+}
+
+const canvasUrl = (el: UcAiEditorType): string | null =>
+  (el.shadowRoot!.querySelector('uc-ai-canvas') as unknown as { url: string | null }).url;
 
 describe('<uc-ai-editor>', () => {
   it('registers the custom element', () => {
@@ -70,33 +107,23 @@ describe('<uc-ai-editor>', () => {
   it('updates internal prompt state when the user types in the prompt input', async () => {
     const el = mount();
     await el.updateComplete;
-    const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
-    const input = promptRow.shadowRoot!.querySelector('input')!;
+    const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('input')!;
     input.value = 'a tiger';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
-    // The "Surprise me" chip is no longer pressed since prompt != ''
     expect(input.value).toBe('a tiger');
   });
 
-  it('runs the provider and updates the canvas when Generate is clicked', async () => {
-    const el = mount();
-    el.provider = fakeProvider({ url: 'https://example.com/result.jpg' });
+  it('runs the provider and pushes the result url to the canvas when Generate is clicked', async () => {
+    stubFetch({ uuid: 'result' });
+    const el = mount(STAGING);
     await el.updateComplete;
-    const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
-    const input = promptRow.shadowRoot!.querySelector('input')!;
-    input.value = 'a tiger';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    typePrompt(el, 'a tiger');
     await el.updateComplete;
-
-    const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
-    const primary = footer.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement;
-    primary.click();
+    clickPrimary(el);
 
     await vi.waitFor(() => {
-      const canvas = el.shadowRoot!.querySelector('uc-ai-canvas')!;
-      const img = canvas.shadowRoot!.querySelector('img');
-      expect(img?.getAttribute('src')).toBe('https://example.com/result.jpg');
+      expect(canvasUrl(el)).toBe('https://cdn.example.com/result/');
     });
   });
 
@@ -106,8 +133,7 @@ describe('<uc-ai-editor>', () => {
     const onCancel = vi.fn();
     el.addEventListener('uc:cancel', onCancel);
     const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
-    const back = footer.shadowRoot!.querySelector('.btn') as HTMLButtonElement;
-    back.click();
+    (footer.shadowRoot!.querySelector('.btn') as HTMLButtonElement).click();
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
@@ -118,9 +144,7 @@ describe('<uc-ai-editor>', () => {
     await el.updateComplete;
     const onDone = vi.fn();
     el.addEventListener('uc:done', onDone);
-    const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
-    const primary = footer.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement;
-    primary.click();
+    clickPrimary(el);
     expect(onDone).toHaveBeenCalledTimes(1);
     const detail = onDone.mock.calls[0]![0].detail;
     expect(detail).toMatchObject({ url: 'https://example.com/source.jpg', capability: 'object-remove' });
@@ -140,16 +164,12 @@ describe('<uc-ai-editor>', () => {
   });
 
   it('populates history after a successful generation', async () => {
-    const el = mount();
-    el.provider = fakeProvider();
+    stubFetch();
+    const el = mount(STAGING);
     await el.updateComplete;
-    const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
-    const input = promptRow.shadowRoot!.querySelector('input')!;
-    input.value = 'a tiger';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    typePrompt(el, 'a tiger');
     await el.updateComplete;
-    const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
-    (footer.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement).click();
+    clickPrimary(el);
     await vi.waitFor(() => {
       const popover = el.shadowRoot!.querySelector('uc-ai-history-popover')!;
       // @ts-expect-error reading public Lit @property
@@ -158,10 +178,8 @@ describe('<uc-ai-editor>', () => {
   });
 
   it('opens the popover (native Popover API) when the history button is clicked in edit mode with empty prompt', async () => {
-    const el = mount();
-    el.provider = fakeProvider();
-    el.mode = 'edit';
-    el.src = 'https://example.com/source.jpg';
+    stubFetch();
+    const el = mount({ ...STAGING, mode: 'edit', src: 'https://example.com/source.jpg' });
     await el.updateComplete;
     // Seed history with one generation
     const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
@@ -179,59 +197,37 @@ describe('<uc-ai-editor>', () => {
     input.value = '';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
-    // Click the history button
-    const historyBtn = promptRow.shadowRoot!.querySelector('.icon-btn') as HTMLButtonElement;
-    historyBtn.click();
+    (promptRow.shadowRoot!.querySelector('.icon-btn') as HTMLButtonElement).click();
     await el.updateComplete;
     const popover = el.shadowRoot!.querySelector('uc-ai-history-popover')!;
     expect(popover.matches(':popover-open')).toBe(true);
   });
 
-  it('renders the aspect-ratio picker in generate mode and passes the selected ratio to the provider', async () => {
-    const seen: Array<[number, number] | undefined> = [];
-    const recorder: AiProvider = {
-      id: 'recorder',
-      generate: async ({ prompt, capability, aspectRatio }) => {
-        seen.push(aspectRatio as [number, number] | undefined);
-        return { url: 'https://example.com/r.jpg', prompt, capability };
-      },
-    };
-    const el = mount();
-    el.provider = recorder;
-    el.setAttribute('aspect-ratios', '16:9 1:1');
+  it('renders the aspect-ratio picker in generate mode and sends the selected ratio', async () => {
+    const stub = stubFetch();
+    const el = mount({ ...STAGING, 'aspect-ratios': '16:9 1:1' });
     await el.updateComplete;
 
     const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
     expect(ratio).toBeTruthy();
 
     // Default selection is the first option in the list (16:9).
-    const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
-    const input = promptRow.shadowRoot!.querySelector('input')!;
-    input.value = 'mountain';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    typePrompt(el, 'mountain');
     await el.updateComplete;
-
-    const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
-    (footer.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement).click();
-
-    await vi.waitFor(() => {
-      expect(seen.length).toBe(1);
-    });
-    expect(seen[0]).toEqual([16, 9]);
+    clickPrimary(el);
+    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
+    expect(stub.generateBodies[0]!.aspect_ratio).toEqual([16, 9]);
 
     // Pick the second option from the popover.
-    const trigger = ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement;
-    trigger.click();
+    (ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
     await el.updateComplete;
     const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
     expect(options.length).toBe(2);
     options[1]!.click();
     await el.updateComplete;
-    (footer.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement).click();
-    await vi.waitFor(() => {
-      expect(seen.length).toBe(2);
-    });
-    expect(seen[1]).toEqual([1, 1]);
+    clickPrimary(el);
+    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(2));
+    expect(stub.generateBodies[1]!.aspect_ratio).toEqual([1, 1]);
   });
 
   it('hides the aspect-ratio picker in edit mode', async () => {
@@ -242,41 +238,28 @@ describe('<uc-ai-editor>', () => {
     expect(el.shadowRoot!.querySelector('uc-ai-aspect-ratio')).toBeNull();
   });
 
-  it('aborts in-flight generation and clears resultUrl when src changes', async () => {
-    let resolveProvider: (r: AiProviderResult) => void = () => {};
-    const slowProvider: AiProvider = {
-      id: 'slow',
-      generate: ({ signal }) =>
-        new Promise((res, rej) => {
-          resolveProvider = res;
+  it('aborts in-flight generation and clears the result when src changes', async () => {
+    // Status hangs until the request is aborted.
+    stubFetch({
+      status: (signal) =>
+        new Promise((_res, rej) => {
           signal?.addEventListener('abort', () => rej(new DOMException('Aborted', 'AbortError')), { once: true });
         }),
-    };
-    const el = mount();
-    el.provider = slowProvider;
-    el.mode = 'edit';
-    el.src = 'https://example.com/first.jpg';
+    });
+    const el = mount({ ...STAGING, mode: 'edit', src: 'https://example.com/first.jpg' });
     await el.updateComplete;
 
-    const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
-    const input = promptRow.shadowRoot!.querySelector('input')!;
-    input.value = 'try';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    typePrompt(el, 'try');
     await el.updateComplete;
-    (promptRow.shadowRoot!.querySelector('.icon-btn--primary') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('.icon-btn--primary') as HTMLButtonElement).click();
 
-    // Now change src mid-flight
+    // Change src mid-flight — this aborts the in-flight generation.
     el.src = 'https://example.com/second.jpg';
     await el.updateComplete;
 
-    // If the abort path didn't fire, this resolve would set a stale result.
-    resolveProvider({ url: 'https://example.com/STALE.jpg', prompt: 'try', capability: 'object-remove' });
-
-    // After the abort, the displayed image should be the new src (no resultUrl override).
+    // After the abort, the displayed image should be the new src (no result override).
     await vi.waitFor(() => {
-      const canvas = el.shadowRoot!.querySelector('uc-ai-canvas')!;
-      const img = canvas.shadowRoot!.querySelector('img');
-      expect(img?.getAttribute('src')).toBe('https://example.com/second.jpg');
+      expect(canvasUrl(el)).toBe('https://example.com/second.jpg');
     });
   });
 });

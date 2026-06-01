@@ -43,6 +43,11 @@ async function openModal() {
 beforeAll(async () => {
   const UC = await import('@uploadcare/file-uploader');
   UC.defineComponents(UC);
+  // The uploader bundles only English by default; define its German locale so
+  // switching `localeName` to "de" doesn't throw "Locale de is not defined".
+  UC.defineLocale('de', () =>
+    import('@uploadcare/file-uploader/locales/file-uploader/de.js').then((m) => m.default),
+  );
   // Registers <uc-ai-editor> and sub-elements
   await import('../src/index');
 });
@@ -51,7 +56,7 @@ describe('AiEnhancerPlugin', () => {
   it('registers "Generate image" as an upload source', async () => {
     const { AiEnhancerPlugin } = await import('../src/plugin');
     const { config } = await renderUploader([AiEnhancerPlugin]);
-    addSource(config, 'ai-generate');
+    addSource(config, 'ai-enhancer');
     await openModal();
     await expect.element(page.getByText('Generate image')).toBeVisible();
     cleanup();
@@ -60,13 +65,65 @@ describe('AiEnhancerPlugin', () => {
   it('opens the AI editor activity when the Generate image source is selected', async () => {
     const { AiEnhancerPlugin } = await import('../src/plugin');
     const { config } = await renderUploader([AiEnhancerPlugin]);
-    addSource(config, 'ai-generate');
+    addSource(config, 'ai-enhancer');
     await openModal();
     await page.getByText('Generate image').click();
     await vi.waitFor(() => {
       const editor = document.querySelector('uc-ai-editor') as (Element & { mode?: string }) | null;
       expect(editor).toBeTruthy();
       expect(editor?.mode).toBe('generate');
+    });
+    cleanup();
+  });
+
+  it('feeds editor locale overrides from the uploader config (localeDefinitionOverride)', async () => {
+    const { AiEnhancerPlugin } = await import('../src/plugin');
+    const { config } = await renderUploader([AiEnhancerPlugin]);
+    type L10nConfig = { localeDefinitionOverride: Record<string, Record<string, string>> | null };
+    (config as unknown as L10nConfig).localeDefinitionOverride = {
+      en: { 'ai-enhancer-generate-btn': 'Make it!' },
+    };
+    addSource(config, 'ai-enhancer');
+    await openModal();
+    await page.getByText('Generate image').click();
+
+    type Editor = Element & { l10nOverrides?: Record<string, string> };
+    await vi.waitFor(() => {
+      const editor = document.querySelector('uc-ai-editor') as Editor | null;
+      expect(editor?.l10nOverrides?.['ai-enhancer-generate-btn']).toBe('Make it!');
+    });
+
+    // Reactive: changing the override after the editor is open updates it.
+    (config as unknown as L10nConfig).localeDefinitionOverride = {
+      en: { 'ai-enhancer-generate-btn': 'Generate now' },
+    };
+    await vi.waitFor(() => {
+      const editor = document.querySelector('uc-ai-editor') as Editor | null;
+      expect(editor?.l10nOverrides?.['ai-enhancer-generate-btn']).toBe('Generate now');
+    });
+    cleanup();
+  });
+
+  it('lazily switches the editor locale when the uploader localeName changes', async () => {
+    const { AiEnhancerPlugin } = await import('../src/plugin');
+    const { config } = await renderUploader([AiEnhancerPlugin]);
+    addSource(config, 'ai-enhancer');
+    await openModal();
+    await page.getByText('Generate image').click();
+
+    type Editor = Element & { l10nOverrides?: Record<string, string> };
+    // Defaults to English.
+    await vi.waitFor(() => {
+      const editor = document.querySelector('uc-ai-editor') as Editor | null;
+      expect(editor?.l10nOverrides?.['ai-enhancer-cancel']).toBe('Cancel');
+    });
+
+    // Switching localeName lazy-loads and applies the German strings.
+    (config as unknown as { localeName: string }).localeName = 'de';
+    await vi.waitFor(() => {
+      const editor = document.querySelector('uc-ai-editor') as Editor | null;
+      expect(editor?.l10nOverrides?.['ai-enhancer-cancel']).toBe('Abbrechen');
+      expect(editor?.l10nOverrides?.['ai-enhancer-generate-btn']).toBe('Hochladen');
     });
     cleanup();
   });
