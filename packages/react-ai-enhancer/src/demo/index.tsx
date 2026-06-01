@@ -1,5 +1,4 @@
-import { createMockBflProvider } from '@uploadcare/ai-enhancer';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AiEnhancer } from '../AiEnhancer';
 
@@ -9,7 +8,6 @@ void React;
 type Theme = 'auto' | 'light' | 'dark';
 
 function App() {
-  const provider = useMemo(() => createMockBflProvider({ latency: 600 }), []);
   const [log, setLog] = useState<string[]>([]);
   const [theme, setTheme] = useState<Theme>('auto');
   const append = (line: string) => setLog((prev) => [line, ...prev].slice(0, 20));
@@ -32,7 +30,9 @@ function App() {
       </label>
       <AiEnhancer
         mode="generate"
-        provider={provider}
+        pubkey="demopublickey"
+        baseUrl="https://upload.example.com"
+        cdnCnamePrefixed="https://cdn.example.com"
         onDone={(detail) => append(`done: ${JSON.stringify(detail)}`)}
         onCancel={() => append('cancel')}
         onError={(error) => append(`error: ${(error as Error)?.message ?? String(error)}`)}

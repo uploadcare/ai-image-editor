@@ -16,15 +16,53 @@
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 50%, color-mix(in oklch, var(--uc-ai-foreground) 5%, transparent) 0.5px, transparent 1px) 0 0 / 8px 8px,
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in oklch, var(--uc-ai-foreground) 5%, transparent) 0.5px,
+      transparent 1px
+    )
+    0 0 / 8px 8px,
     transparent;
 }
 
-.canvas img {
+.canvas img.shown {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  /* Cross-fade between the old and new image on swap (View Transitions API). */
+  view-transition-name: uc-ai-canvas-image;
+}
+
+/*
+ * Off-screen <img> used only to preload the next URL so it can be swapped in
+ * fully decoded — display:none would still load, but keeping it rendered (and
+ * invisible) is the most reliable across engines.
+ */
+.canvas img.preload {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas img.shown {
+    view-transition-name: none;
+  }
+}
+
+.error-state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  text-align: center;
+  color: var(--uc-ai-muted-foreground);
+  font-size: 0.875em;
+  z-index: 1;
 }
 
 .busy-overlay {

@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "AI image generation and editing web component for Uploadcare",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/ai-enhancer.cjs",
   "module": "./dist/ai-enhancer.js",
   "types": "./dist/ai-enhancer.d.ts",
@@ -27,6 +29,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@uploadcare/cname-prefix": "^6.18.4",
     "lit": "^3.2.1"
   },
   "peerDependencies": {
@@ -40,7 +43,8 @@
   "devDependencies": {
     "@uploadcare/file-uploader": "^1.29.0",
     "@vitest/browser": "^3.0.9",
-    "playwright": "^1.49.0"
+    "playwright": "^1.49.0",
+    "zod": "^3.25.76"
   },
   "keywords": [
     "uploadcare",

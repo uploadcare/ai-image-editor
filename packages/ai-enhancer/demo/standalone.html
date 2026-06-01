@@ -101,6 +101,10 @@
       <input id="pubkey" type="text" size="20" placeholder="demopublickey" />
     </label>
     <label>
+      Locale
+      <select id="locale"></select>
+    </label>
+    <label>
       Theme
       <select id="theme">
         <option value="auto">auto (system)</option>
@@ -120,11 +124,15 @@
   <div class="log" id="log"></div>
 
   <script type="module">
-    import { createUploadcareGenerateProvider, mockBflProvider } from '../src/index.ts';
+    import '../src/index.ts';
+    import { LOCALE_LOADERS, SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
 
-    const STAGING_BASE_URL = 'https://upload.example.com';
+    const DEMO_PUBKEY = 'demopublickey';
 
     const editor = document.querySelector('uc-ai-editor');
+    editor.baseUrl = 'https://upload.example.com';
+    editor.cdnCnamePrefixed = 'https://cdn.example.com';
+    editor.pubkey = DEMO_PUBKEY;
     const log = document.getElementById('log');
     const append = (msg) => {
       const p = document.createElement('p');
@@ -148,20 +156,29 @@
       document.getElementById('stage').classList.toggle('brand-overrides', e.target.checked);
       append(`brand-themed: ${e.target.checked}`);
     });
+    const localeSelect = document.getElementById('locale');
+    for (const name of SUPPORTED_LOCALES) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      localeSelect.append(opt);
+    }
+    localeSelect.value = 'en';
+    localeSelect.addEventListener('change', async (e) => {
+      const name = e.target.value;
+      editor.l10nOverrides = await LOCALE_LOADERS[name]();
+      append(`locale → ${name}`);
+    });
+
     document.getElementById('theme').addEventListener('change', (e) => {
       document.body.classList.remove('uc-light', 'uc-dark');
       if (e.target.value !== 'auto') document.body.classList.add(`uc-${e.target.value}`);
       append(`theme → ${e.target.value}`);
     });
     document.getElementById('pubkey').addEventListener('change', (e) => {
-      const key = e.target.value.trim();
-      if (key) {
-        editor.provider = createUploadcareGenerateProvider({ publicKey: key, baseUrl: STAGING_BASE_URL });
-        append(`provider → uploadcare-generate (staging, ${key})`);
-      } else {
-        editor.provider = mockBflProvider;
-        append('provider → mock');
-      }
+      const key = e.target.value.trim() || DEMO_PUBKEY;
+      editor.pubkey = key;
+      append(`pubkey → ${key} (staging)`);
     });
 
     editor.addEventListener('uc:done', (e) => {

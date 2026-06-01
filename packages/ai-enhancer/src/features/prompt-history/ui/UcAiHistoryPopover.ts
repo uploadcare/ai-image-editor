@@ -71,4 +71,3 @@ export class UcAiHistoryPopover extends LitElement {
     `;
   }
 }
-

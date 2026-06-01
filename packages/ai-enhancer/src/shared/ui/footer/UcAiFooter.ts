@@ -37,4 +37,3 @@ export class UcAiFooter extends LitElement {
     `;
   }
 }
-

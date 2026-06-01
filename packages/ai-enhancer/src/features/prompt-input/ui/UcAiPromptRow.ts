@@ -123,4 +123,3 @@ export class UcAiPromptRow extends LitElement {
     `;
   }
 }
-
