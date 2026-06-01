@@ -4,8 +4,8 @@ import {
   aspectRatioKey,
   isValidAspectRatio,
   labelKeyForRatio,
-  parseAspectRatioList,
   POPULAR_ASPECT_RATIOS,
+  parseAspectRatioList,
   toAspectRatioOption,
 } from './aspect-ratio';
 

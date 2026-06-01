@@ -4,9 +4,9 @@ import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
 import {
   type AspectRatio,
+  type AspectRatioOption,
   aspectRatioEquals,
   aspectRatioKey,
-  type AspectRatioOption,
   aspectRatioSvg,
 } from '../../../entities/aspect-ratio';
 import styles from './aspect-ratio.css?inline';
@@ -109,4 +109,3 @@ export class UcAiAspectRatio extends LitElement {
     `;
   }
 }
-

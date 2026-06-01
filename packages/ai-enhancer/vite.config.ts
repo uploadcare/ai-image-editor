@@ -31,6 +31,6 @@ export default defineConfig(({ command }) => {
         },
       },
     },
-    plugins: [dts({ rollupTypes: true, insertTypesEntry: true })],
+    plugins: [dts({ rollupTypes: true, insertTypesEntry: true, exclude: ['**/*.dev.ts', '**/*.test.ts'] })],
   };
 });

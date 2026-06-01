@@ -1,7 +1,6 @@
 import {
   type AiCapability,
   type AiEditorMode,
-  type AiProvider,
   type AspectRatio,
   type DoneDetail,
   UcAiEditor,
@@ -22,7 +21,10 @@ export type AiEnhancerProps = {
   capability?: AiCapability;
   src?: string | null;
   aspectRatios?: AspectRatio[];
-  provider?: AiProvider;
+  pubkey: string;
+  baseUrl?: string;
+  cdnCname?: string;
+  cdnCnamePrefixed?: string;
   l10n?: Record<string, string>;
   className?: string;
   apiRef?: Ref<UcAiEditor>;
@@ -31,14 +33,7 @@ export type AiEnhancerProps = {
   onError?: (error: unknown) => void;
 };
 
-export const AiEnhancer: FC<AiEnhancerProps> = ({
-  apiRef,
-  className,
-  onDone,
-  onCancel,
-  onError,
-  ...props
-}) => {
+export const AiEnhancer: FC<AiEnhancerProps> = ({ apiRef, className, onDone, onCancel, onError, ...props }) => {
   const handlers = useMemo(
     () => ({
       'uc:done': (e: CustomEvent<DoneDetail>) => onDone?.(e.detail),

@@ -1,21 +1,15 @@
 import type { UploaderPlugin } from '@uploadcare/file-uploader';
 import { type AspectRatio, isValidAspectRatio, POPULAR_ASPECT_RATIOS } from '../../../entities/aspect-ratio';
-import {
-  type AiProvider,
-  createUploadcareGenerateProvider,
-  mockBflProvider,
-} from '../../../entities/provider';
-import { enLocale } from '../../../shared/i18n';
+import { type AiEnhancerLocale, enLocale, LOCALE_LOADERS } from '../../../shared/i18n';
 import { ICON_EDIT_AI, ICON_GENERATE } from '../../../shared/ui/icons';
 import type { DoneDetail, UcAiEditor } from '../../ai-editor';
 import { parseCropPreset } from '../lib/parseCropPreset';
 
 import '../../ai-editor';
 
-const PLUGIN_ID = 'ai-enhancer';
-const SOURCE_ID = 'ai-generate';
-const FILE_ACTION_ID = 'ai-edit';
-const ACTIVITY_ID = 'ai-editor' as const;
+// One shared id for the plugin, its source, file action, and activity. They live
+// in separate registries, so reusing the same value is safe and keeps them aligned.
+const AI_ENHANCER_ID = 'ai-enhancer';
 
 /**
  * Pipes the file-uploader's theme tokens (`--uc-*`) into the AI editor's
@@ -56,6 +50,16 @@ export type AiEditorActivityParams = {
   internalId?: string;
 };
 
+/**
+ * Register the plugin's custom activity with the file-uploader's type system so
+ * `setCurrentActivity(AI_ENHANCER_ID, params)` is type-checked instead of cast.
+ */
+declare module '@uploadcare/file-uploader' {
+  interface CustomActivities {
+    [AI_ENHANCER_ID]: { params: AiEditorActivityParams };
+  }
+}
+
 async function urlToFile(url: string, name: string): Promise<File> {
   const res = await fetch(url);
   const blob = await res.blob();
@@ -87,54 +91,100 @@ export function aspectRatiosFromCropPreset(cropPreset: string): AspectRatio[] | 
 }
 
 export const AiEnhancerPlugin: UploaderPlugin = {
-  id: PLUGIN_ID,
+  id: AI_ENHANCER_ID,
   setup: ({ pluginApi, uploaderApi }) => {
     const { registry, config } = pluginApi;
 
     registry.registerIcon({ name: 'ai-generate', svg: ICON_GENERATE });
     registry.registerIcon({ name: 'ai-edit', svg: ICON_EDIT_AI });
 
+    // English is the always-present synchronous fallback; every other locale
+    // loads lazily and is registered with the uploader on demand.
     registry.registerL10n({ en: enLocale });
 
+    const localeCache = new Map<string, AiEnhancerLocale>([['en', enLocale]]);
+    const registeredLocales = new Set<string>(['en']);
+
+    const loadLocale = async (localeName: string): Promise<AiEnhancerLocale | null> => {
+      const name = localeName || 'en';
+      const cached = localeCache.get(name);
+      if (cached) return cached;
+      const loader = LOCALE_LOADERS[name];
+      if (!loader) return null;
+      const strings = await loader();
+      localeCache.set(name, strings);
+      return strings;
+    };
+
+    /**
+     * Lazy-load the active locale's strings and register them with the uploader
+     * so the uploader-rendered source / file-action labels follow `localeName`.
+     */
+    const syncLocaleToUploader = async (localeName: string): Promise<void> => {
+      const name = localeName || 'en';
+      if (registeredLocales.has(name)) return;
+      const strings = await loadLocale(name);
+      if (!strings) return;
+      registeredLocales.add(name);
+      registry.registerL10n({ [name]: strings });
+    };
+
+    void syncLocaleToUploader(config.get('localeName'));
+    config.subscribe('localeName', (value) => {
+      void syncLocaleToUploader(value);
+    });
+
+    /**
+     * Build the editor's locale map: the active language's strings with the
+     * uploader's `localeDefinitionOverride` (for that locale) layered on top.
+     * Missing keys fall back to the editor's built-in English via `translate`.
+     */
+    const resolveEditorL10n = async (): Promise<Partial<AiEnhancerLocale>> => {
+      const localeName = config.get('localeName') || 'en';
+      const base = (await loadLocale(localeName)) ?? enLocale;
+      const result: Partial<Record<keyof AiEnhancerLocale, string>> = { ...base };
+      const override = config.get('localeDefinitionOverride')?.[localeName] as Record<string, string> | undefined;
+      if (override) {
+        for (const key of Object.keys(enLocale) as (keyof AiEnhancerLocale)[]) {
+          if (typeof override[key] === 'string') result[key] = override[key];
+        }
+      }
+      return result;
+    };
+
     registry.registerSource({
-      id: SOURCE_ID,
+      id: AI_ENHANCER_ID,
       label: 'ai-enhancer-source-label',
       icon: 'ai-generate',
       onSelect: () => {
-        // ActivityType is a published enum; the plugin's custom activity is named "ai-editor".
-        (uploaderApi.setCurrentActivity as (id: string, params?: unknown) => void)?.(ACTIVITY_ID,{ mode: 'generate' });
-        uploaderApi.setModalState?.(true);
+        uploaderApi.setCurrentActivity(AI_ENHANCER_ID, { mode: 'generate' });
+        uploaderApi.setModalState(true);
       },
     });
 
     registry.registerFileAction({
-      id: FILE_ACTION_ID,
+      id: AI_ENHANCER_ID,
       icon: 'ai-edit',
       label: 'ai-enhancer-file-action-label',
       shouldRender: (fileEntry) => Boolean(fileEntry.isImage && fileEntry.cdnUrl),
       onClick: (fileEntry) => {
-        (uploaderApi.setCurrentActivity as (id: string, params?: unknown) => void)?.(ACTIVITY_ID,{
+        uploaderApi.setCurrentActivity(AI_ENHANCER_ID, {
           mode: 'edit',
           src: fileEntry.cdnUrl ?? undefined,
           internalId: fileEntry.internalId,
         });
-        uploaderApi.setModalState?.(true);
+        uploaderApi.setModalState(true);
       },
     });
 
-    const resolveProvider = (): AiProvider => {
-      const pubkey = config.get('pubkey');
-      if (!pubkey) return mockBflProvider;
-      return createUploadcareGenerateProvider({
-        publicKey: pubkey,
-        baseUrl: config.get('baseUrl'),
-        cdnBaseUrl: config.get('cdnCname'),
-      });
-    };
-
     registry.registerActivity({
-      id: ACTIVITY_ID,
+      id: AI_ENHANCER_ID,
       render: (host, activityParams) => {
+        if (!config.get('pubkey')) {
+          console.warn('[ai-enhancer] No `pubkey` configured; the AI editor is disabled.');
+          return () => {};
+        }
+
         const params = (activityParams ?? {}) as AiEditorActivityParams;
         const editor = document.createElement('uc-ai-editor') as UcAiEditor;
         editor.mode = params.mode ?? 'generate';
@@ -142,17 +192,29 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         editor.style.margin = 'auto';
         applyUploaderTheme(editor);
 
-        editor.provider = resolveProvider();
+        const refreshProviderConfig = () => {
+          editor.pubkey = config.get('pubkey');
+          editor.baseUrl = config.get('baseUrl');
+          editor.cdnCname = config.get('cdnCname');
+        };
+        refreshProviderConfig();
+        void resolveEditorL10n().then((l10n) => {
+          editor.l10nOverrides = l10n;
+        });
         const ratios = aspectRatiosFromCropPreset(config.get('cropPreset') ?? '');
         if (ratios) editor.aspectRatios = ratios;
 
-        const refreshProvider = () => {
-          editor.provider = resolveProvider();
+        const refreshL10n = () => {
+          void resolveEditorL10n().then((l10n) => {
+            editor.l10nOverrides = l10n;
+          });
         };
         const unsubscribers = [
-          config.subscribe('pubkey', refreshProvider),
-          config.subscribe('baseUrl', refreshProvider),
-          config.subscribe('cdnCname', refreshProvider),
+          config.subscribe('pubkey', refreshProviderConfig),
+          config.subscribe('baseUrl', refreshProviderConfig),
+          config.subscribe('cdnCname', refreshProviderConfig),
+          config.subscribe('localeName', refreshL10n),
+          config.subscribe('localeDefinitionOverride', refreshL10n),
           config.subscribe('cropPreset', (value) => {
             editor.aspectRatios = aspectRatiosFromCropPreset(value ?? '');
           }),
@@ -165,9 +227,9 @@ export const AiEnhancerPlugin: UploaderPlugin = {
               detail.url,
               detail.prompt ? `${detail.prompt.slice(0, 32).trim() || 'ai-image'}.jpg` : 'ai-image.jpg',
             );
-            uploaderApi.addFileFromObject(file, { source: PLUGIN_ID });
-            uploaderApi.setCurrentActivity?.('upload-list');
-            uploaderApi.setModalState?.(true);
+            uploaderApi.addFileFromObject(file, { source: AI_ENHANCER_ID });
+            uploaderApi.setCurrentActivity('upload-list');
+            uploaderApi.setModalState(true);
           } catch (err) {
             editor.dispatchEvent(
               new CustomEvent('uc:error', { detail: { error: err }, bubbles: true, composed: true }),
@@ -176,8 +238,8 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         };
 
         const onCancel = () => {
-          uploaderApi.setCurrentActivity?.('upload-list');
-          uploaderApi.setModalState?.(true);
+          uploaderApi.setCurrentActivity('upload-list');
+          uploaderApi.setModalState(true);
         };
 
         editor.addEventListener('uc:done', onDone);

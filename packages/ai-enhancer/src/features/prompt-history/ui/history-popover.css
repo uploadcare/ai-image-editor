@@ -20,7 +20,7 @@
   background: var(--uc-ai-background);
   border: 1px solid var(--uc-ai-border);
   border-radius: var(--uc-ai-radius);
-  box-shadow: 0 10px 30px color-mix(in oklch, var(--uc-ai-foreground) 18%, transparent);
+  box-shadow: 0 10px 30px var(--uc-ai-shadow-color);
   padding: 5px;
 }
 
