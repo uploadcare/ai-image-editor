@@ -30,7 +30,7 @@ function App() {
       </label>
       <AiEnhancer
         mode="generate"
-        pubkey="demopublickey"
+        pubkey="YOUR_PUBLIC_KEY"
         baseUrl="https://upload.example.com"
         cdnCnamePrefixed="https://cdn.example.com"
         onDone={(detail) => append(`done: ${JSON.stringify(detail)}`)}

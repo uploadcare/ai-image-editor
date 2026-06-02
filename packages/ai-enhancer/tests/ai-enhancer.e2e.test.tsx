@@ -1,5 +1,5 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { page } from '@vitest/browser/context';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { UcAiEditor as UcAiEditorType } from '../src/index';
 import { cleanup } from './test-renderer';
 
@@ -28,9 +28,9 @@ const jsonResponse = (body: unknown): Response =>
  * handler). Captures the POST bodies for assertions. The provider binds
  * `globalThis.fetch` at construction, so install this BEFORE setting `pubkey`.
  */
-function stubFetch(
-  opts: { uuid?: string; status?: (signal?: AbortSignal) => Promise<Response> } = {},
-): { generateBodies: Array<Record<string, unknown>> } {
+function stubFetch(opts: { uuid?: string; status?: (signal?: AbortSignal) => Promise<Response> } = {}): {
+  generateBodies: Array<Record<string, unknown>>;
+} {
   const real = globalThis.fetch;
   const generateBodies: Array<Record<string, unknown>> = [];
   globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -63,9 +63,19 @@ function typePrompt(el: UcAiEditorType, value: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+function primaryBtn(el: UcAiEditorType): HTMLButtonElement {
+  return el.shadowRoot!.querySelector('uc-ai-footer')!.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement;
+}
+
+/** Footer primary commits the result (fires uc:done). */
 function clickPrimary(el: UcAiEditorType): void {
-  const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
-  (footer.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement).click();
+  primaryBtn(el).click();
+}
+
+/** The prompt row's send button triggers generation. */
+function clickSend(el: UcAiEditorType): void {
+  const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
+  (promptRow.shadowRoot!.querySelector('.icon-btn--primary') as HTMLButtonElement).click();
 }
 
 const canvasUrl = (el: UcAiEditorType): string | null =>
@@ -114,17 +124,32 @@ describe('<uc-ai-editor>', () => {
     expect(input.value).toBe('a tiger');
   });
 
-  it('runs the provider and pushes the result url to the canvas when Generate is clicked', async () => {
+  it('generates via the send button, then the primary commits the result with uc:done', async () => {
     stubFetch({ uuid: 'result' });
     const el = mount(STAGING);
     await el.updateComplete;
+
+    // Primary is disabled until there is a result to commit.
+    expect(primaryBtn(el).disabled).toBe(true);
+
     typePrompt(el, 'a tiger');
     await el.updateComplete;
-    clickPrimary(el);
-
+    clickSend(el);
     await vi.waitFor(() => {
       expect(canvasUrl(el)).toBe('https://cdn.example.com/result/');
     });
+    await el.updateComplete;
+
+    // Now the primary commits the generated result (it never generates).
+    expect(primaryBtn(el).disabled).toBe(false);
+    const onDone = vi.fn();
+    el.addEventListener('uc:done', onDone);
+    clickPrimary(el);
+    expect(onDone).toHaveBeenCalledTimes(1);
+    const detail = onDone.mock.calls[0]![0].detail;
+    expect(detail.url).toBe('https://cdn.example.com/result/');
+    expect(detail.file.uuid).toBe('result');
+    expect(detail.file.cdnUrl).toBe('https://cdn.example.com/result/');
   });
 
   it('dispatches uc:cancel when the back button is clicked', async () => {
@@ -137,17 +162,17 @@ describe('<uc-ai-editor>', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('dispatches uc:done with the current url + prompt + capability when Done is clicked in edit mode', async () => {
+  it('keeps the primary disabled and fires no uc:done until a result exists (edit mode with src)', async () => {
     const el = mount();
     el.mode = 'edit';
     el.src = 'https://example.com/source.jpg';
     await el.updateComplete;
     const onDone = vi.fn();
     el.addEventListener('uc:done', onDone);
+    // A source image alone is not a result — the primary commits results only.
+    expect(primaryBtn(el).disabled).toBe(true);
     clickPrimary(el);
-    expect(onDone).toHaveBeenCalledTimes(1);
-    const detail = onDone.mock.calls[0]![0].detail;
-    expect(detail).toMatchObject({ url: 'https://example.com/source.jpg', capability: 'object-remove' });
+    expect(onDone).not.toHaveBeenCalled();
   });
 
   it('does not dispatch uc:done when there is no displayable image (edit mode without src)', async () => {
@@ -156,10 +181,8 @@ describe('<uc-ai-editor>', () => {
     await el.updateComplete;
     const onDone = vi.fn();
     el.addEventListener('uc:done', onDone);
-    const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
-    const primary = footer.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement;
-    expect(primary.disabled).toBe(true);
-    primary.click();
+    expect(primaryBtn(el).disabled).toBe(true);
+    primaryBtn(el).click();
     expect(onDone).not.toHaveBeenCalled();
   });
 
@@ -169,7 +192,7 @@ describe('<uc-ai-editor>', () => {
     await el.updateComplete;
     typePrompt(el, 'a tiger');
     await el.updateComplete;
-    clickPrimary(el);
+    clickSend(el);
     await vi.waitFor(() => {
       const popover = el.shadowRoot!.querySelector('uc-ai-history-popover')!;
       // @ts-expect-error reading public Lit @property
@@ -179,21 +202,23 @@ describe('<uc-ai-editor>', () => {
 
   it('opens the popover (native Popover API) when the history button is clicked in edit mode with empty prompt', async () => {
     stubFetch();
-    const el = mount({ ...STAGING, mode: 'edit', src: 'https://example.com/source.jpg' });
+    // Seed history with a generation (edit-mode generation is disabled, so seed
+    // in generate mode — the history persists across the mode switch).
+    const el = mount(STAGING);
     await el.updateComplete;
-    // Seed history with one generation
-    const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
-    const input = promptRow.shadowRoot!.querySelector('input')!;
-    input.value = 'a tiger';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    typePrompt(el, 'a tiger');
     await el.updateComplete;
-    (promptRow.shadowRoot!.querySelector('.icon-btn--primary') as HTMLButtonElement).click();
+    clickSend(el);
     await vi.waitFor(() => {
       const popover = el.shadowRoot!.querySelector('uc-ai-history-popover')!;
-      // @ts-expect-error
+      // @ts-expect-error reading public Lit @property
       expect(popover.entries.length).toBe(1);
     });
-    // Clear prompt so the history button reappears
+    // The history button is the edit-mode affordance shown when the prompt is empty.
+    el.mode = 'edit';
+    await el.updateComplete;
+    const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
+    const input = promptRow.shadowRoot!.querySelector('input')!;
     input.value = '';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
@@ -214,7 +239,7 @@ describe('<uc-ai-editor>', () => {
     // Default selection is the first option in the list (16:9).
     typePrompt(el, 'mountain');
     await el.updateComplete;
-    clickPrimary(el);
+    clickSend(el);
     await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
     expect(stub.generateBodies[0]!.aspect_ratio).toEqual([16, 9]);
 
@@ -225,9 +250,28 @@ describe('<uc-ai-editor>', () => {
     expect(options.length).toBe(2);
     options[1]!.click();
     await el.updateComplete;
-    clickPrimary(el);
+    clickSend(el);
     await vi.waitFor(() => expect(stub.generateBodies.length).toBe(2));
     expect(stub.generateBodies[1]!.aspect_ratio).toEqual([1, 1]);
+  });
+
+  it('includes the UploadcareFile and its uuid in uc:done after a generation', async () => {
+    stubFetch({ uuid: 'result-123' });
+    const el = mount(STAGING);
+    await el.updateComplete;
+    const onDone = vi.fn();
+    el.addEventListener('uc:done', onDone);
+
+    typePrompt(el, 'make it pop');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(canvasUrl(el)).toBe('https://cdn.example.com/result-123/'));
+    await el.updateComplete;
+
+    clickPrimary(el);
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(onDone.mock.calls[0]![0].detail.file.uuid).toBe('result-123');
+    expect(onDone.mock.calls[0]![0].detail.uuid).toBe('result-123');
   });
 
   it('hides the aspect-ratio picker in edit mode', async () => {
@@ -251,7 +295,11 @@ describe('<uc-ai-editor>', () => {
 
     typePrompt(el, 'try');
     await el.updateComplete;
-    (el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('.icon-btn--primary') as HTMLButtonElement).click();
+    (
+      el
+        .shadowRoot!.querySelector('uc-ai-prompt-row')!
+        .shadowRoot!.querySelector('.icon-btn--primary') as HTMLButtonElement
+    ).click();
 
     // Change src mid-flight — this aborts the in-flight generation.
     el.src = 'https://example.com/second.jpg';

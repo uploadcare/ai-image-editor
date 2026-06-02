@@ -51,8 +51,9 @@ const StatusResponseSchema: z.ZodType<UploadcareJobStatus> = z.discriminatedUnio
   }),
   z.object({
     status: z.literal('success'),
-    uuid: z.string().optional(),
-    file: z.string().optional(),
+    // On success the endpoint returns the upload-info bag, which always carries
+    // the uploaded file's `uuid` (see platform PR #1497's status test).
+    uuid: z.string(),
   }),
 ]);
 

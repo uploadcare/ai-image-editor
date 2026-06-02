@@ -25,13 +25,33 @@
     transparent;
 }
 
-.canvas img.shown {
-  display: block;
+/*
+ * Stacked image layers: the outgoing `.prev` sits underneath while the incoming
+ * `.shown` fades in over it, producing a self-contained cross-fade (no global
+ * View Transitions snapshot, so no clipping/overlay artifacts).
+ */
+.canvas .layer {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  /* Cross-fade between the old and new image on swap (View Transitions API). */
-  view-transition-name: uc-ai-canvas-image;
+}
+
+.canvas .layer.shown {
+  animation: ai-fade-in var(--uc-ai-transition, 0.2s) ease;
+}
+
+@keyframes ai-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas .layer.shown {
+    animation: none;
+  }
 }
 
 /*
@@ -47,12 +67,6 @@
   pointer-events: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .canvas img.shown {
-    view-transition-name: none;
-  }
-}
-
 .error-state {
   position: absolute;
   inset: 0;
@@ -65,14 +79,36 @@
   z-index: 1;
 }
 
+/*
+ * Always present so the blur/opacity can transition in AND out (a conditionally
+ * rendered element can't animate on removal). Inactive = invisible and inert.
+ */
 .busy-overlay {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  background: color-mix(in oklch, var(--uc-ai-background) 70%, transparent);
-  backdrop-filter: blur(2px);
+  background: color-mix(in oklch, var(--uc-ai-background) 0%, transparent);
+  backdrop-filter: blur(0);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    backdrop-filter 0.35s ease,
+    background 0.35s ease;
   z-index: 2;
+}
+
+.busy-overlay--active {
+  background: color-mix(in oklch, var(--uc-ai-background) 60%, transparent);
+  backdrop-filter: blur(12px);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .busy-overlay {
+    transition: opacity 0.25s ease;
+  }
 }
 
 .spinner {

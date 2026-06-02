@@ -1,5 +1,5 @@
-import { beforeEach } from 'vitest';
 import { page } from '@vitest/browser/context';
+import { beforeEach } from 'vitest';
 
 const containers = new Set<HTMLElement>();
 
