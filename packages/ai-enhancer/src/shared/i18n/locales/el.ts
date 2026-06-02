@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Δημιουργία εικόνας...',
   'ai-enhancer-edit-placeholder': 'Επεξεργασία εικόνας...',
   'ai-enhancer-cancel': 'Άκυρο',
-  'ai-enhancer-generate-btn': 'Μεταφόρτωση',
+  'ai-enhancer-generate-btn': 'Δημιουργία',
   'ai-enhancer-done-btn': 'Τέλος',
   'ai-enhancer-history-empty': 'Δεν υπάρχουν ακόμη προτροπές',
   'ai-enhancer-history-title': 'Πρόσφατες προτροπές',

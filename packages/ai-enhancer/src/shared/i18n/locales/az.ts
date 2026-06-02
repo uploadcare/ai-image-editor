@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Şəkil yarat...',
   'ai-enhancer-edit-placeholder': 'Şəkli redaktə et...',
   'ai-enhancer-cancel': 'Ləğv et',
-  'ai-enhancer-generate-btn': 'Yüklə',
+  'ai-enhancer-generate-btn': 'Yarat',
   'ai-enhancer-done-btn': 'Hazırdır',
   'ai-enhancer-history-empty': 'Hələ prompt yoxdur',
   'ai-enhancer-history-title': 'Son promptlar',

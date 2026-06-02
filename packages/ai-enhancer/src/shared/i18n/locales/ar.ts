@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'إنشاء صورة...',
   'ai-enhancer-edit-placeholder': 'تحرير الصورة...',
   'ai-enhancer-cancel': 'إلغاء',
-  'ai-enhancer-generate-btn': 'رفع',
+  'ai-enhancer-generate-btn': 'إنشاء',
   'ai-enhancer-done-btn': 'تم',
   'ai-enhancer-history-empty': 'لا توجد مطالبات بعد',
   'ai-enhancer-history-title': 'المطالبات الأخيرة',

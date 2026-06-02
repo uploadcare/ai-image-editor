@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Bild erstellen...',
   'ai-enhancer-edit-placeholder': 'Bild bearbeiten...',
   'ai-enhancer-cancel': 'Abbrechen',
-  'ai-enhancer-generate-btn': 'Hochladen',
+  'ai-enhancer-generate-btn': 'Generieren',
   'ai-enhancer-done-btn': 'Fertig',
   'ai-enhancer-history-empty': 'Noch keine Prompts',
   'ai-enhancer-history-title': 'Letzte Prompts',

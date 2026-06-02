@@ -80,7 +80,7 @@
 }
 
 /*
- * Always present so the blur/opacity can transition in AND out (a conditionally
+ * Always present so the opacity can transition in AND out (a conditionally
  * rendered element can't animate on removal). Inactive = invisible and inert.
  */
 .busy-overlay {
@@ -89,19 +89,16 @@
   display: grid;
   place-items: center;
   background: color-mix(in oklch, var(--uc-ai-background) 0%, transparent);
-  backdrop-filter: blur(0);
   opacity: 0;
   pointer-events: none;
   transition:
     opacity 0.25s ease,
-    backdrop-filter 0.35s ease,
     background 0.35s ease;
   z-index: 2;
 }
 
 .busy-overlay--active {
   background: color-mix(in oklch, var(--uc-ai-background) 60%, transparent);
-  backdrop-filter: blur(12px);
   opacity: 1;
 }
 

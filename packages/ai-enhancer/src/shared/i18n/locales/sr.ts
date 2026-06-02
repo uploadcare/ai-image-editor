@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Napravi sliku...',
   'ai-enhancer-edit-placeholder': 'Uredi sliku...',
   'ai-enhancer-cancel': 'Otkaži',
-  'ai-enhancer-generate-btn': 'Otpremi',
+  'ai-enhancer-generate-btn': 'Generiši',
   'ai-enhancer-done-btn': 'Gotovo',
   'ai-enhancer-history-empty': 'Još nema upita',
   'ai-enhancer-history-title': 'Nedavni upiti',

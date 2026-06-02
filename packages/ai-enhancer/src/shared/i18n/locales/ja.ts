@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': '画像を作成...',
   'ai-enhancer-edit-placeholder': '画像を編集...',
   'ai-enhancer-cancel': 'キャンセル',
-  'ai-enhancer-generate-btn': 'アップロード',
+  'ai-enhancer-generate-btn': '生成',
   'ai-enhancer-done-btn': '完了',
   'ai-enhancer-history-empty': 'プロンプトはまだありません',
   'ai-enhancer-history-title': '最近のプロンプト',

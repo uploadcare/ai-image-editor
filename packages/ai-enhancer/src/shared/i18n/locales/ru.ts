@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Создать изображение...',
   'ai-enhancer-edit-placeholder': 'Редактировать изображение...',
   'ai-enhancer-cancel': 'Отмена',
-  'ai-enhancer-generate-btn': 'Загрузить',
+  'ai-enhancer-generate-btn': 'Сгенерировать',
   'ai-enhancer-done-btn': 'Готово',
   'ai-enhancer-history-empty': 'Пока нет запросов',
   'ai-enhancer-history-title': 'Недавние запросы',

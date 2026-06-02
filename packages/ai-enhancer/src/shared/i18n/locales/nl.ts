@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Afbeelding maken...',
   'ai-enhancer-edit-placeholder': 'Afbeelding bewerken...',
   'ai-enhancer-cancel': 'Annuleren',
-  'ai-enhancer-generate-btn': 'Uploaden',
+  'ai-enhancer-generate-btn': 'Genereren',
   'ai-enhancer-done-btn': 'Klaar',
   'ai-enhancer-history-empty': 'Nog geen prompts',
   'ai-enhancer-history-title': 'Recente prompts',

@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Loo pilt...',
   'ai-enhancer-edit-placeholder': 'Redigeeri pilti...',
   'ai-enhancer-cancel': 'Tühista',
-  'ai-enhancer-generate-btn': 'Laadi üles',
+  'ai-enhancer-generate-btn': 'Genereeri',
   'ai-enhancer-done-btn': 'Valmis',
   'ai-enhancer-history-empty': 'Veel pole viipasid',
   'ai-enhancer-history-title': 'Hiljutised viiped',

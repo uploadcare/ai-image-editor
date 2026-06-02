@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Creează imagine...',
   'ai-enhancer-edit-placeholder': 'Editează imaginea...',
   'ai-enhancer-cancel': 'Anulează',
-  'ai-enhancer-generate-btn': 'Încarcă',
+  'ai-enhancer-generate-btn': 'Generează',
   'ai-enhancer-done-btn': 'Gata',
   'ai-enhancer-history-empty': 'Încă niciun prompt',
   'ai-enhancer-history-title': 'Prompturi recente',

@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'יצירת תמונה...',
   'ai-enhancer-edit-placeholder': 'עריכת תמונה...',
   'ai-enhancer-cancel': 'ביטול',
-  'ai-enhancer-generate-btn': 'העלאה',
+  'ai-enhancer-generate-btn': 'יצירה',
   'ai-enhancer-done-btn': 'סיום',
   'ai-enhancer-history-empty': 'אין עדיין הנחיות',
   'ai-enhancer-history-title': 'הנחיות אחרונות',
