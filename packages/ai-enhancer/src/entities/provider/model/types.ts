@@ -1,3 +1,4 @@
+import type { UploadcareFile } from '@uploadcare/upload-client';
 import type { AspectRatio } from '../../aspect-ratio';
 import type { AiCapability } from '../../capability';
 
@@ -15,8 +16,12 @@ export type AiProviderRequest = {
 
 export type AiProviderResult = {
   url: string;
+  /** UUID of the resulting Uploadcare file (same as `file.uuid`). */
+  uuid: string;
   prompt: string;
   capability: AiCapability;
+  /** The resulting file as an Uploadcare file object. */
+  file: UploadcareFile;
 };
 
 export type AiProvider = {

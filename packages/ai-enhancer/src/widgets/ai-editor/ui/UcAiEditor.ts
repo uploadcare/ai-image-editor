@@ -1,6 +1,6 @@
+import type { UploadcareFile } from '@uploadcare/upload-client';
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
-
 import {
   type AspectRatio,
   type AspectRatioOption,
@@ -35,9 +35,13 @@ export type { HistoryEntry } from '../../../features/generation';
 
 export type DoneDetail = {
   url: string;
+  /** UUID of the committed Uploadcare file (same as `file.uuid`). */
+  uuid: string;
   prompt: string;
   capability: AiCapability;
   aspectRatio?: AspectRatio;
+  /** The committed result as an Uploadcare file object. */
+  file: UploadcareFile;
 };
 
 const CAPABILITIES_USING_ASPECT_RATIO: ReadonlySet<AiCapability> = new Set<AiCapability>(['generate']);
@@ -180,7 +184,13 @@ export class UcAiEditor extends LitElement {
     const { entry } = e.detail;
     this._prompt = entry.prompt;
     this.capability = entry.capability;
-    this._gen.setResult(entry.url);
+    this._gen.setResult({
+      url: entry.url,
+      uuid: entry.file.uuid,
+      prompt: entry.prompt,
+      capability: entry.capability,
+      file: entry.file,
+    });
     this._historyOpen = false;
   }
 
@@ -204,20 +214,20 @@ export class UcAiEditor extends LitElement {
   }
 
   private _onPrimary(): void {
-    if (this.mode === 'edit') {
-      const url = this._displayUrl;
-      if (!url) return;
-      const detail: DoneDetail = {
-        url,
-        prompt: this._prompt,
-        capability: this.capability,
-        aspectRatio:
-          CAPABILITIES_USING_ASPECT_RATIO.has(this.capability) && this._selectedRatio ? this._selectedRatio : undefined,
-      };
-      this.dispatchEvent(new CustomEvent('uc:done', { detail, bubbles: true, composed: true }));
-    } else {
-      void this._generate();
-    }
+    // The primary action commits the current generation result; it never
+    // triggers generation (that's the prompt row's send button).
+    const result = this._gen.result;
+    if (!result) return;
+    const detail: DoneDetail = {
+      url: result.url,
+      uuid: result.uuid,
+      prompt: result.prompt,
+      capability: result.capability,
+      aspectRatio:
+        CAPABILITIES_USING_ASPECT_RATIO.has(result.capability) && this._selectedRatio ? this._selectedRatio : undefined,
+      file: result.file,
+    };
+    this.dispatchEvent(new CustomEvent('uc:done', { detail, bubbles: true, composed: true }));
   }
 
   private _onCancel(e: Event): void {
@@ -228,8 +238,8 @@ export class UcAiEditor extends LitElement {
   public override render(): TemplateResult {
     const placeholderKey = CAPABILITIES[this.capability].placeholderKey as keyof typeof enLocale;
     const primaryLabelKey = this.mode === 'edit' ? 'ai-enhancer-done-btn' : 'ai-enhancer-generate-btn';
-    const primaryDisabled =
-      this.mode === 'edit' ? this._gen.busy || !this._displayUrl : this._gen.busy || !this._prompt.trim();
+    // The primary commits a generation result, so it's enabled only once one exists.
+    const primaryDisabled = this._gen.busy || !this._gen.result;
 
     const showAspectRatio = this.mode === 'generate' && CAPABILITIES_USING_ASPECT_RATIO.has(this.capability);
     const ratioOptions = showAspectRatio ? this._aspectRatioOptions() : [];

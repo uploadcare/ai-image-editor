@@ -54,11 +54,11 @@ export type UploadcareJobErrorStatus = {
   error?: string;
 };
 
-/** The job finished; the payload carries the uploaded file's identifiers. */
+/** The job finished; the payload is the upload-info bag, keyed by the file's UUID. */
 export type UploadcareJobSuccessStatus = {
   status: 'success';
-  uuid?: string;
-  file?: string;
+  /** Always present on success — the uploaded file's UUID (see platform PR #1497). */
+  uuid: string;
 };
 
 /**
@@ -118,19 +118,16 @@ export class UploadcareApiClient {
     return this.startJob(new URL('/derivative/image/generate/', this.baseUrl), body, 'generate', params.signal);
   }
 
-  /** Start an image→image edit job. Resolves to the job handle. */
-  async edit(params: EditRequestParams): Promise<UploadcareJobResponse> {
-    const body: Record<string, unknown> = {
-      pub_key: this.publicKey,
-      prompt: params.prompt,
-      image_url: params.imageUrl,
-      filename: params.filename,
-    };
-    if (params.aspectRatio) body.aspect_ratio = [params.aspectRatio[0], params.aspectRatio[1]];
-    if (params.store !== undefined) body.store = params.store;
-
-    await devValidate('edit', body);
-    return this.startJob(new URL('/derivative/image/edit/', this.baseUrl), body, 'edit', params.signal);
+  /**
+   * Start an image→image edit job. Resolves to the job handle.
+   *
+   * Placeholder: the AI edit endpoint is not available yet — the platform side
+   * (`derivative/image/edit/`) does not exist. The real request-building logic
+   * is held until the backend lands; until then this throws so no edit traffic
+   * is sent. Edit is not exposed publicly while this is stubbed.
+   */
+  async edit(_params: EditRequestParams): Promise<UploadcareJobResponse> {
+    throw new Error('AI edit is not available yet');
   }
 
   /** Fetch the current state of a generation/edit job. */

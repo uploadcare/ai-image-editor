@@ -111,6 +111,24 @@ describe('UploadcareDerivativeApi', () => {
     expect(result.url).toBe('https://cdn.example.com/xyz/');
   });
 
+  it('returns an UploadcareFile on the result (with camelized fields)', async () => {
+    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [
+      { status: 'success', uuid: 'final-uuid', original_filename: 'f.png', is_image: true },
+    ]);
+    const provider = new UploadcareDerivativeApi({
+      publicKey: 'pk',
+      cdnBaseUrl: 'https://cdn.example.com',
+      fetch: fetchImpl,
+      ...NO_DELAY,
+    });
+    const result = await provider.generate({ prompt: 'x', capability: 'generate' });
+    expect(result.file.uuid).toBe('final-uuid');
+    expect(result.file.cdnUrl).toBe('https://cdn.example.com/final-uuid/');
+    expect(result.file.originalFilename).toBe('f.png');
+    expect(result.file.isImage).toBe(true);
+    expect(result.url).toBe('https://cdn.example.com/final-uuid/');
+  });
+
   it('derives the CDN base from the public key when cdnBaseUrl is left at the default', async () => {
     const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'final-uuid' }]);
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
@@ -119,10 +137,10 @@ describe('UploadcareDerivativeApi', () => {
     expect(result.url).toBe(`${base}/final-uuid/`);
   });
 
-  it('throws when the success status has no usable URL or uuid', async () => {
+  it('throws when the success status has no uuid', async () => {
     const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success' }]);
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await expect(provider.generate({ prompt: 'x', capability: 'generate' })).rejects.toThrow(/usable URL/);
+    await expect(provider.generate({ prompt: 'x', capability: 'generate' })).rejects.toThrow(/uuid/);
   });
 
   it('surfaces non-2xx generate responses with status text', async () => {
@@ -191,35 +209,19 @@ describe('UploadcareDerivativeApi', () => {
   });
 
   describe('edit mode', () => {
-    it('routes edit-mode capabilities to the edit endpoint with the source image', async () => {
-      const fetchImpl = routedFetch({ type: 'job', job_id: 'edit-1' }, [{ status: 'success', uuid: 'edited' }]);
-      const provider = new UploadcareDerivativeApi({
-        publicKey: 'pk',
-        cdnBaseUrl: 'https://cdn.example.com',
-        fetch: fetchImpl,
-        ...NO_DELAY,
-      });
-
-      const result = await provider.generate({
-        prompt: 'remove the cat',
-        capability: 'object-remove',
-        sourceUrl: 'https://ucarecdn.com/src/',
-      });
-
-      expect(result.url).toBe('https://cdn.example.com/edited/');
-      const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect(url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-      expect(readSentBody(init)).toMatchObject({
-        pub_key: 'pk',
-        prompt: 'remove the cat',
-        image_url: 'https://ucarecdn.com/src/',
-      });
-    });
-
-    it('throws when an edit request has no source image', async () => {
+    // AI edit is not available yet — every edit-mode capability throws before
+    // touching the network. Restore the routing / source-image tests when the
+    // edit endpoint lands.
+    it('throws for edit-mode capabilities without sending any request', async () => {
       const fetchImpl = routedFetch({ type: 'job', job_id: 'j' }, [{ status: 'success', uuid: 'x' }]);
       const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-      await expect(provider.generate({ prompt: 'x', capability: 'bg-replace' })).rejects.toThrow(/source image/i);
+      await expect(
+        provider.generate({
+          prompt: 'remove the cat',
+          capability: 'object-remove',
+          sourceUrl: 'https://ucarecdn.com/src/',
+        }),
+      ).rejects.toThrow(/not available yet/i);
       expect(fetchImpl).not.toHaveBeenCalled();
     });
   });

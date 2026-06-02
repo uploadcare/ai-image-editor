@@ -44,6 +44,30 @@ function applyUploaderTheme(editor: HTMLElement): void {
   }
 }
 
+const MODAL_SIZE_STYLE_ID = 'uc-ai-enhancer-modal-size';
+
+/**
+ * Maximize the uploader modal by default while this plugin is installed, so the
+ * AI editor activity gets full room. Injected once as an unlayered rule, which
+ * overrides the theme's layered (`@layer uc.base`) `:where([uc-wgt-common])`
+ * dialog-size defaults.
+ */
+function ensureMaxModalSize(): void {
+  if (typeof document === 'undefined' || document.getElementById(MODAL_SIZE_STYLE_ID)) {
+    return;
+  }
+  const style = document.createElement('style');
+  style.id = MODAL_SIZE_STYLE_ID;
+  style.textContent = [
+    '[uc-wgt-common] {',
+    '  --uc-dialog-width: 100vw;',
+    '  --uc-dialog-max-width: 100vw;',
+    '  --uc-dialog-max-height: 100vh;',
+    '}',
+  ].join('\n');
+  document.head.appendChild(style);
+}
+
 export type AiEditorActivityParams = {
   mode?: 'generate' | 'edit';
   src?: string;
@@ -58,12 +82,6 @@ declare module '@uploadcare/file-uploader' {
   interface CustomActivities {
     [AI_ENHANCER_ID]: { params: AiEditorActivityParams };
   }
-}
-
-async function urlToFile(url: string, name: string): Promise<File> {
-  const res = await fetch(url);
-  const blob = await res.blob();
-  return new File([blob], name, { type: blob.type || 'image/jpeg' });
 }
 
 /**
@@ -94,6 +112,8 @@ export const AiEnhancerPlugin: UploaderPlugin = {
   id: AI_ENHANCER_ID,
   setup: ({ pluginApi, uploaderApi }) => {
     const { registry, config } = pluginApi;
+
+    ensureMaxModalSize();
 
     registry.registerIcon({ name: 'ai-generate', svg: ICON_GENERATE });
     registry.registerIcon({ name: 'ai-edit', svg: ICON_EDIT_AI });
@@ -162,20 +182,23 @@ export const AiEnhancerPlugin: UploaderPlugin = {
       },
     });
 
-    registry.registerFileAction({
-      id: AI_ENHANCER_ID,
-      icon: 'ai-edit',
-      label: 'ai-enhancer-file-action-label',
-      shouldRender: (fileEntry) => Boolean(fileEntry.isImage && fileEntry.cdnUrl),
-      onClick: (fileEntry) => {
-        uploaderApi.setCurrentActivity(AI_ENHANCER_ID, {
-          mode: 'edit',
-          src: fileEntry.cdnUrl ?? undefined,
-          internalId: fileEntry.internalId,
-        });
-        uploaderApi.setModalState(true);
-      },
-    });
+    // The AI edit file-action button is temporarily disabled: AI edit is not
+    // available yet (the platform endpoint does not exist). Re-enable this once
+    // the edit API lands — it's the only public entry point into `mode: 'edit'`.
+    // registry.registerFileAction({
+    //   id: AI_ENHANCER_ID,
+    //   icon: 'ai-edit',
+    //   label: 'ai-enhancer-file-action-label',
+    //   shouldRender: (fileEntry) => Boolean(fileEntry.isImage && fileEntry.cdnUrl),
+    //   onClick: (fileEntry) => {
+    //     uploaderApi.setCurrentActivity(AI_ENHANCER_ID, {
+    //       mode: 'edit',
+    //       src: fileEntry.cdnUrl ?? undefined,
+    //       internalId: fileEntry.internalId,
+    //     });
+    //     uploaderApi.setModalState(true);
+    //   },
+    // });
 
     registry.registerActivity({
       id: AI_ENHANCER_ID,
@@ -196,6 +219,7 @@ export const AiEnhancerPlugin: UploaderPlugin = {
           editor.pubkey = config.get('pubkey');
           editor.baseUrl = config.get('baseUrl');
           editor.cdnCname = config.get('cdnCname');
+          editor.cdnCnamePrefixed = config.get('cdnCnamePrefixed');
         };
         refreshProviderConfig();
         void resolveEditorL10n().then((l10n) => {
@@ -213,6 +237,7 @@ export const AiEnhancerPlugin: UploaderPlugin = {
           config.subscribe('pubkey', refreshProviderConfig),
           config.subscribe('baseUrl', refreshProviderConfig),
           config.subscribe('cdnCname', refreshProviderConfig),
+          config.subscribe('cdnCnamePrefixed', refreshProviderConfig),
           config.subscribe('localeName', refreshL10n),
           config.subscribe('localeDefinitionOverride', refreshL10n),
           config.subscribe('cropPreset', (value) => {
@@ -220,21 +245,13 @@ export const AiEnhancerPlugin: UploaderPlugin = {
           }),
         ];
 
-        const onDone = async (e: Event) => {
-          const detail = (e as CustomEvent<DoneDetail>).detail;
-          try {
-            const file = await urlToFile(
-              detail.url,
-              detail.prompt ? `${detail.prompt.slice(0, 32).trim() || 'ai-image'}.jpg` : 'ai-image.jpg',
-            );
-            uploaderApi.addFileFromObject(file, { source: AI_ENHANCER_ID });
-            uploaderApi.setCurrentActivity('upload-list');
-            uploaderApi.setModalState(true);
-          } catch (err) {
-            editor.dispatchEvent(
-              new CustomEvent('uc:error', { detail: { error: err }, bubbles: true, composed: true }),
-            );
-          }
+        const onDone = (e: Event) => {
+          const { file } = (e as CustomEvent<DoneDetail>).detail;
+          // The result is already stored on Uploadcare — add it by uuid instead
+          // of re-downloading and re-uploading the bytes.
+          uploaderApi.addFileFromUuid(file.uuid, { source: AI_ENHANCER_ID });
+          uploaderApi.setCurrentActivity('upload-list');
+          uploaderApi.setModalState(true);
         };
 
         const onCancel = () => {

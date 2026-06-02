@@ -1,5 +1,5 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { page } from '@vitest/browser/context';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, delay, getCtxName } from './test-renderer';
 
 const TEST_IMAGE_URL =
@@ -45,9 +45,7 @@ beforeAll(async () => {
   UC.defineComponents(UC);
   // The uploader bundles only English by default; define its German locale so
   // switching `localeName` to "de" doesn't throw "Locale de is not defined".
-  UC.defineLocale('de', () =>
-    import('@uploadcare/file-uploader/locales/file-uploader/de.js').then((m) => m.default),
-  );
+  UC.defineLocale('de', () => import('@uploadcare/file-uploader/locales/file-uploader/de.js').then((m) => m.default));
   // Registers <uc-ai-editor> and sub-elements
   await import('../src/index');
 });
@@ -128,7 +126,10 @@ describe('AiEnhancerPlugin', () => {
     cleanup();
   });
 
-  it('opens the editor in edit mode when the AI Edit file action is clicked', async () => {
+  // AI edit is not available yet, so the AI Edit file-action button is disabled.
+  // Re-enable this test (and the file action in AiEnhancerPlugin) once the edit
+  // endpoint lands.
+  it.skip('opens the editor in edit mode when the AI Edit file action is clicked', async () => {
     const { AiEnhancerPlugin } = await import('../src/plugin');
     await renderUploader([AiEnhancerPlugin]);
     const api = getApi();

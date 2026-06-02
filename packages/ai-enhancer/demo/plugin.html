@@ -13,63 +13,74 @@
     body {
       font-family: system-ui, -apple-system, sans-serif;
       padding: 24px;
-      max-width: 720px;
-      margin: 0 auto;
+      margin: 0;
       background: light-dark(#ffffff, #121213);
       color: light-dark(#181818, #ffffff);
     }
-    h1 { font-weight: 500; }
-    p { color: light-dark(#4b5563, #9ca3af); }
-    .toolbar {
-      display: flex;
-      gap: 12px;
-      margin: 0 0 16px;
-      font-size: 13px;
-    }
-  </style>
+</style>
 </head>
 <body>
-  <h1>AI Enhancer — File Uploader Plugin</h1>
-  <p>Click <strong>Generate image</strong> as an upload source, or click the AI icon next to an uploaded image to edit it.</p>
-
-  <div class="toolbar">
-    <label>
-      Theme
-      <select id="theme">
-        <option value="auto">auto (system)</option>
-        <option value="light">light</option>
-        <option value="dark">dark</option>
-      </select>
+  <demo-shell
+    heading="AI Enhancer — File Uploader Plugin"
+    description="Click Generate image as an upload source to create an image with AI."
+  >
+    <label slot="controls">
+      Locale
+      <select id="locale"></select>
     </label>
-  </div>
+
+    <uc-file-uploader-regular ctx-name="my-uploader"></uc-file-uploader-regular>
+    <uc-config
+      ctx-name="my-uploader"
+      pubkey="90c654b71e238b7a4023"
+      base-url="https://upload.staging0.uploadcare.com"
+      cdn-cname-prefixed="https://staging0.ucarecd.net"
+      debug
+      test-mode
+      source-list="local, url, camera, ai-enhancer"
+    ></uc-config>
+    <uc-upload-ctx-provider ctx-name="my-uploader"></uc-upload-ctx-provider>
+  </demo-shell>
 
   <script type="module">
-    document.getElementById('theme').addEventListener('change', (e) => {
-      document.body.classList.remove('uc-light', 'uc-dark');
-      if (e.target.value !== 'auto') document.body.classList.add(`uc-${e.target.value}`);
-    });
-  </script>
-
-  <script type="module">
+    import './demo-shell.ts';
     import '@uploadcare/file-uploader/web/uc-file-uploader-regular.min.css';
     import * as UC from '@uploadcare/file-uploader';
     import { AiEnhancerPlugin } from '../src/plugin.ts';
+    import { SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
 
     UC.defineComponents(UC);
 
+    // The uploader ships only English eagerly; register a lazy resolver for every
+    // other locale so switching `localeName` actually re-languages the uploader UI.
+    // (The AI-enhancer editor strings are loaded separately by the plugin.)
+    // Vite globs the package's shipped locale definitions (a bare-specifier
+    // template `import()` can't be statically analyzed, so it never loads).
+    const uploaderLocales = import.meta.glob(
+      '../../../node_modules/@uploadcare/file-uploader/dist/locales/file-uploader/*.js',
+    );
+    for (const [path, load] of Object.entries(uploaderLocales)) {
+      const name = path.split('/').pop().replace(/\.js$/, '');
+      if (name === 'en') continue;
+      UC.defineLocale(name, () => load().then((m) => m.default));
+    }
+
     const config = document.querySelector('uc-config');
     config.plugins = [AiEnhancerPlugin];
-  </script>
 
-  <uc-file-uploader-regular ctx-name="my-uploader"></uc-file-uploader-regular>
-  <uc-config
-    ctx-name="my-uploader"
-    pubkey="demopublickey"
-    base-url="https://upload.staging0.uploadcare.com"
-    debug
-    test-mode
-    source-list="local, url, camera, ai-generate"
-  ></uc-config>
-  <uc-upload-ctx-provider ctx-name="my-uploader"></uc-upload-ctx-provider>
+    // The plugin syncs the editor's locale (and the uploader's labels) from the
+    // uploader config's `localeName`, so the chooser just drives that.
+    const localeSelect = document.getElementById('locale');
+    for (const name of SUPPORTED_LOCALES) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      localeSelect.append(opt);
+    }
+    localeSelect.value = 'en';
+    localeSelect.addEventListener('change', (e) => {
+      config.localeName = e.target.value;
+    });
+  </script>
 </body>
 </html>

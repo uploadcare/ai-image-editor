@@ -14,13 +14,14 @@ async function mount(url: string | null, errorLabel = 'Failed to load'): Promise
 const preloadImg = (el: UcAiCanvas) => el.shadowRoot!.querySelector('img.preload');
 const shownImg = (el: UcAiCanvas) => el.shadowRoot!.querySelector('img.shown');
 const errorState = (el: UcAiCanvas) => el.shadowRoot!.querySelector('.error-state');
-const loader = (el: UcAiCanvas) => el.shadowRoot!.querySelector('.busy-overlay');
+const loaderActive = (el: UcAiCanvas) =>
+  el.shadowRoot!.querySelector('.busy-overlay')!.classList.contains('busy-overlay--active');
 
 describe('UcAiCanvas', () => {
   it('shows a loader and preloads the new url before displaying it', async () => {
     const el = await mount('https://example.com/a.png');
     // Before load: loader visible, nothing shown yet, preloader present.
-    expect(loader(el)).toBeTruthy();
+    expect(loaderActive(el)).toBe(true);
     expect(shownImg(el)).toBeNull();
     expect(preloadImg(el)).toBeTruthy();
 
@@ -29,7 +30,7 @@ describe('UcAiCanvas', () => {
 
     // After load: the image is shown, loader and preloader are gone.
     expect(shownImg(el)?.getAttribute('src')).toBe('https://example.com/a.png');
-    expect(loader(el)).toBeNull();
+    expect(loaderActive(el)).toBe(false);
     expect(preloadImg(el)).toBeNull();
   });
 
@@ -43,7 +44,7 @@ describe('UcAiCanvas', () => {
     el.url = 'https://example.com/b.png';
     await el.updateComplete;
     expect(shownImg(el)?.getAttribute('src')).toBe('https://example.com/a.png');
-    expect(loader(el)).toBeTruthy();
+    expect(loaderActive(el)).toBe(true);
     expect(preloadImg(el)?.getAttribute('src')).toBe('https://example.com/b.png');
 
     preloadImg(el)!.dispatchEvent(new Event('load'));
@@ -62,7 +63,7 @@ describe('UcAiCanvas', () => {
     expect(onError).toHaveBeenCalledOnce();
     expect((onError.mock.calls[0]![0] as CustomEvent).detail.url).toBe('https://example.com/broken.png');
     expect(errorState(el)?.textContent).toContain('Failed to load');
-    expect(loader(el)).toBeNull();
+    expect(loaderActive(el)).toBe(false);
   });
 
   it('clears the error and retries when the url changes', async () => {
@@ -82,6 +83,6 @@ describe('UcAiCanvas', () => {
     const el = await mount(null);
     el.busy = true;
     await el.updateComplete;
-    expect(loader(el)).toBeTruthy();
+    expect(loaderActive(el)).toBe(true);
   });
 });
