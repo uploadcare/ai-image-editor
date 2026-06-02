@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Búa til mynd...',
   'ai-enhancer-edit-placeholder': 'Breyta mynd...',
   'ai-enhancer-cancel': 'Hætta við',
-  'ai-enhancer-generate-btn': 'Hlaða upp',
+  'ai-enhancer-generate-btn': 'Búa til',
   'ai-enhancer-done-btn': 'Lokið',
   'ai-enhancer-history-empty': 'Engar leiðbeiningar enn',
   'ai-enhancer-history-title': 'Nýlegar leiðbeiningar',

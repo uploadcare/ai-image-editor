@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Сурет жасау...',
   'ai-enhancer-edit-placeholder': 'Суретті өңдеу...',
   'ai-enhancer-cancel': 'Бас тарту',
-  'ai-enhancer-generate-btn': 'Жүктеу',
+  'ai-enhancer-generate-btn': 'Жасау',
   'ai-enhancer-done-btn': 'Дайын',
   'ai-enhancer-history-empty': 'Әзірге сұраулар жоқ',
   'ai-enhancer-history-title': 'Соңғы сұраулар',

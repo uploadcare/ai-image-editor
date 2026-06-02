@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Izveidot attēlu...',
   'ai-enhancer-edit-placeholder': 'Rediģēt attēlu...',
   'ai-enhancer-cancel': 'Atcelt',
-  'ai-enhancer-generate-btn': 'Augšupielādēt',
+  'ai-enhancer-generate-btn': 'Ģenerēt',
   'ai-enhancer-done-btn': 'Gatavs',
   'ai-enhancer-history-empty': 'Vēl nav uzvedņu',
   'ai-enhancer-history-title': 'Nesenās uzvednes',

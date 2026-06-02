@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Créer une image...',
   'ai-enhancer-edit-placeholder': 'Modifier l’image...',
   'ai-enhancer-cancel': 'Annuler',
-  'ai-enhancer-generate-btn': 'Téléverser',
+  'ai-enhancer-generate-btn': 'Générer',
   'ai-enhancer-done-btn': 'Terminé',
   'ai-enhancer-history-empty': 'Aucune invite pour le moment',
   'ai-enhancer-history-title': 'Invites récentes',

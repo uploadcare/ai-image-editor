@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Crea una imatge...',
   'ai-enhancer-edit-placeholder': 'Edita la imatge...',
   'ai-enhancer-cancel': 'Cancel·la',
-  'ai-enhancer-generate-btn': 'Puja',
+  'ai-enhancer-generate-btn': 'Genera',
   'ai-enhancer-done-btn': 'Fet',
   'ai-enhancer-history-empty': 'Encara no hi ha indicacions',
   'ai-enhancer-history-title': 'Indicacions recents',

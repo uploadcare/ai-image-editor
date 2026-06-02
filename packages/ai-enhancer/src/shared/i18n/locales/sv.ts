@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Skapa bild...',
   'ai-enhancer-edit-placeholder': 'Redigera bild...',
   'ai-enhancer-cancel': 'Avbryt',
-  'ai-enhancer-generate-btn': 'Ladda upp',
+  'ai-enhancer-generate-btn': 'Generera',
   'ai-enhancer-done-btn': 'Klar',
   'ai-enhancer-history-empty': 'Inga prompts ännu',
   'ai-enhancer-history-title': 'Senaste prompts',

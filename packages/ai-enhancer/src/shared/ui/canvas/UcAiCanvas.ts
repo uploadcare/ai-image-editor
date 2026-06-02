@@ -40,6 +40,19 @@ export class UcAiCanvas extends LitElement {
   @state()
   private _failed = false;
 
+  /**
+   * Safety net for dropping the outgoing layer: the cross-fade normally clears
+   * it on `animationend`, but that never fires when the fade is disabled
+   * (`prefers-reduced-motion`) or interrupted — which would leave the old image
+   * stranded underneath the new one.
+   */
+  private _dropPreviousTimer?: ReturnType<typeof setTimeout>;
+
+  public override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    clearTimeout(this._dropPreviousTimer);
+  }
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (!changed.has('url')) return;
 
@@ -59,13 +72,29 @@ export class UcAiCanvas extends LitElement {
     const loaded = (e.currentTarget as HTMLImageElement).getAttribute('src');
     // Ignore a stale preload that resolved after `url` moved on.
     if (!loaded || loaded !== this.url) return;
-    if (loaded !== this._displayedUrl) this._previousUrl = this._displayedUrl;
+    if (loaded !== this._displayedUrl) {
+      // Keep the outgoing image underneath for the cross-fade — but not when
+      // motion is reduced, since there's no fade (and so no `animationend`) to
+      // clear it afterwards.
+      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+      this._previousUrl = reducedMotion ? null : this._displayedUrl;
+      if (this._previousUrl) this._scheduleDropPrevious();
+    }
     this._displayedUrl = loaded;
     this._loading = false;
   }
 
+  /** Guarantee the outgoing layer is dropped even if `animationend` never fires. */
+  private _scheduleDropPrevious(): void {
+    clearTimeout(this._dropPreviousTimer);
+    this._dropPreviousTimer = setTimeout(() => {
+      this._previousUrl = null;
+    }, 600);
+  }
+
   private _onFadeEnd(): void {
     // The incoming image is fully opaque now; drop the layer beneath it.
+    clearTimeout(this._dropPreviousTimer);
     this._previousUrl = null;
   }
 

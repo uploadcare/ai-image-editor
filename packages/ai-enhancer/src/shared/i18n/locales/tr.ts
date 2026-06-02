@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Görsel oluştur...',
   'ai-enhancer-edit-placeholder': 'Görseli düzenle...',
   'ai-enhancer-cancel': 'İptal',
-  'ai-enhancer-generate-btn': 'Yükle',
+  'ai-enhancer-generate-btn': 'Oluştur',
   'ai-enhancer-done-btn': 'Bitti',
   'ai-enhancer-history-empty': 'Henüz komut yok',
   'ai-enhancer-history-title': 'Son komutlar',

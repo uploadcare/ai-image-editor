@@ -121,7 +121,7 @@ describe('AiEnhancerPlugin', () => {
     await vi.waitFor(() => {
       const editor = document.querySelector('uc-ai-editor') as Editor | null;
       expect(editor?.l10nOverrides?.['ai-enhancer-cancel']).toBe('Abbrechen');
-      expect(editor?.l10nOverrides?.['ai-enhancer-generate-btn']).toBe('Hochladen');
+      expect(editor?.l10nOverrides?.['ai-enhancer-generate-btn']).toBe('Generieren');
     });
     cleanup();
   });

@@ -6,7 +6,7 @@ export const enLocale = {
   'ai-enhancer-generate-placeholder': 'Create image...',
   'ai-enhancer-edit-placeholder': 'Edit image...',
   'ai-enhancer-cancel': 'Cancel',
-  'ai-enhancer-generate-btn': 'Upload',
+  'ai-enhancer-generate-btn': 'Generate',
   'ai-enhancer-done-btn': 'Done',
   'ai-enhancer-history-empty': 'No prompts yet',
   'ai-enhancer-history-title': 'Recent prompts',

@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Vytvořit obrázek...',
   'ai-enhancer-edit-placeholder': 'Upravit obrázek...',
   'ai-enhancer-cancel': 'Zrušit',
-  'ai-enhancer-generate-btn': 'Nahrát',
+  'ai-enhancer-generate-btn': 'Vygenerovat',
   'ai-enhancer-done-btn': 'Hotovo',
   'ai-enhancer-history-empty': 'Zatím žádné prompty',
   'ai-enhancer-history-title': 'Poslední prompty',
