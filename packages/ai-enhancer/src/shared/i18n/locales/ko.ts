@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': '이미지 만들기...',
   'ai-enhancer-edit-placeholder': '이미지 편집...',
   'ai-enhancer-cancel': '취소',
-  'ai-enhancer-generate-btn': '업로드',
+  'ai-enhancer-generate-btn': '생성',
   'ai-enhancer-done-btn': '완료',
   'ai-enhancer-history-empty': '아직 프롬프트가 없습니다',
   'ai-enhancer-history-title': '최근 프롬프트',

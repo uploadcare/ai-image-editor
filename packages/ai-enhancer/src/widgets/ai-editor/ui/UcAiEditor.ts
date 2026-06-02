@@ -237,7 +237,9 @@ export class UcAiEditor extends LitElement {
 
   public override render(): TemplateResult {
     const placeholderKey = CAPABILITIES[this.capability].placeholderKey as keyof typeof enLocale;
-    const primaryLabelKey = this.mode === 'edit' ? 'ai-enhancer-done-btn' : 'ai-enhancer-generate-btn';
+    // The footer primary commits the current result; label it "Done" in both
+    // modes. (`ai-enhancer-generate-btn` stays the prompt-row send aria-label.)
+    const primaryLabelKey = 'ai-enhancer-done-btn';
     // The primary commits a generation result, so it's enabled only once one exists.
     const primaryDisabled = this._gen.busy || !this._gen.result;
 

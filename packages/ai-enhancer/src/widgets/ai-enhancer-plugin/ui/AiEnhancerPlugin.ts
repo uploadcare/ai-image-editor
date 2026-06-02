@@ -35,7 +35,6 @@ const UPLOADER_TOKEN_MAP: ReadonlyArray<readonly [aiToken: string, ucToken: stri
   ['--uc-ai-font-family', '--uc-font-family'],
   ['--uc-ai-font-size', '--uc-font-size'],
   ['--uc-ai-transition', '--uc-transition'],
-  ['--uc-ai-dialog-width', '--uc-dialog-width'],
 ];
 
 function applyUploaderTheme(editor: HTMLElement): void {
@@ -44,25 +43,29 @@ function applyUploaderTheme(editor: HTMLElement): void {
   }
 }
 
-const MODAL_SIZE_STYLE_ID = 'uc-ai-enhancer-modal-size';
+const ACTIVITY_SIZE_STYLE_ID = 'uc-ai-enhancer-activity-size';
 
 /**
- * Maximize the uploader modal by default while this plugin is installed, so the
- * AI editor activity gets full room. Injected once as an unlayered rule, which
- * overrides the theme's layered (`@layer uc.base`) `:where([uc-wgt-common])`
- * dialog-size defaults.
+ * Let the AI editor activity fill the uploader modal, mirroring how the uploader's
+ * own large activities (cloud-image-edit, camera, external) size themselves: a
+ * global rule matching the dialog that contains the active `ai-enhancer` activity.
+ * The uploader renders in light DOM, so this document-level rule reaches its modal.
+ * Scoped to this activity only — other activities and the inline uploader keep
+ * their default size.
  */
-function ensureMaxModalSize(): void {
-  if (typeof document === 'undefined' || document.getElementById(MODAL_SIZE_STYLE_ID)) {
+function ensureActivityModalSize(): void {
+  if (typeof document === 'undefined' || document.getElementById(ACTIVITY_SIZE_STYLE_ID)) {
     return;
   }
   const style = document.createElement('style');
-  style.id = MODAL_SIZE_STYLE_ID;
+  style.id = ACTIVITY_SIZE_STYLE_ID;
+  // The `:not(#\#)` pairs replicate the uploader's own specificity hack so this
+  // rule outranks the base `> dialog` width/height rules (matching how
+  // cloud-image-edit / camera / external size their modal).
   style.textContent = [
-    '[uc-wgt-common] {',
-    '  --uc-dialog-width: 100vw;',
-    '  --uc-dialog-max-width: 100vw;',
-    '  --uc-dialog-max-height: 100vh;',
+    `[uc-modal]:not(#\\#) > dialog:has([activity="${AI_ENHANCER_ID}"][active]) {`,
+    '  width: 100%;',
+    '  height: 100%;',
     '}',
   ].join('\n');
   document.head.appendChild(style);
@@ -113,7 +116,7 @@ export const AiEnhancerPlugin: UploaderPlugin = {
   setup: ({ pluginApi, uploaderApi }) => {
     const { registry, config } = pluginApi;
 
-    ensureMaxModalSize();
+    ensureActivityModalSize();
 
     registry.registerIcon({ name: 'ai-generate', svg: ICON_GENERATE });
     registry.registerIcon({ name: 'ai-edit', svg: ICON_EDIT_AI });
@@ -212,7 +215,6 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         const editor = document.createElement('uc-ai-editor') as UcAiEditor;
         editor.mode = params.mode ?? 'generate';
         if (params.src) editor.src = params.src;
-        editor.style.margin = 'auto';
         applyUploaderTheme(editor);
 
         const refreshProviderConfig = () => {

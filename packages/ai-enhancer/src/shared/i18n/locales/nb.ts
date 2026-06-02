@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Lag bilde...',
   'ai-enhancer-edit-placeholder': 'Rediger bilde...',
   'ai-enhancer-cancel': 'Avbryt',
-  'ai-enhancer-generate-btn': 'Last opp',
+  'ai-enhancer-generate-btn': 'Generer',
   'ai-enhancer-done-btn': 'Ferdig',
   'ai-enhancer-history-empty': 'Ingen prompts ennå',
   'ai-enhancer-history-title': 'Nylige prompts',

@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'სურათის შექმნა...',
   'ai-enhancer-edit-placeholder': 'სურათის რედაქტირება...',
   'ai-enhancer-cancel': 'გაუქმება',
-  'ai-enhancer-generate-btn': 'ატვირთვა',
+  'ai-enhancer-generate-btn': 'გენერაცია',
   'ai-enhancer-done-btn': 'მზადაა',
   'ai-enhancer-history-empty': 'ჯერ არ არის მოთხოვნები',
   'ai-enhancer-history-title': 'ბოლო მოთხოვნები',

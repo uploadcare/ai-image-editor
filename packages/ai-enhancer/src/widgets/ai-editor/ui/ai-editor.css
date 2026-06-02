@@ -25,11 +25,10 @@
   --uc-ai-font-family: system-ui, -apple-system, sans-serif;
   --uc-ai-font-size: 14px;
   --uc-ai-transition: 0.2s ease;
-  --uc-ai-dialog-width: 583px;
 
   display: block;
   width: 100%;
-  max-width: var(--uc-ai-dialog-width);
+  height: 100%;
   font-family: var(--uc-ai-font-family);
   font-size: var(--uc-ai-font-size);
   color: var(--uc-ai-foreground);
@@ -64,12 +63,27 @@
   border-radius: var(--uc-ai-radius);
   overflow: hidden;
   box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.1);
+  /*
+   * Fill the host when it's given an explicit height (e.g. the file-uploader
+   * plugin's maximized modal). When the host is content-height (standalone),
+   * a percentage height resolves to auto, so this is a no-op there.
+   */
+  height: 100%;
 }
 
 .body {
   display: flex;
   flex-direction: column;
   padding: var(--uc-ai-padding) var(--uc-ai-padding) 0;
+  /* Grow to fill the shell so the footer stays pinned to the bottom. */
+  flex: 1;
+  min-height: 0;
+}
+
+uc-ai-canvas {
+  /* Grow to fill the available body height (the image stays object-contain). */
+  flex: 1;
+  min-height: 0;
 }
 
 .body-inner {

@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Luo kuva...',
   'ai-enhancer-edit-placeholder': 'Muokkaa kuvaa...',
   'ai-enhancer-cancel': 'Peruuta',
-  'ai-enhancer-generate-btn': 'Lataa',
+  'ai-enhancer-generate-btn': 'Luo',
   'ai-enhancer-done-btn': 'Valmis',
   'ai-enhancer-history-empty': 'Ei vielä kehotteita',
   'ai-enhancer-history-title': 'Viimeisimmät kehotteet',

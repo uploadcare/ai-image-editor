@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': '建立圖片...',
   'ai-enhancer-edit-placeholder': '編輯圖片...',
   'ai-enhancer-cancel': '取消',
-  'ai-enhancer-generate-btn': '上傳',
+  'ai-enhancer-generate-btn': '生成',
   'ai-enhancer-done-btn': '完成',
   'ai-enhancer-history-empty': '尚無提示詞',
   'ai-enhancer-history-title': '最近的提示詞',

@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Ստեղծել պատկեր...',
   'ai-enhancer-edit-placeholder': 'Խմբագրել պատկերը...',
   'ai-enhancer-cancel': 'Չեղարկել',
-  'ai-enhancer-generate-btn': 'Վերբեռնել',
+  'ai-enhancer-generate-btn': 'Ստեղծել',
   'ai-enhancer-done-btn': 'Պատրաստ է',
   'ai-enhancer-history-empty': 'Դեռ հուշումներ չկան',
   'ai-enhancer-history-title': 'Վերջին հուշումները',

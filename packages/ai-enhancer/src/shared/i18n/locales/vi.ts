@@ -8,7 +8,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-placeholder': 'Tạo ảnh...',
   'ai-enhancer-edit-placeholder': 'Chỉnh sửa ảnh...',
   'ai-enhancer-cancel': 'Hủy',
-  'ai-enhancer-generate-btn': 'Tải lên',
+  'ai-enhancer-generate-btn': 'Tạo',
   'ai-enhancer-done-btn': 'Xong',
   'ai-enhancer-history-empty': 'Chưa có lời nhắc',
   'ai-enhancer-history-title': 'Lời nhắc gần đây',
