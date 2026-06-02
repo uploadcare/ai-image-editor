@@ -73,69 +73,16 @@ describe('UploadcareApiClient', () => {
   });
 
   describe('edit', () => {
-    it('POSTs pub_key + prompt + image_url to the edit endpoint and returns the job', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'edit-1' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
-
-      const job = await client.edit({
-        prompt: 'remove the cat',
-        imageUrl: 'https://ucarecdn.com/abc/',
-        filename: 'edited.png',
-      });
-
-      expect(job).toEqual({ type: 'job', job_id: 'edit-1' });
-      const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect(url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-      expect(init.method).toBe('POST');
-      expect(JSON.parse(init.body as string)).toMatchObject({
-        pub_key: 'pk',
-        prompt: 'remove the cat',
-        image_url: 'https://ucarecdn.com/abc/',
-        filename: 'edited.png',
-      });
-    });
-
-    it('includes aspect_ratio only when provided (e.g. outpaint)', async () => {
-      const fetchImpl = vi
-        .fn<typeof fetch>()
-        .mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
-
-      await client.edit({ prompt: 'extend', imageUrl: 'https://ucarecdn.com/abc/', filename: 'f.png' });
-      expect(JSON.parse((fetchImpl.mock.calls[0]![1] as RequestInit).body as string).aspect_ratio).toBeUndefined();
-
-      await client.edit({
-        prompt: 'extend',
-        imageUrl: 'https://ucarecdn.com/abc/',
-        filename: 'f.png',
-        aspectRatio: [16, 9],
-      });
-      expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).aspect_ratio).toEqual([16, 9]);
-    });
-
-    it('throws with status text on non-2xx', async () => {
-      const fetchImpl = vi
-        .fn<typeof fetch>()
-        .mockResolvedValue(new Response('nope', { status: 422, statusText: 'Unprocessable' }));
+    // AI edit is not available yet — `edit()` is a throwing placeholder and
+    // sends no request. Restore the request-shape / aspect-ratio / error /
+    // abort-signal tests when the edit endpoint lands.
+    it('throws because AI edit is not available yet, without sending a request', async () => {
+      const fetchImpl = vi.fn<typeof fetch>();
       const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
       await expect(
-        client.edit({ prompt: 'x', imageUrl: 'https://ucarecdn.com/abc/', filename: 'f.png' }),
-      ).rejects.toThrow(/422/);
-    });
-
-    it('forwards the abort signal', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
-        expect(init?.signal).toBeInstanceOf(AbortSignal);
-        return jsonResponse({ type: 'job', job_id: 'j' });
-      });
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
-      const controller = new AbortController();
-      await client.edit({
-        prompt: 'x',
-        imageUrl: 'https://ucarecdn.com/abc/',
-        filename: 'f.png',
-        signal: controller.signal,
-      });
+        client.edit({ prompt: 'remove the cat', imageUrl: 'https://ucarecdn.com/abc/', filename: 'edited.png' }),
+      ).rejects.toThrow(/not available yet/i);
+      expect(fetchImpl).not.toHaveBeenCalled();
     });
   });
 

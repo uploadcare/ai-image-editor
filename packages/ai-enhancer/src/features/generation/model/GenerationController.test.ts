@@ -1,7 +1,17 @@
+import { type FileInfo, UploadcareFile } from '@uploadcare/upload-client';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AiCapability } from '../../../entities/capability';
 import type { AiProvider, AiProviderResult } from '../../../entities/provider';
 import { GenerationController } from './GenerationController';
+
+const okResult = (url: string, prompt: string, capability: AiCapability = 'generate'): AiProviderResult => ({
+  url,
+  uuid: 'uuid-1',
+  prompt,
+  capability,
+  file: new UploadcareFile({ uuid: 'uuid-1' } as unknown as FileInfo),
+});
 
 class FakeHost implements ReactiveControllerHost {
   public requestUpdate = vi.fn();
@@ -66,7 +76,7 @@ describe('GenerationController', () => {
     const { provider, setNext } = createDeferredProvider();
     const run = ctrl.run({ provider, prompt: 'x', capability: 'generate' });
     expect(ctrl.busy).toBe(true);
-    setNext({ url: 'https://example.com/a.jpg', prompt: 'x', capability: 'generate' });
+    setNext(okResult('https://example.com/a.jpg', 'x'));
     await run;
     expect(ctrl.busy).toBe(false);
   });
@@ -75,9 +85,9 @@ describe('GenerationController', () => {
     const ctrl = new GenerationController(host);
     const { provider, setNext } = createDeferredProvider();
     const run = ctrl.run({ provider, prompt: 'mountain', capability: 'generate' });
-    setNext({ url: 'https://example.com/mountain.jpg', prompt: 'mountain', capability: 'generate' });
+    setNext(okResult('https://example.com/mountain.jpg', 'mountain'));
     const result = await run;
-    expect(result).toEqual({ url: 'https://example.com/mountain.jpg', prompt: 'mountain', capability: 'generate' });
+    expect(result).toEqual(okResult('https://example.com/mountain.jpg', 'mountain'));
     expect(ctrl.resultUrl).toBe('https://example.com/mountain.jpg');
     expect(ctrl.history).toHaveLength(1);
     expect(ctrl.history[0]).toMatchObject({
@@ -94,7 +104,7 @@ describe('GenerationController', () => {
     const first = ctrl.run({ provider, prompt: 'a', capability: 'generate' });
     const second = await ctrl.run({ provider, prompt: 'b', capability: 'generate' });
     expect(second).toBeNull();
-    setNext({ url: 'https://example.com/a.jpg', prompt: 'a', capability: 'generate' });
+    setNext(okResult('https://example.com/a.jpg', 'a'));
     await first;
   });
 
@@ -102,7 +112,7 @@ describe('GenerationController', () => {
     const ctrl = new GenerationController(host);
     const provider: AiProvider = {
       id: 'fake',
-      generate: async ({ prompt, capability }) => ({ url: `https://example.com/${prompt}.jpg`, prompt, capability }),
+      generate: async ({ prompt, capability }) => okResult(`https://example.com/${prompt}.jpg`, prompt, capability),
     };
     for (let i = 0; i < 25; i++) {
       await ctrl.run({ provider, prompt: `prompt-${i}`, capability: 'generate' });
@@ -145,7 +155,7 @@ describe('GenerationController', () => {
     const ctrl = new GenerationController(host);
     const provider: AiProvider = {
       id: 'fake',
-      generate: async ({ prompt, capability }) => ({ url: 'https://example.com/x.jpg', prompt, capability }),
+      generate: async ({ prompt, capability }) => okResult('https://example.com/x.jpg', prompt, capability),
     };
     await ctrl.run({ provider, prompt: 'x', capability: 'generate' });
     expect(ctrl.resultUrl).not.toBeNull();
@@ -158,7 +168,7 @@ describe('GenerationController', () => {
   it('setResult() updates resultUrl and requests an update', () => {
     const ctrl = new GenerationController(host);
     host.requestUpdate.mockClear();
-    ctrl.setResult('https://example.com/from-history.jpg');
+    ctrl.setResult(okResult('https://example.com/from-history.jpg', 'from history'));
     expect(ctrl.resultUrl).toBe('https://example.com/from-history.jpg');
     expect(host.requestUpdate).toHaveBeenCalled();
   });
@@ -175,7 +185,7 @@ describe('GenerationController', () => {
     const ctrl = new GenerationController(host);
     const provider: AiProvider = {
       id: 'fake',
-      generate: async ({ prompt, capability }) => ({ url: 'https://example.com/x.jpg', prompt, capability }),
+      generate: async ({ prompt, capability }) => okResult('https://example.com/x.jpg', prompt, capability),
     };
     host.requestUpdate.mockClear();
     await ctrl.run({ provider, prompt: 'x', capability: 'generate' });

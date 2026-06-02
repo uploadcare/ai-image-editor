@@ -1,12 +1,10 @@
 import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-prefix/async';
+import { type FileInfo, UploadcareFile } from '@uploadcare/upload-client';
+import { camelizeKeys } from '../../../shared/lib/camelizeKeys';
 import { type AspectRatio, isValidAspectRatio } from '../../aspect-ratio';
 import { CAPABILITIES } from '../../capability';
 import type { AiProvider, AiProviderRequest, AiProviderResult } from '../model/types';
-import {
-  UploadcareApiClient,
-  type UploadcareJobResponse,
-  type UploadcareJobSuccessStatus,
-} from './uploadcareApiClient';
+import { UploadcareApiClient, type UploadcareJobResponse } from './uploadcareApiClient';
 
 const DEFAULT_RATIO: AspectRatio = [1, 1];
 const DEFAULT_CDN_CNAME = 'https://ucarecdn.com';
@@ -111,28 +109,20 @@ export class UploadcareDerivativeApi implements AiProvider {
       request.aspectRatio && isValidAspectRatio(request.aspectRatio) ? request.aspectRatio : DEFAULT_RATIO;
     const aspectRatio: [number, number] = [ratio[0], ratio[1]];
 
-    let job: UploadcareJobResponse;
+    // AI edit (image→image) is not available yet — the platform endpoint does
+    // not exist. Placeholder until the backend lands; the editor/plugin no
+    // longer expose edit publicly. See the deferred edit-mode API note.
     if (CAPABILITIES[request.capability].mode === 'edit') {
-      if (!request.sourceUrl) {
-        throw new Error(`Uploadcare edit (${request.capability}): a source image URL is required`);
-      }
-      job = await this.api.edit({
-        prompt: request.prompt,
-        imageUrl: request.sourceUrl,
-        aspectRatio: request.aspectRatio ? aspectRatio : undefined,
-        filename: this.filename,
-        store: this.store,
-        signal: request.signal,
-      });
-    } else {
-      job = await this.api.generate({
-        prompt: request.prompt,
-        aspectRatio,
-        filename: this.filename,
-        store: this.store,
-        signal: request.signal,
-      });
+      throw new Error(`Uploadcare edit (${request.capability}): AI edit is not available yet`);
     }
+
+    const job: UploadcareJobResponse = await this.api.generate({
+      prompt: request.prompt,
+      aspectRatio,
+      filename: this.filename,
+      store: this.store,
+      signal: request.signal,
+    });
 
     if (!job.job_id) {
       throw new Error('Uploadcare derivative: response did not include a job_id');
@@ -146,11 +136,12 @@ export class UploadcareDerivativeApi implements AiProvider {
       const status = await this.api.getJobStatus(jobId, request.signal);
 
       if (status.status === 'success') {
-        const url = await this.resolveSuccessUrl(status);
-        if (!url) {
-          throw new Error('Uploadcare derivative: response did not include a usable URL or uuid');
+        if (!status.uuid) {
+          throw new Error('Uploadcare derivative: response did not include a uuid');
         }
-        return { url, prompt: request.prompt, capability: request.capability };
+        const fileInfo = camelizeKeys(status) as unknown as FileInfo;
+        const file = new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
+        return { url: file.cdnUrl, uuid: file.uuid, prompt: request.prompt, capability: request.capability, file };
       }
 
       if (status.status === 'error') {
@@ -180,11 +171,5 @@ export class UploadcareDerivativeApi implements AiProvider {
           : Promise.resolve(this.cname);
     }
     return this.cdnBasePromise;
-  }
-
-  private async resolveSuccessUrl(status: UploadcareJobSuccessStatus): Promise<string | null> {
-    const id = status.uuid ?? status.file;
-    if (!id) return null;
-    return new URL(`/${id}/`, await this.getCdnBase()).href;
   }
 }

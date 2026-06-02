@@ -1,5 +1,5 @@
+import type { UploadcareFile } from '@uploadcare/upload-client';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-
 import type { AspectRatio } from '../../../entities/aspect-ratio';
 import type { AiCapability } from '../../../entities/capability';
 import type { AiProvider, AiProviderResult } from '../../../entities/provider';
@@ -9,6 +9,7 @@ export type HistoryEntry = {
   prompt: string;
   capability: AiCapability;
   url: string;
+  file: UploadcareFile;
 };
 
 export type RunArgs = {
@@ -24,6 +25,8 @@ const MAX_HISTORY = 20;
 export class GenerationController implements ReactiveController {
   public busy = false;
   public resultUrl: string | null = null;
+  /** The last successful generation result, including its raw response. */
+  public result: AiProviderResult | null = null;
   public error: string | null = null;
   public history: HistoryEntry[] = [];
 
@@ -52,12 +55,14 @@ export class GenerationController implements ReactiveController {
   public reset(): void {
     this.abort();
     this.resultUrl = null;
+    this.result = null;
     this.error = null;
     this._host.requestUpdate();
   }
 
-  public setResult(url: string): void {
-    this.resultUrl = url;
+  public setResult(result: AiProviderResult): void {
+    this.resultUrl = result.url;
+    this.result = result;
     this._host.requestUpdate();
   }
 
@@ -80,8 +85,15 @@ export class GenerationController implements ReactiveController {
       });
       if (controller.signal.aborted) return null;
       this.resultUrl = result.url;
+      this.result = result;
       this.history = [
-        { id: crypto.randomUUID(), prompt: result.prompt, capability: result.capability, url: result.url },
+        {
+          id: crypto.randomUUID(),
+          prompt: result.prompt,
+          capability: result.capability,
+          url: result.url,
+          file: result.file,
+        },
         ...this.history,
       ].slice(0, MAX_HISTORY);
       return result;

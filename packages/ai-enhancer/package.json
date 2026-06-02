@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@uploadcare/cname-prefix": "^6.18.4",
+    "@uploadcare/upload-client": "^6.18.4",
     "lit": "^3.2.1"
   },
   "peerDependencies": {
