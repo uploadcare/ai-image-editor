@@ -2,11 +2,29 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
   if (command === 'serve') {
     return {
       root: resolve(__dirname, 'demo'),
       server: { open: '/standalone.html' },
+    };
+  }
+
+  // Static demo site build: vite build --mode demo
+  if (mode === 'demo') {
+    return {
+      root: resolve(__dirname, 'demo'),
+      build: {
+        outDir: resolve(__dirname, 'dist-demo'),
+        emptyOutDir: true,
+        rollupOptions: {
+          input: {
+            index: resolve(__dirname, 'demo/index.html'),
+            standalone: resolve(__dirname, 'demo/standalone.html'),
+            plugin: resolve(__dirname, 'demo/plugin.html'),
+          },
+        },
+      },
     };
   }
 
