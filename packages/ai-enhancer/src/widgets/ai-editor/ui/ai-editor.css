@@ -26,7 +26,7 @@
   --uc-ai-font-size: 14px;
   --uc-ai-transition: 0.2s ease;
   /* Prompt textarea growth cap: N lines of text plus its vertical padding. */
-  --uc-ai-prompt-max-lines: 4;
+  --uc-ai-prompt-max-lines: 6;
   --uc-ai-prompt-max-height: calc(var(--uc-ai-prompt-max-lines) * 1.5em + 10px);
 
   display: block;
