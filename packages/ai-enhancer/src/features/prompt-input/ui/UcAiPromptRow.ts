@@ -1,4 +1,4 @@
-import { html, LitElement, nothing, type TemplateResult, unsafeCSS } from 'lit';
+import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
@@ -34,22 +34,43 @@ export class UcAiPromptRow extends LitElement {
   public sendAriaLabel = '';
 
   @query('.input')
-  private _inputEl?: HTMLInputElement;
+  private _inputEl?: HTMLTextAreaElement;
 
   public focusInput(): void {
     this._inputEl?.focus();
   }
 
+  protected override updated(changed: PropertyValues<this>): void {
+    // Covers programmatic value changes (template chips, history) as well as typing.
+    if (changed.has('value')) {
+      this._resize();
+    }
+  }
+
+  /**
+   * Auto-grow fallback for browsers without `field-sizing: content` support.
+   * The CSS `max-height` caps the growth; overflow scrolls internally.
+   */
+  private _resize(): void {
+    const el = this._inputEl;
+    if (!el || CSS.supports('field-sizing', 'content')) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
   private _onInput(e: Event): void {
-    const value = (e.target as HTMLInputElement).value;
+    const value = (e.target as HTMLTextAreaElement).value;
     this.value = value;
     this.dispatchEvent(
       new CustomEvent<PromptInputDetail>('uc:input', { detail: { value }, bubbles: true, composed: true }),
     );
+    this._resize();
   }
 
   private _onKeydown(e: KeyboardEvent): void {
-    if (e.key === 'Enter' && this.value.trim()) {
+    // Enter sends; Shift+Enter falls through and inserts a newline natively.
+    // Ignore Enter that confirms an IME composition candidate.
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && this.value.trim()) {
       e.preventDefault();
       this._emitSend();
     }
@@ -75,6 +96,7 @@ export class UcAiPromptRow extends LitElement {
               <button
                 type="button"
                 class="icon-btn"
+                data-testid="history-btn"
                 aria-label="${this.historyAriaLabel}"
                 aria-expanded="${this.historyOpen}"
                 @click=${this._emitToggleHistory}
@@ -85,9 +107,9 @@ export class UcAiPromptRow extends LitElement {
             `
             : nothing
         }
-        <input
+        <textarea
           class="input"
-          type="text"
+          rows="1"
           .value=${this.value}
           placeholder="${this.placeholder}"
           aria-label="${this.placeholder}"
@@ -102,7 +124,7 @@ export class UcAiPromptRow extends LitElement {
           @input=${this._onInput}
           @keydown=${this._onKeydown}
           ?disabled=${this.busy}
-        />
+        ></textarea>
         <slot name="aspect-ratio"></slot>
         ${
           showArrow

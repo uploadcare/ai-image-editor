@@ -58,7 +58,7 @@ function mount(attrs: Record<string, string> = {}): UcAiEditorType {
 const STAGING = { pubkey: 'demopublickey', 'cdn-cname': 'https://cdn.example.com' };
 
 function typePrompt(el: UcAiEditorType, value: string): void {
-  const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('input')!;
+  const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
   input.value = value;
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
@@ -117,7 +117,7 @@ describe('<uc-ai-editor>', () => {
   it('updates internal prompt state when the user types in the prompt input', async () => {
     const el = mount();
     await el.updateComplete;
-    const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('input')!;
+    const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
     input.value = 'a tiger';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
@@ -218,7 +218,7 @@ describe('<uc-ai-editor>', () => {
     el.mode = 'edit';
     await el.updateComplete;
     const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
-    const input = promptRow.shadowRoot!.querySelector('input')!;
+    const input = promptRow.shadowRoot!.querySelector('textarea')!;
     input.value = '';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;

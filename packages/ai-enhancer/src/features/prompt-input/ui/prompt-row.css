@@ -5,7 +5,7 @@
 .row {
   box-sizing: border-box;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 5px;
   background: var(--uc-ai-background);
   border: 1px solid var(--uc-ai-border);
@@ -65,16 +65,44 @@
 }
 
 .input {
+  box-sizing: border-box;
   flex: 1;
   min-width: 0;
   border: 0;
   background: transparent;
   font-family: inherit;
   font-size: var(--uc-ai-font-size);
+  line-height: 1.5;
   color: var(--uc-ai-foreground);
   outline: none;
-  padding: 0 5px;
-  height: 30px;
+  padding: 5px;
+  /* Single line: 1.5em text + 10px padding ≈ 31px, bottom-aligned with the 32px buttons. */
+  min-height: calc(1.5em + 10px);
+  /*
+   * Grows with content up to N lines, then scrolls internally. Token defaults
+   * live in ai-editor.css :host; fallbacks here keep the row usable standalone.
+   */
+  max-height: var(--uc-ai-prompt-max-height, calc(var(--uc-ai-prompt-max-lines, 4) * 1.5em + 10px));
+  resize: none;
+  overflow-y: auto;
+  /* Height is driven inline by the JS fallback; transition smooths growth. */
+  transition: height var(--uc-ai-transition);
+  scrollbar-width: thin;
+  scrollbar-color: var(--uc-ai-border) transparent;
+}
+
+/* Modern browsers: let CSS auto-size the textarea, no JS measurement needed. */
+@supports (field-sizing: content) {
+  .input {
+    field-sizing: content;
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input {
+    transition: none;
+  }
 }
 
 .input::placeholder {
