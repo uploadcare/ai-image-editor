@@ -249,9 +249,10 @@ export const AiEnhancerPlugin: UploaderPlugin = {
 
         const onDone = (e: Event) => {
           const { file } = (e as CustomEvent<DoneDetail>).detail;
-          // The result is already stored on Uploadcare — add it by uuid instead
-          // of re-downloading and re-uploading the bytes.
-          uploaderApi.addFileFromUuid(file.uuid, { source: AI_ENHANCER_ID });
+          // The result is already stored on Uploadcare — hand the full file
+          // object over so the uploader adds it in `success` state without
+          // re-fetching file info (needs file-uploader >= 1.31.0).
+          uploaderApi.addFileFromUploadcareFile(file, { source: AI_ENHANCER_ID });
           uploaderApi.setCurrentActivity('upload-list');
           uploaderApi.setModalState(true);
         };
