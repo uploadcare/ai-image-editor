@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Nylige prompts',
   'ai-enhancer-busy': 'Genererer…',
   'ai-enhancer-error': 'Noe gikk galt. Prøv igjen.',
+  'ai-enhancer-fullscreen': 'Vis i fullskjerm',
+  'ai-enhancer-exit-fullscreen': 'Avslutt fullskjerm',
   'ai-enhancer-aspect-ratio-aria': 'Velg bildeformat',
   'ai-enhancer-aspect-square': 'Kvadratisk',
   'ai-enhancer-aspect-tall': 'Høyt',

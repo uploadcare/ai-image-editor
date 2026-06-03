@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Seneste prompts',
   'ai-enhancer-busy': 'Genererer…',
   'ai-enhancer-error': 'Noget gik galt. Prøv igen.',
+  'ai-enhancer-fullscreen': 'Vis i fuld skærm',
+  'ai-enhancer-exit-fullscreen': 'Afslut fuld skærm',
   'ai-enhancer-aspect-ratio-aria': 'Vælg billedformat',
   'ai-enhancer-aspect-square': 'Kvadratisk',
   'ai-enhancer-aspect-tall': 'Høj',

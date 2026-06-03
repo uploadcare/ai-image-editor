@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'ბოლო მოთხოვნები',
   'ai-enhancer-busy': 'გენერირდება…',
   'ai-enhancer-error': 'რაღაც ვერ მოხერხდა. სცადეთ თავიდან.',
+  'ai-enhancer-fullscreen': 'სრულ ეკრანზე ნახვა',
+  'ai-enhancer-exit-fullscreen': 'სრული ეკრანიდან გასვლა',
   'ai-enhancer-aspect-ratio-aria': 'აირჩიეთ ფარდობა',
   'ai-enhancer-aspect-square': 'კვადრატი',
   'ai-enhancer-aspect-tall': 'მაღალი',

@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Соңғы сұраулар',
   'ai-enhancer-busy': 'Жасалуда…',
   'ai-enhancer-error': 'Бірдеңе дұрыс болмады. Қайталап көріңіз.',
+  'ai-enhancer-fullscreen': 'Толық экранда қарау',
+  'ai-enhancer-exit-fullscreen': 'Толық экраннан шығу',
   'ai-enhancer-aspect-ratio-aria': 'Арақатынасын таңдаңыз',
   'ai-enhancer-aspect-square': 'Шаршы',
   'ai-enhancer-aspect-tall': 'Биік',

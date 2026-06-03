@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Prompturi recente',
   'ai-enhancer-busy': 'Se generează…',
   'ai-enhancer-error': 'Ceva n-a mers bine. Încearcă din nou.',
+  'ai-enhancer-fullscreen': 'Vizualizare pe tot ecranul',
+  'ai-enhancer-exit-fullscreen': 'Ieșire din ecran complet',
   'ai-enhancer-aspect-ratio-aria': 'Alege raportul de aspect',
   'ai-enhancer-aspect-square': 'Pătrat',
   'ai-enhancer-aspect-tall': 'Înalt',

@@ -19,6 +19,7 @@ import {
 import { UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
 import { type enLocale, translate } from '../../../shared/i18n';
+import { cdnFullsizeUrl, cdnPreviewUrl } from '../../../shared/lib/cdn';
 import '../../../features/aspect-ratio-select';
 import '../../../features/prompt-history';
 import '../../../features/prompt-input';
@@ -141,6 +142,21 @@ export class UcAiEditor extends LitElement {
     return this._gen.resultUrl ?? this.src;
   }
 
+  /** CDN-optimized rendition for the on-canvas preview. */
+  private get _previewUrl(): string | null {
+    const url = this._displayUrl;
+    if (!url) return null;
+    // The canvas spans the editor width; measured at render time (the result
+    // arrives long after first layout). Fall back for detached renders.
+    return cdnPreviewUrl(url, this.clientWidth || 1024);
+  }
+
+  /** Full-quality rendition shown in fullscreen. */
+  private get _fullsizeUrl(): string | null {
+    const url = this._displayUrl;
+    return url ? cdnFullsizeUrl(url) : null;
+  }
+
   private _aspectRatioOptions(): AspectRatioOption[] {
     const list = this.aspectRatios && this.aspectRatios.length > 0 ? this.aspectRatios : POPULAR_ASPECT_RATIOS;
     return list.filter(isValidAspectRatio).map(toAspectRatioOption);
@@ -255,11 +271,14 @@ export class UcAiEditor extends LitElement {
         <div class="body">
           <div class="body-inner">
             <uc-ai-canvas
-              .url=${this._displayUrl}
+              .url=${this._previewUrl}
+              .fullsizeUrl=${this._fullsizeUrl}
               .busy=${this._gen.busy}
               .alt=${this._prompt}
               busy-label="${this._l('ai-enhancer-busy')}"
               error-label="${this._l('ai-enhancer-error')}"
+              fullscreen-label="${this._l('ai-enhancer-fullscreen')}"
+              exit-fullscreen-label="${this._l('ai-enhancer-exit-fullscreen')}"
             ></uc-ai-canvas>
             ${this._gen.error ? html`<div class="error-banner" role="alert">${this._gen.error}</div>` : nothing}
             <div class="bottom">

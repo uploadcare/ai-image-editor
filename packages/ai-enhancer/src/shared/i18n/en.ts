@@ -12,6 +12,8 @@ export const enLocale = {
   'ai-enhancer-history-title': 'Recent prompts',
   'ai-enhancer-busy': 'Generating…',
   'ai-enhancer-error': 'Something went wrong. Try again.',
+  'ai-enhancer-fullscreen': 'View fullscreen',
+  'ai-enhancer-exit-fullscreen': 'Exit fullscreen',
   'ai-enhancer-aspect-ratio-aria': 'Pick aspect ratio',
   'ai-enhancer-aspect-square': 'Square',
   'ai-enhancer-aspect-tall': 'Tall',

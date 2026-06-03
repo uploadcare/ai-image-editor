@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Indicacions recents',
   'ai-enhancer-busy': 'S’està generant…',
   'ai-enhancer-error': 'Hi ha hagut un error. Torna-ho a provar.',
+  'ai-enhancer-fullscreen': 'Veure a pantalla completa',
+  'ai-enhancer-exit-fullscreen': 'Sortir de pantalla completa',
   'ai-enhancer-aspect-ratio-aria': 'Tria la relació d’aspecte',
   'ai-enhancer-aspect-square': 'Quadrat',
   'ai-enhancer-aspect-tall': 'Alt',

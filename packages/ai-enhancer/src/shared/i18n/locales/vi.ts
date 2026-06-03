@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Lời nhắc gần đây',
   'ai-enhancer-busy': 'Đang tạo…',
   'ai-enhancer-error': 'Đã xảy ra lỗi. Vui lòng thử lại.',
+  'ai-enhancer-fullscreen': 'Xem toàn màn hình',
+  'ai-enhancer-exit-fullscreen': 'Thoát toàn màn hình',
   'ai-enhancer-aspect-ratio-aria': 'Chọn tỷ lệ khung hình',
   'ai-enhancer-aspect-square': 'Vuông',
   'ai-enhancer-aspect-tall': 'Cao',

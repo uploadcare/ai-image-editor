@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Hiljutised viiped',
   'ai-enhancer-busy': 'Genereerimine…',
   'ai-enhancer-error': 'Midagi läks valesti. Proovi uuesti.',
+  'ai-enhancer-fullscreen': 'Kuva täisekraanil',
+  'ai-enhancer-exit-fullscreen': 'Välju täisekraanist',
   'ai-enhancer-aspect-ratio-aria': 'Vali kuvasuhe',
   'ai-enhancer-aspect-square': 'Ruut',
   'ai-enhancer-aspect-tall': 'Kõrge',

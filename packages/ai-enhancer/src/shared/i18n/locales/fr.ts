@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Invites récentes',
   'ai-enhancer-busy': 'Génération…',
   'ai-enhancer-error': 'Une erreur s’est produite. Réessayez.',
+  'ai-enhancer-fullscreen': 'Afficher en plein écran',
+  'ai-enhancer-exit-fullscreen': 'Quitter le plein écran',
   'ai-enhancer-aspect-ratio-aria': 'Choisir le format',
   'ai-enhancer-aspect-square': 'Carré',
   'ai-enhancer-aspect-tall': 'Haut',

@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Senaste prompts',
   'ai-enhancer-busy': 'Genererar…',
   'ai-enhancer-error': 'Något gick fel. Försök igen.',
+  'ai-enhancer-fullscreen': 'Visa i helskärm',
+  'ai-enhancer-exit-fullscreen': 'Avsluta helskärm',
   'ai-enhancer-aspect-ratio-aria': 'Välj bildformat',
   'ai-enhancer-aspect-square': 'Kvadratisk',
   'ai-enhancer-aspect-tall': 'Hög',

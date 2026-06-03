@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'הנחיות אחרונות',
   'ai-enhancer-busy': 'יוצר…',
   'ai-enhancer-error': 'משהו השתבש. נסה שוב.',
+  'ai-enhancer-fullscreen': 'הצג במסך מלא',
+  'ai-enhancer-exit-fullscreen': 'צא ממסך מלא',
   'ai-enhancer-aspect-ratio-aria': 'בחר יחס גובה-רוחב',
   'ai-enhancer-aspect-square': 'ריבוע',
   'ai-enhancer-aspect-tall': 'גבוה',

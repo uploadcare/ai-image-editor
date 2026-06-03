@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Nýlegar leiðbeiningar',
   'ai-enhancer-busy': 'Bý til…',
   'ai-enhancer-error': 'Eitthvað fór úrskeiðis. Reyndu aftur.',
+  'ai-enhancer-fullscreen': 'Skoða á öllum skjánum',
+  'ai-enhancer-exit-fullscreen': 'Loka fullum skjá',
   'ai-enhancer-aspect-ratio-aria': 'Veldu myndhlutföll',
   'ai-enhancer-aspect-square': 'Ferningur',
   'ai-enhancer-aspect-tall': 'Hátt',

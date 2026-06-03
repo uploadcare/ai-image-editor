@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Viimeisimmät kehotteet',
   'ai-enhancer-busy': 'Luodaan…',
   'ai-enhancer-error': 'Jotain meni pieleen. Yritä uudelleen.',
+  'ai-enhancer-fullscreen': 'Näytä koko näytöllä',
+  'ai-enhancer-exit-fullscreen': 'Poistu koko näytöstä',
   'ai-enhancer-aspect-ratio-aria': 'Valitse kuvasuhde',
   'ai-enhancer-aspect-square': 'Neliö',
   'ai-enhancer-aspect-tall': 'Korkea',

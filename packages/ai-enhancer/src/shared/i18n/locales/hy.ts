@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Վերջին հուշումները',
   'ai-enhancer-busy': 'Ստեղծվում է…',
   'ai-enhancer-error': 'Ինչ-որ բան սխալ գնաց։ Կրկին փորձեք։',
+  'ai-enhancer-fullscreen': 'Դիտել լիաէկրան',
+  'ai-enhancer-exit-fullscreen': 'Դուրս գալ լիաէկրանից',
   'ai-enhancer-aspect-ratio-aria': 'Ընտրեք կողմերի հարաբերակցությունը',
   'ai-enhancer-aspect-square': 'Քառակուսի',
   'ai-enhancer-aspect-tall': 'Բարձր',

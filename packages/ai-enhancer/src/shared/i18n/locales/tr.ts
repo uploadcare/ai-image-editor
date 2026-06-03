@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Son komutlar',
   'ai-enhancer-busy': 'Oluşturuluyor…',
   'ai-enhancer-error': 'Bir şeyler ters gitti. Tekrar deneyin.',
+  'ai-enhancer-fullscreen': 'Tam ekran görüntüle',
+  'ai-enhancer-exit-fullscreen': 'Tam ekrandan çık',
   'ai-enhancer-aspect-ratio-aria': 'En boy oranını seçin',
   'ai-enhancer-aspect-square': 'Kare',
   'ai-enhancer-aspect-tall': 'Uzun',

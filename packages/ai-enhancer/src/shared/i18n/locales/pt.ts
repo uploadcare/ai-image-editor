@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Prompts recentes',
   'ai-enhancer-busy': 'Gerando…',
   'ai-enhancer-error': 'Algo deu errado. Tente novamente.',
+  'ai-enhancer-fullscreen': 'Ver em ecrã inteiro',
+  'ai-enhancer-exit-fullscreen': 'Sair do ecrã inteiro',
   'ai-enhancer-aspect-ratio-aria': 'Escolher proporção',
   'ai-enhancer-aspect-square': 'Quadrado',
   'ai-enhancer-aspect-tall': 'Alto',

@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Recente prompts',
   'ai-enhancer-busy': 'Genereren…',
   'ai-enhancer-error': 'Er ging iets mis. Probeer het opnieuw.',
+  'ai-enhancer-fullscreen': 'Volledig scherm weergeven',
+  'ai-enhancer-exit-fullscreen': 'Volledig scherm sluiten',
   'ai-enhancer-aspect-ratio-aria': 'Beeldverhouding kiezen',
   'ai-enhancer-aspect-square': 'Vierkant',
   'ai-enhancer-aspect-tall': 'Hoog',

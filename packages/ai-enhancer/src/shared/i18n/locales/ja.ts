@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': '最近のプロンプト',
   'ai-enhancer-busy': '生成中…',
   'ai-enhancer-error': '問題が発生しました。もう一度お試しください。',
+  'ai-enhancer-fullscreen': '全画面表示',
+  'ai-enhancer-exit-fullscreen': '全画面表示を終了',
   'ai-enhancer-aspect-ratio-aria': 'アスペクト比を選択',
   'ai-enhancer-aspect-square': '正方形',
   'ai-enhancer-aspect-tall': '縦長',

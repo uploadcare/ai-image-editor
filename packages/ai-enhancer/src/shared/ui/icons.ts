@@ -19,3 +19,11 @@ export const ICON_HISTORY = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://
 export const ICON_ARROW_THICK = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <path d="M3 6.74251L8 2L13 6.74251M7.99961 14V2.10636" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
+
+export const ICON_FULLSCREEN = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+export const ICON_FULLSCREEN_EXIT = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M4 9h5V4M20 9h-5V4M4 15h5v5M20 15h-5v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;

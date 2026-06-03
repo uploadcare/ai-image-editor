@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': '最近的提示詞',
   'ai-enhancer-busy': '生成中…',
   'ai-enhancer-error': '發生錯誤，請重試。',
+  'ai-enhancer-fullscreen': '全螢幕檢視',
+  'ai-enhancer-exit-fullscreen': '結束全螢幕',
   'ai-enhancer-aspect-ratio-aria': '選擇長寬比',
   'ai-enhancer-aspect-square': '正方形',
   'ai-enhancer-aspect-tall': '高',
