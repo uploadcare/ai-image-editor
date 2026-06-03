@@ -85,4 +85,112 @@ describe('UcAiCanvas', () => {
     await el.updateComplete;
     expect(loaderActive(el)).toBe(true);
   });
+
+  describe('fullscreen button', () => {
+    const fullscreenBtn = (el: UcAiCanvas) => el.shadowRoot!.querySelector('[data-testid="fullscreen-btn"]');
+
+    /** happy-dom has no Fullscreen API — stub just enough of it. */
+    function stubFullscreenSupport() {
+      Object.defineProperty(document, 'fullscreenEnabled', { value: true, configurable: true });
+      const requestFullscreen = vi.fn().mockResolvedValue(undefined);
+      HTMLElement.prototype.requestFullscreen = requestFullscreen;
+      return requestFullscreen;
+    }
+
+    async function mountWithImage(): Promise<UcAiCanvas> {
+      const el = await mount('https://example.com/a.png');
+      el.fullscreenLabel = 'View fullscreen';
+      el.exitFullscreenLabel = 'Exit fullscreen';
+      preloadImg(el)!.dispatchEvent(new Event('load'));
+      await el.updateComplete;
+      return el;
+    }
+
+    it('is hidden when the Fullscreen API is unsupported', async () => {
+      const el = await mountWithImage();
+      expect(fullscreenBtn(el)).toBeNull();
+    });
+
+    it('is hidden while no image is displayed and shown once one is', async () => {
+      stubFullscreenSupport();
+      const el = await mount('https://example.com/a.png');
+      expect(fullscreenBtn(el)).toBeNull();
+
+      preloadImg(el)!.dispatchEvent(new Event('load'));
+      await el.updateComplete;
+      expect(fullscreenBtn(el)).toBeTruthy();
+    });
+
+    it('requests fullscreen on the canvas when clicked', async () => {
+      const requestFullscreen = stubFullscreenSupport();
+      const el = await mountWithImage();
+
+      (fullscreenBtn(el) as HTMLButtonElement).click();
+
+      expect(requestFullscreen).toHaveBeenCalledOnce();
+      expect(fullscreenBtn(el)!.getAttribute('aria-label')).toBe('View fullscreen');
+    });
+
+    it('preloads the fullsize rendition when the button is hovered', async () => {
+      stubFullscreenSupport();
+      const created: string[] = [];
+      vi.stubGlobal(
+        'Image',
+        class {
+          set src(value: string) {
+            created.push(value);
+          }
+        },
+      );
+      try {
+        const el = await mountWithImage();
+        el.fullsizeUrl = 'https://example.com/full.png';
+        await el.updateComplete;
+
+        fullscreenBtn(el)!.dispatchEvent(new Event('mouseenter'));
+        expect(created).toEqual(['https://example.com/full.png']);
+
+        // Hovering again must not refetch the same url.
+        fullscreenBtn(el)!.dispatchEvent(new Event('mouseenter'));
+        expect(created).toHaveLength(1);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('overlays the fullsize rendition only while fullscreen', async () => {
+      stubFullscreenSupport();
+      const el = await mountWithImage();
+      el.fullsizeUrl = 'https://example.com/full.png';
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('img.layer.full')).toBeNull();
+
+      const canvas = el.shadowRoot!.querySelector('.canvas')!;
+      Object.defineProperty(document, 'fullscreenElement', { value: canvas, configurable: true });
+      canvas.dispatchEvent(new Event('fullscreenchange', { bubbles: true }));
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('img.layer.full')?.getAttribute('src')).toBe('https://example.com/full.png');
+
+      Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
+      canvas.dispatchEvent(new Event('fullscreenchange', { bubbles: true }));
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('img.layer.full')).toBeNull();
+    });
+
+    it('switches to the exit state while fullscreen is active', async () => {
+      stubFullscreenSupport();
+      const el = await mountWithImage();
+      const canvas = el.shadowRoot!.querySelector('.canvas')!;
+
+      Object.defineProperty(document, 'fullscreenElement', { value: canvas, configurable: true });
+      canvas.dispatchEvent(new Event('fullscreenchange', { bubbles: true }));
+      await el.updateComplete;
+      expect(fullscreenBtn(el)!.getAttribute('aria-label')).toBe('Exit fullscreen');
+
+      Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
+      canvas.dispatchEvent(new Event('fullscreenchange', { bubbles: true }));
+      await el.updateComplete;
+      expect(fullscreenBtn(el)!.getAttribute('aria-label')).toBe('View fullscreen');
+    });
+  });
 });

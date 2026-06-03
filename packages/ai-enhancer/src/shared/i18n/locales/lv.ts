@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Nesenās uzvednes',
   'ai-enhancer-busy': 'Ģenerē…',
   'ai-enhancer-error': 'Radās kļūda. Mēģiniet vēlreiz.',
+  'ai-enhancer-fullscreen': 'Skatīt pilnekrāna režīmā',
+  'ai-enhancer-exit-fullscreen': 'Iziet no pilnekrāna',
   'ai-enhancer-aspect-ratio-aria': 'Izvēlieties malu attiecību',
   'ai-enhancer-aspect-square': 'Kvadrāts',
   'ai-enhancer-aspect-tall': 'Augsts',

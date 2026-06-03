@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Son promptlar',
   'ai-enhancer-busy': 'Yaradılır…',
   'ai-enhancer-error': 'Nəsə səhv getdi. Yenidən cəhd edin.',
+  'ai-enhancer-fullscreen': 'Tam ekran bax',
+  'ai-enhancer-exit-fullscreen': 'Tam ekrandan çıx',
   'ai-enhancer-aspect-ratio-aria': 'Tərəf nisbətini seçin',
   'ai-enhancer-aspect-square': 'Kvadrat',
   'ai-enhancer-aspect-tall': 'Hündür',

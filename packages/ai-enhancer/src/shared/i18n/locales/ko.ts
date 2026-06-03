@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': '최근 프롬프트',
   'ai-enhancer-busy': '생성 중…',
   'ai-enhancer-error': '문제가 발생했습니다. 다시 시도하세요.',
+  'ai-enhancer-fullscreen': '전체 화면으로 보기',
+  'ai-enhancer-exit-fullscreen': '전체 화면 종료',
   'ai-enhancer-aspect-ratio-aria': '화면 비율 선택',
   'ai-enhancer-aspect-square': '정사각형',
   'ai-enhancer-aspect-tall': '세로로 긴',

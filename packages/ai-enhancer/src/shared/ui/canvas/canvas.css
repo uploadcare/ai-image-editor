@@ -67,6 +67,62 @@
   pointer-events: none;
 }
 
+.fullscreen-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: var(--uc-ai-button-size, 32px);
+  height: var(--uc-ai-button-size, 32px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--uc-ai-radius-button, 8px);
+  background: color-mix(in oklch, var(--uc-ai-background) 75%, transparent);
+  color: var(--uc-ai-foreground);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--uc-ai-transition, 0.2s ease),
+    background var(--uc-ai-transition, 0.2s ease);
+}
+
+.fullscreen-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Hover-reveal on pointer devices; keyboard focus reveals it too. */
+.canvas:hover .fullscreen-btn,
+.fullscreen-btn:focus-visible {
+  opacity: 1;
+}
+
+.fullscreen-btn:hover {
+  background: var(--uc-ai-background);
+}
+
+/* No hover on touch devices — keep the button visible whenever it exists. */
+@media (hover: none) {
+  .fullscreen-btn {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fullscreen-btn {
+    transition: none;
+  }
+}
+
+/* Fullscreen presentation: black stage, no rounding, dotted backdrop off. */
+.canvas:fullscreen {
+  background: #000;
+  border-radius: 0;
+  min-height: 0;
+}
+
 .error-state {
   position: absolute;
   inset: 0;

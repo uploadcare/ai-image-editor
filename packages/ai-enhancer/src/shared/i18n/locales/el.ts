@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Πρόσφατες προτροπές',
   'ai-enhancer-busy': 'Δημιουργία…',
   'ai-enhancer-error': 'Κάτι πήγε στραβά. Δοκιμάστε ξανά.',
+  'ai-enhancer-fullscreen': 'Προβολή σε πλήρη οθόνη',
+  'ai-enhancer-exit-fullscreen': 'Έξοδος από πλήρη οθόνη',
   'ai-enhancer-aspect-ratio-aria': 'Επιλέξτε αναλογία εικόνας',
   'ai-enhancer-aspect-square': 'Τετράγωνο',
   'ai-enhancer-aspect-tall': 'Ψηλό',

@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Poslední prompty',
   'ai-enhancer-busy': 'Generování…',
   'ai-enhancer-error': 'Něco se pokazilo. Zkuste to znovu.',
+  'ai-enhancer-fullscreen': 'Zobrazit na celou obrazovku',
+  'ai-enhancer-exit-fullscreen': 'Ukončit celou obrazovku',
   'ai-enhancer-aspect-ratio-aria': 'Vyberte poměr stran',
   'ai-enhancer-aspect-square': 'Čtverec',
   'ai-enhancer-aspect-tall': 'Vysoký',

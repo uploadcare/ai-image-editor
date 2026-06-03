@@ -1,7 +1,9 @@
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property, query, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
+import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
+import { ICON_FULLSCREEN, ICON_FULLSCREEN_EXIT } from '../icons';
 import styles from './canvas.css?inline';
 
 @customElement('uc-ai-canvas')
@@ -25,6 +27,20 @@ export class UcAiCanvas extends LitElement {
   @property({ attribute: 'error-label' })
   public errorLabel = '';
 
+  @property({ attribute: 'fullscreen-label' })
+  public fullscreenLabel = '';
+
+  @property({ attribute: 'exit-fullscreen-label' })
+  public exitFullscreenLabel = '';
+
+  /**
+   * Full-quality rendition shown while fullscreen (the regular `url` is a
+   * downscaled CDN preview). Preloaded eagerly when the user hovers the
+   * fullscreen button, so it is usually cached by the time it is needed.
+   */
+  @property({ attribute: 'fullsize-url' })
+  public fullsizeUrl: string | null = null;
+
   /** The image currently shown — only updated once a new `url` has loaded. */
   @state()
   private _displayedUrl: string | null = null;
@@ -40,6 +56,13 @@ export class UcAiCanvas extends LitElement {
   @state()
   private _failed = false;
 
+  /** Mirrors whether the canvas is the current fullscreen element. */
+  @state()
+  private _fullscreen = false;
+
+  @query('.canvas')
+  private _canvasEl?: HTMLElement;
+
   /**
    * Safety net for dropping the outgoing layer: the cross-fade normally clears
    * it on `animationend`, but that never fires when the fade is disabled
@@ -51,6 +74,7 @@ export class UcAiCanvas extends LitElement {
   public override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this._dropPreviousTimer);
+    document.removeEventListener('keydown', this._onFullscreenKeydown, true);
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -104,12 +128,58 @@ export class UcAiCanvas extends LitElement {
     this.dispatchEvent(new CustomEvent('uc:image-error', { detail: { url: this.url }, bubbles: true, composed: true }));
   }
 
+  /** Fullscreen is unavailable on some platforms (e.g. iPhone Safari). */
+  private get _fullscreenSupported(): boolean {
+    return document.fullscreenEnabled && typeof this._canvasEl?.requestFullscreen === 'function';
+  }
+
+  private _preloadedFullsizeUrl: string | null = null;
+
+  /** Warm the browser cache for the fullscreen rendition ahead of the click. */
+  private _preloadFullsize(): void {
+    if (!this.fullsizeUrl || this.fullsizeUrl === this._preloadedFullsizeUrl) return;
+    this._preloadedFullsizeUrl = this.fullsizeUrl;
+    new Image().src = this.fullsizeUrl;
+  }
+
+  private _toggleFullscreen(): void {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+    } else {
+      void this._canvasEl?.requestFullscreen();
+    }
+  }
+
+  private _onFullscreenChange(): void {
+    this._fullscreen = document.fullscreenElement != null;
+    // While fullscreen, swallow Escape before it reaches an ancestor <dialog>
+    // (e.g. the file-uploader modal): the browser exits fullscreen natively,
+    // but without this the same keypress would also cancel the dialog.
+    if (this._fullscreen) {
+      document.addEventListener('keydown', this._onFullscreenKeydown, true);
+    } else {
+      document.removeEventListener('keydown', this._onFullscreenKeydown, true);
+    }
+  }
+
+  private _onFullscreenKeydown = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape' && document.fullscreenElement) {
+      // preventDefault also suppresses the browser's own Esc handling, so we
+      // exit fullscreen ourselves.
+      e.preventDefault();
+      e.stopPropagation();
+      void document.exitFullscreen();
+    }
+  };
+
   public override render(): TemplateResult {
     const preloading = this.url != null && this.url !== this._displayedUrl && !this._failed;
     const busyActive = this._loading || this.busy;
 
+    const showFullscreenBtn = this._displayedUrl != null && !this._failed && this._fullscreenSupported;
+
     return html`
-      <div class="canvas" data-state="${this.url ? 'filled' : 'empty'}">
+      <div class="canvas" data-state="${this.url ? 'filled' : 'empty'}" @fullscreenchange=${this._onFullscreenChange}>
         ${
           this._previousUrl
             ? html`<img class="layer prev" src="${this._previousUrl}" alt="" aria-hidden="true" />`
@@ -124,6 +194,13 @@ export class UcAiCanvas extends LitElement {
             : nothing
         }
         ${
+          // Full-quality rendition overlays the preview while fullscreen; the
+          // preview stays underneath so there is no flash while it loads.
+          this._fullscreen && this.fullsizeUrl
+            ? html`<img class="layer full" src="${this.fullsizeUrl}" alt="${this.alt || 'AI image'}" />`
+            : nothing
+        }
+        ${
           preloading
             ? html`<img class="preload" src="${this.url}" alt="" aria-hidden="true" @load=${this._onLoaded} @error=${this._onError} />`
             : nothing
@@ -131,6 +208,23 @@ export class UcAiCanvas extends LitElement {
         ${
           this._failed
             ? html`<div class="error-state" role="alert">${this.errorLabel || 'Failed to load image'}</div>`
+            : nothing
+        }
+        ${
+          showFullscreenBtn
+            ? html`
+              <button
+                type="button"
+                class="fullscreen-btn"
+                data-testid="fullscreen-btn"
+                aria-label="${this._fullscreen ? this.exitFullscreenLabel : this.fullscreenLabel}"
+                @mouseenter=${this._preloadFullsize}
+                @focus=${this._preloadFullsize}
+                @click=${this._toggleFullscreen}
+              >
+                ${unsafeSVG(this._fullscreen ? ICON_FULLSCREEN_EXIT : ICON_FULLSCREEN)}
+              </button>
+            `
             : nothing
         }
         <div class="busy-overlay ${busyActive ? 'busy-overlay--active' : ''}" aria-hidden="${!busyActive}">

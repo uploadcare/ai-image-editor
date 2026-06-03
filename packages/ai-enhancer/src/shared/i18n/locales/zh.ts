@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': '最近的提示词',
   'ai-enhancer-busy': '生成中…',
   'ai-enhancer-error': '出了点问题，请重试。',
+  'ai-enhancer-fullscreen': '全屏查看',
+  'ai-enhancer-exit-fullscreen': '退出全屏',
   'ai-enhancer-aspect-ratio-aria': '选择宽高比',
   'ai-enhancer-aspect-square': '正方形',
   'ai-enhancer-aspect-tall': '高',

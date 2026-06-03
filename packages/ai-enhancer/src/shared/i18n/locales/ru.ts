@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Недавние запросы',
   'ai-enhancer-busy': 'Генерация…',
   'ai-enhancer-error': 'Что-то пошло не так. Попробуйте снова.',
+  'ai-enhancer-fullscreen': 'Открыть на весь экран',
+  'ai-enhancer-exit-fullscreen': 'Выйти из полноэкранного режима',
   'ai-enhancer-aspect-ratio-aria': 'Выберите соотношение сторон',
   'ai-enhancer-aspect-square': 'Квадрат',
   'ai-enhancer-aspect-tall': 'Высокий',

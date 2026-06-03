@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Letzte Prompts',
   'ai-enhancer-busy': 'Wird generiert…',
   'ai-enhancer-error': 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
+  'ai-enhancer-fullscreen': 'Vollbild anzeigen',
+  'ai-enhancer-exit-fullscreen': 'Vollbild beenden',
   'ai-enhancer-aspect-ratio-aria': 'Seitenverhältnis wählen',
   'ai-enhancer-aspect-square': 'Quadratisch',
   'ai-enhancer-aspect-tall': 'Hoch',

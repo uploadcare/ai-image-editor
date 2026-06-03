@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Ostatnie prompty',
   'ai-enhancer-busy': 'Generowanie…',
   'ai-enhancer-error': 'Coś poszło nie tak. Spróbuj ponownie.',
+  'ai-enhancer-fullscreen': 'Wyświetl na pełnym ekranie',
+  'ai-enhancer-exit-fullscreen': 'Zamknij pełny ekran',
   'ai-enhancer-aspect-ratio-aria': 'Wybierz proporcje',
   'ai-enhancer-aspect-square': 'Kwadrat',
   'ai-enhancer-aspect-tall': 'Wysoki',

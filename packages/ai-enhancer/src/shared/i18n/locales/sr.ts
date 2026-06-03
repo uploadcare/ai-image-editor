@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'Nedavni upiti',
   'ai-enhancer-busy': 'Generisanje…',
   'ai-enhancer-error': 'Nešto je pošlo po zlu. Pokušajte ponovo.',
+  'ai-enhancer-fullscreen': 'Prikaži preko celog ekrana',
+  'ai-enhancer-exit-fullscreen': 'Izađi iz celog ekrana',
   'ai-enhancer-aspect-ratio-aria': 'Izaberite odnos stranica',
   'ai-enhancer-aspect-square': 'Kvadrat',
   'ai-enhancer-aspect-tall': 'Visoko',

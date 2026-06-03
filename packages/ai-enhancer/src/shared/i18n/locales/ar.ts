@@ -14,6 +14,8 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-history-title': 'المطالبات الأخيرة',
   'ai-enhancer-busy': 'جارٍ الإنشاء…',
   'ai-enhancer-error': 'حدث خطأ ما. حاول مرة أخرى.',
+  'ai-enhancer-fullscreen': 'عرض ملء الشاشة',
+  'ai-enhancer-exit-fullscreen': 'إنهاء ملء الشاشة',
   'ai-enhancer-aspect-ratio-aria': 'اختر نسبة العرض إلى الارتفاع',
   'ai-enhancer-aspect-square': 'مربع',
   'ai-enhancer-aspect-tall': 'طويل',
