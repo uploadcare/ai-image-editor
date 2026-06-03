@@ -34,7 +34,7 @@
 <body>
   <demo-shell heading="AI Enhancer — Standalone">
     <label slot="controls">
-      Public key (staging)
+      Public key
       <input id="pubkey" type="text" size="20" placeholder="5f124c1a3f9e9b6303c3" />
     </label>
     <label slot="controls">
@@ -68,7 +68,7 @@
     document.getElementById('pubkey').addEventListener('change', (e) => {
       const key = e.target.value.trim() || DEMO_PUBKEY;
       editor.pubkey = key;
-      shell.log(`pubkey → ${key} (staging)`);
+      shell.log(`pubkey → ${key}`);
     });
 
     const localeSelect = document.getElementById('locale');
