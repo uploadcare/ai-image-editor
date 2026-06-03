@@ -34,7 +34,7 @@
     "lit": "^3.2.1"
   },
   "peerDependencies": {
-    "@uploadcare/file-uploader": ">=1.29.0"
+    "@uploadcare/file-uploader": ">=1.31.0"
   },
   "peerDependenciesMeta": {
     "@uploadcare/file-uploader": {
@@ -42,7 +42,7 @@
     }
   },
   "devDependencies": {
-    "@uploadcare/file-uploader": "^1.29.0",
+    "@uploadcare/file-uploader": "^1.31.0",
     "@vitest/browser": "^3.0.9",
     "playwright": "^1.49.0",
     "zod": "^3.25.76"
