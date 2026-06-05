@@ -1,13 +1,13 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { AspectRatio } from '../../../entities/aspect-ratio';
-import type { AiCapability } from '../../../entities/capability';
+import type { AiEditorMode } from '../../../entities/mode';
 import type { AiProvider, AiProviderResult } from '../../../entities/provider';
 
 export type HistoryEntry = {
   id: string;
   prompt: string;
-  capability: AiCapability;
+  mode: AiEditorMode;
   url: string;
   file: UploadcareFile;
 };
@@ -15,9 +15,10 @@ export type HistoryEntry = {
 export type RunArgs = {
   provider: AiProvider;
   prompt: string;
-  capability: AiCapability;
+  mode: AiEditorMode;
   aspectRatio?: AspectRatio;
-  sourceUrl?: string;
+  /** UUID of the source image to edit (when `mode` is `edit`). */
+  source?: string;
 };
 
 const MAX_HISTORY = 20;
@@ -63,6 +64,7 @@ export class GenerationController implements ReactiveController {
   public setResult(result: AiProviderResult): void {
     this.resultUrl = result.url;
     this.result = result;
+    this.error = null;
     this._host.requestUpdate();
   }
 
@@ -78,9 +80,9 @@ export class GenerationController implements ReactiveController {
     try {
       const result = await args.provider.generate({
         prompt: args.prompt,
-        capability: args.capability,
+        mode: args.mode,
         aspectRatio: args.aspectRatio,
-        sourceUrl: args.sourceUrl,
+        source: args.source,
         signal: controller.signal,
       });
       if (controller.signal.aborted) return null;
@@ -90,7 +92,7 @@ export class GenerationController implements ReactiveController {
         {
           id: crypto.randomUUID(),
           prompt: result.prompt,
-          capability: result.capability,
+          mode: result.mode,
           url: result.url,
           file: result.file,
         },

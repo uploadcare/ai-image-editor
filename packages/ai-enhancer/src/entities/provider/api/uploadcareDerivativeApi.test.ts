@@ -40,7 +40,7 @@ describe('UploadcareDerivativeApi', () => {
   it('POSTs the prompt + aspect ratio + pub_key to the derivative endpoint', async () => {
     const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk_test', fetch: fetchImpl, ...NO_DELAY });
-    await provider.generate({ prompt: 'a hat', capability: 'generate', aspectRatio: [16, 9] });
+    await provider.generate({ prompt: 'a hat', mode: 'generate', aspectRatio: [16, 9] });
 
     const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
     expect(url).toBe('https://upload.uploadcare.com/derivative/image/generate/');
@@ -57,7 +57,7 @@ describe('UploadcareDerivativeApi', () => {
   it('uses 1:1 when aspectRatio is missing or invalid', async () => {
     const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await provider.generate({ prompt: 'x', capability: 'generate' });
+    await provider.generate({ prompt: 'x', mode: 'generate' });
     const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
     expect(readSentBody(init).aspect_ratio).toEqual([1, 1]);
   });
@@ -75,7 +75,7 @@ describe('UploadcareDerivativeApi', () => {
       ...NO_DELAY,
     });
 
-    const result = await provider.generate({ prompt: 'x', capability: 'generate' });
+    const result = await provider.generate({ prompt: 'x', mode: 'generate' });
 
     expect(result.url).toBe('https://cdn.example.com/final-uuid/');
     // 1 POST + 3 status polls
@@ -91,7 +91,7 @@ describe('UploadcareDerivativeApi', () => {
       { type: 'job', status: 'error', error_source: 'ai_gateway', error_code: 'content_policy', error: 'blocked' },
     ]);
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await expect(provider.generate({ prompt: 'x', capability: 'generate' })).rejects.toThrow(/content_policy|blocked/);
+    await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/content_policy|blocked/);
   });
 
   it('honours baseUrl + cdnBaseUrl overrides for both generate and status', async () => {
@@ -103,7 +103,7 @@ describe('UploadcareDerivativeApi', () => {
       fetch: fetchImpl,
       ...NO_DELAY,
     });
-    const result = await provider.generate({ prompt: 'x', capability: 'generate' });
+    const result = await provider.generate({ prompt: 'x', mode: 'generate' });
     const [genUrl] = fetchImpl.mock.calls[0]! as [string, RequestInit];
     const [statusUrl] = fetchImpl.mock.calls[1]! as [string, RequestInit];
     expect(genUrl).toBe('https://upload.example.com/derivative/image/generate/');
@@ -121,7 +121,7 @@ describe('UploadcareDerivativeApi', () => {
       fetch: fetchImpl,
       ...NO_DELAY,
     });
-    const result = await provider.generate({ prompt: 'x', capability: 'generate' });
+    const result = await provider.generate({ prompt: 'x', mode: 'generate' });
     expect(result.file.uuid).toBe('final-uuid');
     expect(result.file.cdnUrl).toBe('https://cdn.example.com/final-uuid/');
     expect(result.file.originalFilename).toBe('f.png');
@@ -132,7 +132,7 @@ describe('UploadcareDerivativeApi', () => {
   it('derives the CDN base from the public key when cdnBaseUrl is left at the default', async () => {
     const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'final-uuid' }]);
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    const result = await provider.generate({ prompt: 'x', capability: 'generate' });
+    const result = await provider.generate({ prompt: 'x', mode: 'generate' });
     const base = await getPrefixedCdnBaseAsync('pk', 'https://ucarecd.net');
     expect(result.url).toBe(`${base}/final-uuid/`);
   });
@@ -140,7 +140,7 @@ describe('UploadcareDerivativeApi', () => {
   it('throws when the success status has no uuid', async () => {
     const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success' }]);
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await expect(provider.generate({ prompt: 'x', capability: 'generate' })).rejects.toThrow(/uuid/);
+    await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/uuid/);
   });
 
   it('surfaces non-2xx generate responses with status text', async () => {
@@ -152,7 +152,7 @@ describe('UploadcareDerivativeApi', () => {
       }),
     );
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await expect(provider.generate({ prompt: 'x', capability: 'generate' })).rejects.toThrow(/400/);
+    await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/400/);
   });
 
   it('times out when the job never reaches a terminal state', async () => {
@@ -163,7 +163,7 @@ describe('UploadcareDerivativeApi', () => {
       pollIntervalMs: 0,
       pollTimeoutMs: 5,
     });
-    await expect(provider.generate({ prompt: 'x', capability: 'generate' })).rejects.toThrow(/time/i);
+    await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/time/i);
   });
 
   it('passes the abort signal to generate and status fetches', async () => {
@@ -175,7 +175,7 @@ describe('UploadcareDerivativeApi', () => {
     });
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
     const controller = new AbortController();
-    await provider.generate({ prompt: 'x', capability: 'generate', signal: controller.signal });
+    await provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
     expect(seen.length).toBeGreaterThanOrEqual(2);
     expect(seen.every((s) => s === controller.signal)).toBe(true);
   });
@@ -191,7 +191,7 @@ describe('UploadcareDerivativeApi', () => {
     });
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
 
-    await expect(provider.generate({ prompt: 'x', capability: 'generate', signal: controller.signal })).rejects.toThrow(
+    await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toThrow(
       /abort/i,
     );
     // 1 POST + exactly 1 status poll, then it bails — no further polling.
@@ -204,25 +204,61 @@ describe('UploadcareDerivativeApi', () => {
     const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new DOMException('Aborted', 'AbortError'));
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
     await expect(
-      provider.generate({ prompt: 'x', capability: 'generate', signal: controller.signal }),
+      provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal }),
     ).rejects.toThrow();
   });
 
   describe('edit mode', () => {
-    // AI edit is not available yet — every edit-mode capability throws before
-    // touching the network. Restore the routing / source-image tests when the
-    // edit endpoint lands.
-    it('throws for edit-mode capabilities without sending any request', async () => {
+    it('POSTs prompt + source uuid to the edit endpoint and resolves the result', async () => {
+      const fetchImpl = routedFetch({ type: 'job', job_id: 'job-e' }, [{ status: 'success', uuid: 'edited-uuid' }]);
+      const provider = new UploadcareDerivativeApi({
+        publicKey: 'pk',
+        cdnBaseUrl: 'https://cdn.example.com',
+        fetch: fetchImpl,
+        ...NO_DELAY,
+      });
+
+      const result = await provider.generate({
+        prompt: 'remove the cat',
+        mode: 'edit',
+        source: 'src-uuid',
+        aspectRatio: [16, 9],
+      });
+
+      const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
+      expect(url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
+      expect(readSentBody(init)).toMatchObject({
+        pub_key: 'pk',
+        prompt: 'remove the cat',
+        source: 'src-uuid',
+        aspect_ratio: [16, 9],
+      });
+      expect(result.url).toBe('https://cdn.example.com/edited-uuid/');
+      expect(result.mode).toBe('edit');
+    });
+
+    it('omits aspect_ratio when none is provided', async () => {
+      const fetchImpl = routedFetch({ type: 'job', job_id: 'job-e' }, [{ status: 'success', uuid: 'u' }]);
+      const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
+      await provider.generate({ prompt: 'x', mode: 'edit', source: 'src-uuid' });
+      expect(readSentBody(fetchImpl.mock.calls[0]![1] as RequestInit).aspect_ratio).toBeUndefined();
+    });
+
+    it('throws (without any request) when an edit has no source uuid', async () => {
       const fetchImpl = routedFetch({ type: 'job', job_id: 'j' }, [{ status: 'success', uuid: 'x' }]);
       const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-      await expect(
-        provider.generate({
-          prompt: 'remove the cat',
-          capability: 'object-remove',
-          sourceUrl: 'https://ucarecdn.com/src/',
-        }),
-      ).rejects.toThrow(/not available yet/i);
+      await expect(provider.generate({ prompt: 'x', mode: 'edit' })).rejects.toThrow(/source/i);
       expect(fetchImpl).not.toHaveBeenCalled();
+    });
+
+    it('resolveCdnUrl maps a uuid to its CDN URL', async () => {
+      const provider = new UploadcareDerivativeApi({
+        publicKey: 'pk',
+        cdnBaseUrl: 'https://cdn.example.com',
+        fetch: vi.fn<typeof fetch>(),
+        ...NO_DELAY,
+      });
+      expect(await provider.resolveCdnUrl('some-uuid')).toBe('https://cdn.example.com/some-uuid/');
     });
   });
 });

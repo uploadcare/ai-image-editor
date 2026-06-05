@@ -38,6 +38,10 @@
       <input id="pubkey" type="text" size="20" placeholder="YOUR_PUBLIC_KEY" />
     </label>
     <label slot="controls">
+      Source UUID (edit mode)
+      <input id="source" type="text" size="36" placeholder="uuid to edit (blank = generate)" />
+    </label>
+    <label slot="controls">
       Locale
       <select id="locale"></select>
     </label>
@@ -45,7 +49,7 @@
       <input id="branded" type="checkbox" /> Brand-themed
     </label>
 
-    <uc-ai-editor mode="generate"></uc-ai-editor>
+    <uc-ai-editor></uc-ai-editor>
   </demo-shell>
 
   <script type="module">
@@ -57,8 +61,8 @@
 
     const shell = document.querySelector('demo-shell');
     const editor = document.querySelector('uc-ai-editor');
-    editor.baseUrl = 'https://upload.uploadcare.com';
-    editor.cdnCnamePrefixed = 'https://ucarecd.net';
+    editor.baseUrl = 'https://upload.example.com';
+    editor.cdnCnamePrefixed = 'https://cdn.example.com';
     editor.pubkey = DEMO_PUBKEY;
 
     document.getElementById('branded').addEventListener('change', (e) => {
@@ -69,6 +73,11 @@
       const key = e.target.value.trim() || DEMO_PUBKEY;
       editor.pubkey = key;
       shell.log(`pubkey → ${key}`);
+    });
+    document.getElementById('source').addEventListener('change', (e) => {
+      const uuid = e.target.value.trim();
+      editor.source = uuid || null;
+      shell.log(uuid ? `source → ${uuid} (edit mode)` : 'source cleared (generate mode)');
     });
 
     const localeSelect = document.getElementById('locale');

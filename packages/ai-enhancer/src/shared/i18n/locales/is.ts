@@ -10,6 +10,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-cancel': 'Hætta við',
   'ai-enhancer-generate-btn': 'Búa til',
   'ai-enhancer-done-btn': 'Lokið',
+  'ai-enhancer-start-over': 'Byrja upp á nýtt',
   'ai-enhancer-history-empty': 'Engar leiðbeiningar enn',
   'ai-enhancer-history-title': 'Nýlegar leiðbeiningar',
   'ai-enhancer-busy': 'Bý til…',

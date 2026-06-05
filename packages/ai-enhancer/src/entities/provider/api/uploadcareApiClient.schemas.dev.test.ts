@@ -29,13 +29,13 @@ describe('uploadcare derivative API dev schema validation', () => {
     validate('edit', {
       pub_key: 'pk',
       prompt: 'remove the cat',
-      image_url: 'https://ucarecdn.com/abc/',
+      source: 'abc-uuid',
       filename: 'edited.png',
     });
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('reports an edit request without a source image url', () => {
+  it('reports an edit request without a source uuid', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     validate('edit', { pub_key: 'pk', prompt: 'x', filename: 'f.png' });
     expect(spy).toHaveBeenCalledOnce();

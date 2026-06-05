@@ -105,6 +105,14 @@
   }
 }
 
+/* Dim the prompt text while generating (the textarea is disabled). */
+.input:disabled {
+  color: var(--uc-ai-muted-foreground);
+  /* WebKit overrides disabled text color otherwise. */
+  -webkit-text-fill-color: var(--uc-ai-muted-foreground);
+  cursor: not-allowed;
+}
+
 .input::placeholder {
   color: var(--uc-ai-muted-foreground);
 }

@@ -10,14 +10,7 @@ export {
   parseAspectRatioList,
   toAspectRatioOption,
 } from './entities/aspect-ratio';
-export {
-  type AiCapability,
-  type AiEditorMode,
-  type AiTemplate,
-  CAPABILITIES,
-  CAPABILITIES_FOR_MODE,
-  type CapabilityMeta,
-} from './entities/capability';
+export { type AiEditorMode, type AiTemplate, MODES, type ModeMeta } from './entities/mode';
 export {
   type AiProvider,
   type AiProviderRequest,

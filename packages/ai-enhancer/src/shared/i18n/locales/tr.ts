@@ -10,6 +10,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-cancel': 'İptal',
   'ai-enhancer-generate-btn': 'Oluştur',
   'ai-enhancer-done-btn': 'Bitti',
+  'ai-enhancer-start-over': 'Baştan başla',
   'ai-enhancer-history-empty': 'Henüz komut yok',
   'ai-enhancer-history-title': 'Son komutlar',
   'ai-enhancer-busy': 'Oluşturuluyor…',

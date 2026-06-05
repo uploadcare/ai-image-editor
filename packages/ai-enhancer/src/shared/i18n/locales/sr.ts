@@ -10,6 +10,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-cancel': 'Otkaži',
   'ai-enhancer-generate-btn': 'Generiši',
   'ai-enhancer-done-btn': 'Gotovo',
+  'ai-enhancer-start-over': 'Почни изнова',
   'ai-enhancer-history-empty': 'Još nema upita',
   'ai-enhancer-history-title': 'Nedavni upiti',
   'ai-enhancer-busy': 'Generisanje…',

@@ -15,18 +15,12 @@ export type GenerateRequestParams = {
   signal?: AbortSignal;
 };
 
-/**
- * Parameters for an image→image edit request.
- *
- * NOTE: the edit endpoint contract is provisional — the platform side does not
- * exist yet (PR #1497 is generate-only). The endpoint path and `image_url`
- * field are best-guess and must be reconciled once the backend lands.
- */
+/** Parameters for an image→image edit request. */
 export type EditRequestParams = {
   prompt: string;
-  /** CDN URL of the source image to edit. */
-  imageUrl: string;
-  /** Target aspect ratio (used by outpaint to size the extended canvas). */
+  /** UUID of the source image to edit. */
+  source: string;
+  /** Target output aspect ratio. Optional; omitted to preserve the source. */
   aspectRatio?: [number, number];
   filename: string;
   store?: 'auto' | boolean;
@@ -118,16 +112,19 @@ export class UploadcareApiClient {
     return this.startJob(new URL('/derivative/image/generate/', this.baseUrl), body, 'generate', params.signal);
   }
 
-  /**
-   * Start an image→image edit job. Resolves to the job handle.
-   *
-   * Placeholder: the AI edit endpoint is not available yet — the platform side
-   * (`derivative/image/edit/`) does not exist. The real request-building logic
-   * is held until the backend lands; until then this throws so no edit traffic
-   * is sent. Edit is not exposed publicly while this is stubbed.
-   */
-  async edit(_params: EditRequestParams): Promise<UploadcareJobResponse> {
-    throw new Error('AI edit is not available yet');
+  /** Start an image→image edit job. Resolves to the job handle. */
+  async edit(params: EditRequestParams): Promise<UploadcareJobResponse> {
+    const body: Record<string, unknown> = {
+      pub_key: this.publicKey,
+      prompt: params.prompt,
+      source: params.source,
+      filename: params.filename,
+    };
+    if (params.aspectRatio) body.aspect_ratio = [params.aspectRatio[0], params.aspectRatio[1]];
+    if (params.store !== undefined) body.store = params.store;
+
+    await devValidate('edit', body);
+    return this.startJob(new URL('/derivative/image/edit/', this.baseUrl), body, 'edit', params.signal);
   }
 
   /** Fetch the current state of a generation/edit job. */

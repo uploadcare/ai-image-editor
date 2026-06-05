@@ -18,11 +18,17 @@ const GenerateRequestSchema = z.object({
   store: z.union([z.literal('auto'), z.boolean()]).optional(),
 });
 
-/** Request body sent to `derivative/image/edit/` (provisional contract). */
+/**
+ * Request body sent to `derivative/image/edit/`.
+ *
+ * The endpoint also accepts `reference_sources` (uuid[]), `output_format`, and
+ * `seed`, but the editor does not surface them yet — add them here (and to the
+ * request body) when they are wired up.
+ */
 const EditRequestSchema = z.object({
   pub_key: z.string().min(1),
   prompt: z.string(),
-  image_url: z.string().url(),
+  source: z.string().min(1),
   aspect_ratio: z.tuple([z.number(), z.number()]).optional(),
   filename: z.string(),
   store: z.union([z.literal('auto'), z.boolean()]).optional(),

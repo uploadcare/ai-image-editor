@@ -10,6 +10,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-cancel': 'Annuller',
   'ai-enhancer-generate-btn': 'Generér',
   'ai-enhancer-done-btn': 'Færdig',
+  'ai-enhancer-start-over': 'Start forfra',
   'ai-enhancer-history-empty': 'Ingen prompts endnu',
   'ai-enhancer-history-title': 'Seneste prompts',
   'ai-enhancer-busy': 'Genererer…',

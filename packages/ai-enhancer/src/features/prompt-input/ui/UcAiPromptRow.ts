@@ -2,7 +2,7 @@ import { html, LitElement, nothing, type PropertyValues, type TemplateResult, un
 import { customElement, property, query } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
-import type { AiEditorMode } from '../../../entities/capability';
+import type { AiEditorMode } from '../../../entities/mode';
 import { ICON_ARROW_THICK, ICON_HISTORY } from '../../../shared/ui/icons';
 import styles from './prompt-row.css?inline';
 

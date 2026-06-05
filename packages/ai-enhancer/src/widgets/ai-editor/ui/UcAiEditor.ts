@@ -10,12 +10,7 @@ import {
   parseAspectRatioList,
   toAspectRatioOption,
 } from '../../../entities/aspect-ratio';
-import {
-  type AiCapability,
-  type AiEditorMode,
-  CAPABILITIES,
-  CAPABILITIES_FOR_MODE,
-} from '../../../entities/capability';
+import { type AiEditorMode, MODES } from '../../../entities/mode';
 import { UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
 import { type enLocale, translate } from '../../../shared/i18n';
@@ -39,26 +34,23 @@ export type DoneDetail = {
   /** UUID of the committed Uploadcare file (same as `file.uuid`). */
   uuid: string;
   prompt: string;
-  capability: AiCapability;
+  mode: AiEditorMode;
   aspectRatio?: AspectRatio;
   /** The committed result as an Uploadcare file object. */
   file: UploadcareFile;
 };
 
-const CAPABILITIES_USING_ASPECT_RATIO: ReadonlySet<AiCapability> = new Set<AiCapability>(['generate']);
-
 @customElement('uc-ai-editor')
 export class UcAiEditor extends LitElement {
   public static override styles = unsafeCSS(styles);
 
-  @property({ reflect: true })
-  public mode: AiEditorMode = 'generate';
-
+  /**
+   * UUID of an image to edit. When set, the editor opens straight in edit mode;
+   * when absent, it starts in generate mode. The mode is otherwise derived (see
+   * {@link _mode}) — there is no explicit mode property.
+   */
   @property()
-  public src: string | null = null;
-
-  @property({ reflect: true })
-  public capability: AiCapability = 'generate';
+  public source: string | null = null;
 
   /** Uploadcare public key. Required to enable generate/edit. */
   @property()
@@ -96,6 +88,10 @@ export class UcAiEditor extends LitElement {
   @state()
   private _selectedRatio: AspectRatio | null = null;
 
+  /** Display URL for {@link source}, resolved via the provider's CDN base. */
+  @state()
+  private _inputUrl: string | null = null;
+
   @query('uc-ai-prompt-row')
   private _promptRow?: UcAiPromptRow;
 
@@ -103,7 +99,9 @@ export class UcAiEditor extends LitElement {
   private _provider?: UploadcareDerivativeApi;
 
   public override willUpdate(changed: PropertyValues<this>): void {
-    if (changed.has('pubkey') || changed.has('baseUrl') || changed.has('cdnCname') || changed.has('cdnCnamePrefixed')) {
+    const providerConfigChanged =
+      changed.has('pubkey') || changed.has('baseUrl') || changed.has('cdnCname') || changed.has('cdnCnamePrefixed');
+    if (providerConfigChanged) {
       this._provider = this.pubkey
         ? new UploadcareDerivativeApi({
             publicKey: this.pubkey,
@@ -113,14 +111,13 @@ export class UcAiEditor extends LitElement {
           })
         : undefined;
     }
-    if (changed.has('mode')) {
-      const allowed = CAPABILITIES_FOR_MODE[this.mode];
-      if (!allowed.includes(this.capability)) {
-        this.capability = allowed[0] ?? 'generate';
-      }
-    }
-    if (changed.has('src')) {
+    if (changed.has('source')) {
       this._gen.reset();
+    }
+    // Re-resolve the input image's display URL once when its uuid or the
+    // provider (CDN base) changed — covers both set in the same update.
+    if (providerConfigChanged || changed.has('source')) {
+      this._resolveInputUrl();
     }
     if (changed.has('aspectRatios') || this._selectedRatio === null) {
       const options = this._aspectRatioOptions();
@@ -138,8 +135,36 @@ export class UcAiEditor extends LitElement {
     return translate(key, this.l10nOverrides);
   }
 
+  /** UUID of the image the editor is currently operating on, if any. */
+  private get _currentSourceUuid(): string | null {
+    return this._gen.result?.uuid ?? this.source;
+  }
+
+  /**
+   * Derived editor mode: `edit` whenever there is a current image (an input
+   * `source` or a generation result), otherwise `generate`. This makes the
+   * first successful generation flip the editor into edit mode for free.
+   */
+  private get _mode(): AiEditorMode {
+    return this._currentSourceUuid ? 'edit' : 'generate';
+  }
+
+  /** Resolve {@link source} to a display URL via the provider's CDN base. */
+  private _resolveInputUrl(): void {
+    const uuid = this.source;
+    const provider = this._provider;
+    if (!uuid || !provider) {
+      this._inputUrl = null;
+      return;
+    }
+    void provider.resolveCdnUrl(uuid).then((url) => {
+      // Guard against races: a later source/provider change wins.
+      if (this.source === uuid && this._provider === provider) this._inputUrl = url;
+    });
+  }
+
   private get _displayUrl(): string | null {
-    return this._gen.resultUrl ?? this.src;
+    return this._gen.resultUrl ?? this._inputUrl;
   }
 
   /** CDN-optimized rendition for the on-canvas preview. */
@@ -170,18 +195,29 @@ export class UcAiEditor extends LitElement {
     const prompt = this._prompt.trim();
     const provider = this._provider;
     if (!prompt || !provider) return;
-    const useRatio = CAPABILITIES_USING_ASPECT_RATIO.has(this.capability);
+    const mode = this._mode;
     try {
-      await this._gen.run({
+      const result = await this._gen.run({
         provider,
         prompt,
-        capability: this.capability,
-        aspectRatio: useRatio && this._selectedRatio ? this._selectedRatio : undefined,
-        sourceUrl: this._gen.resultUrl ?? this.src ?? undefined,
+        mode,
+        aspectRatio: this._selectedRatio ?? undefined,
+        source: mode === 'edit' ? (this._currentSourceUuid ?? undefined) : undefined,
       });
+      // Clear the prompt only on a produced result — a failed/aborted run keeps
+      // the text so the user can retry or tweak it.
+      if (result) this._prompt = '';
     } catch (err) {
       this.dispatchEvent(new CustomEvent('uc:error', { detail: { error: err }, bubbles: true, composed: true }));
     }
+  }
+
+  /** Discard the current image (input or result) and return to generate mode. */
+  private _onStartOver(): void {
+    this.source = null;
+    this._inputUrl = null;
+    this._prompt = '';
+    this._gen.reset();
   }
 
   private _onPromptInput(e: CustomEvent<PromptInputDetail>): void {
@@ -199,12 +235,11 @@ export class UcAiEditor extends LitElement {
   private _onSelectHistoryEntry(e: CustomEvent<HistorySelectDetail>): void {
     const { entry } = e.detail;
     this._prompt = entry.prompt;
-    this.capability = entry.capability;
     this._gen.setResult({
       url: entry.url,
       uuid: entry.file.uuid,
       prompt: entry.prompt,
-      capability: entry.capability,
+      mode: entry.mode,
       file: entry.file,
     });
     this._historyOpen = false;
@@ -220,9 +255,8 @@ export class UcAiEditor extends LitElement {
 
   private _onSelectTemplate(e: CustomEvent<TemplateSelectDetail>): void {
     const { template } = e.detail;
-    this.capability = template.capability;
     this._prompt = template.prompt;
-    if (template.prompt && this.mode === 'edit') {
+    if (template.prompt && this._mode === 'edit') {
       void this._generate();
     } else {
       queueMicrotask(() => this._promptRow?.focusInput());
@@ -238,9 +272,8 @@ export class UcAiEditor extends LitElement {
       url: result.url,
       uuid: result.uuid,
       prompt: result.prompt,
-      capability: result.capability,
-      aspectRatio:
-        CAPABILITIES_USING_ASPECT_RATIO.has(result.capability) && this._selectedRatio ? this._selectedRatio : undefined,
+      mode: result.mode,
+      aspectRatio: this._selectedRatio ?? undefined,
       file: result.file,
     };
     this.dispatchEvent(new CustomEvent('uc:done', { detail, bubbles: true, composed: true }));
@@ -252,21 +285,18 @@ export class UcAiEditor extends LitElement {
   }
 
   public override render(): TemplateResult {
-    const placeholderKey = CAPABILITIES[this.capability].placeholderKey as keyof typeof enLocale;
-    // The footer primary commits the current result; label it "Done" in both
-    // modes. (`ai-enhancer-generate-btn` stays the prompt-row send aria-label.)
-    const primaryLabelKey = 'ai-enhancer-done-btn';
+    const mode = this._mode;
+    const placeholderKey = MODES[mode].placeholderKey as keyof typeof enLocale;
     // The primary commits a generation result, so it's enabled only once one exists.
     const primaryDisabled = this._gen.busy || !this._gen.result;
 
-    const showAspectRatio = this.mode === 'generate' && CAPABILITIES_USING_ASPECT_RATIO.has(this.capability);
-    const ratioOptions = showAspectRatio ? this._aspectRatioOptions() : [];
+    const ratioOptions = this._aspectRatioOptions();
 
     return html`
       <div
         class="shell"
         role="region"
-        aria-label="${this._l(this.mode === 'edit' ? 'ai-enhancer-edit-title' : 'ai-enhancer-generate-title')}"
+        aria-label="${this._l(mode === 'edit' ? 'ai-enhancer-edit-title' : 'ai-enhancer-generate-title')}"
       >
         <div class="body">
           <div class="body-inner">
@@ -284,7 +314,7 @@ export class UcAiEditor extends LitElement {
             <div class="bottom">
             <div class="history-wrap">
               <uc-ai-prompt-row
-                .mode=${this.mode}
+                .mode=${mode}
                 .value=${this._prompt}
                 .placeholder=${this._l(placeholderKey)}
                 .busy=${this._gen.busy}
@@ -296,7 +326,7 @@ export class UcAiEditor extends LitElement {
                 @uc:toggle-history=${this._onToggleHistory}
               >
                 ${
-                  showAspectRatio && ratioOptions.length > 0
+                  ratioOptions.length > 0
                     ? html`
                       <uc-ai-aspect-ratio
                         slot="aspect-ratio"
@@ -320,8 +350,7 @@ export class UcAiEditor extends LitElement {
               ></uc-ai-history-popover>
             </div>
             <uc-ai-chips
-              .mode=${this.mode}
-              .capability=${this.capability}
+              .mode=${mode}
               .prompt=${this._prompt}
               .busy=${this._gen.busy}
               @uc:select=${this._onSelectTemplate}
@@ -331,10 +360,13 @@ export class UcAiEditor extends LitElement {
         </div>
         <uc-ai-footer
           cancel-label="${this._l('ai-enhancer-cancel')}"
-          primary-label="${this._l(primaryLabelKey)}"
+          primary-label="${this._l('ai-enhancer-done-btn')}"
           ?primary-disabled=${primaryDisabled}
+          start-over-label="${this._l('ai-enhancer-start-over')}"
+          ?show-start-over=${mode === 'edit'}
           @uc:cancel=${this._onCancel}
           @uc:primary=${this._onPrimary}
+          @uc:start-over=${this._onStartOver}
         ></uc-ai-footer>
       </div>
     `;

@@ -1,16 +1,17 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import type { AspectRatio } from '../../aspect-ratio';
-import type { AiCapability } from '../../capability';
+import type { AiEditorMode } from '../../mode';
 
 export type AiProviderRequest = {
   prompt: string;
-  capability: AiCapability;
+  mode: AiEditorMode;
   /**
-   * Target aspect ratio for `generate` (and outpaint). Validated by the editor
-   * before the call; providers may pass it through unchanged.
+   * Target aspect ratio. Required for `generate`; optional for `edit` (omitted
+   * to preserve the source's ratio). Validated by the editor before the call.
    */
   aspectRatio?: AspectRatio;
-  sourceUrl?: string;
+  /** UUID of the source image to edit. Required when `mode` is `edit`. */
+  source?: string;
   signal?: AbortSignal;
 };
 
@@ -19,7 +20,7 @@ export type AiProviderResult = {
   /** UUID of the resulting Uploadcare file (same as `file.uuid`). */
   uuid: string;
   prompt: string;
-  capability: AiCapability;
+  mode: AiEditorMode;
   /** The resulting file as an Uploadcare file object. */
   file: UploadcareFile;
 };

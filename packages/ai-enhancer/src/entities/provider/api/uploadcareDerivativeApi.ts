@@ -1,12 +1,11 @@
 import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-prefix/async';
 import { type FileInfo, UploadcareFile } from '@uploadcare/upload-client';
 import { camelizeKeys } from '../../../shared/lib/camelizeKeys';
-import { type AspectRatio, isValidAspectRatio } from '../../aspect-ratio';
-import { CAPABILITIES } from '../../capability';
+import { isValidAspectRatio } from '../../aspect-ratio';
 import type { AiProvider, AiProviderRequest, AiProviderResult } from '../model/types';
 import { UploadcareApiClient, type UploadcareJobResponse } from './uploadcareApiClient';
 
-const DEFAULT_RATIO: AspectRatio = [1, 1];
+const DEFAULT_RATIO: [number, number] = [1, 1];
 const DEFAULT_CDN_CNAME = 'https://ucarecdn.com';
 const DEFAULT_POLL_INTERVAL_MS = 1500;
 const DEFAULT_POLL_TIMEOUT_MS = 1000_000;
@@ -60,9 +59,8 @@ function performanceNow(): number {
 
 /**
  * AI provider backed by Uploadcare's `derivative/*` API. A single instance
- * serves both editor modes: `generate` (text→image) and `edit` (image→image,
- * for the `object-remove` / `bg-replace` / `outpaint` capabilities), dispatching
- * on the requested capability's mode.
+ * serves both editor modes, dispatching on `request.mode`: `generate`
+ * (text→image) and `edit` (image→image, editing a source image by uuid).
  *
  * Transport is delegated to {@link UploadcareApiClient}; this class owns the
  * domain orchestration: aspect-ratio defaulting, polling the asynchronous job to
@@ -104,30 +102,52 @@ export class UploadcareDerivativeApi implements AiProvider {
     return this.pollUntilDone(jobId, request);
   }
 
+  /**
+   * Resolve a stored file's UUID to its CDN URL, using the same key-derived CDN
+   * base as generation results — so an input image displays identically to one
+   * the editor produced.
+   */
+  async resolveCdnUrl(uuid: string): Promise<string> {
+    const file = new UploadcareFile({ uuid } as FileInfo, { baseCDN: await this.getCdnBase() });
+    return file.cdnUrl;
+  }
+
   private async startJob(request: AiProviderRequest): Promise<string> {
-    const ratio: AspectRatio =
-      request.aspectRatio && isValidAspectRatio(request.aspectRatio) ? request.aspectRatio : DEFAULT_RATIO;
-    const aspectRatio: [number, number] = [ratio[0], ratio[1]];
+    // A valid ratio when supplied; generate falls back to a default, edit omits.
+    const ratio: [number, number] | undefined =
+      request.aspectRatio && isValidAspectRatio(request.aspectRatio)
+        ? [request.aspectRatio[0], request.aspectRatio[1]]
+        : undefined;
 
-    // AI edit (image→image) is not available yet — the platform endpoint does
-    // not exist. Placeholder until the backend lands; the editor/plugin no
-    // longer expose edit publicly. See the deferred edit-mode API note.
-    if (CAPABILITIES[request.capability].mode === 'edit') {
-      throw new Error(`Uploadcare edit (${request.capability}): AI edit is not available yet`);
-    }
-
-    const job: UploadcareJobResponse = await this.api.generate({
-      prompt: request.prompt,
-      aspectRatio,
-      filename: this.filename,
-      store: this.store,
-      signal: request.signal,
-    });
+    const job: UploadcareJobResponse =
+      request.mode === 'edit'
+        ? await this.startEditJob(request, ratio)
+        : await this.api.generate({
+            prompt: request.prompt,
+            aspectRatio: ratio ?? DEFAULT_RATIO,
+            filename: this.filename,
+            store: this.store,
+            signal: request.signal,
+          });
 
     if (!job.job_id) {
       throw new Error('Uploadcare derivative: response did not include a job_id');
     }
     return job.job_id;
+  }
+
+  private startEditJob(request: AiProviderRequest, ratio: [number, number] | undefined): Promise<UploadcareJobResponse> {
+    if (!request.source) {
+      throw new Error('Uploadcare edit: a source image uuid is required');
+    }
+    return this.api.edit({
+      prompt: request.prompt,
+      source: request.source,
+      aspectRatio: ratio,
+      filename: this.filename,
+      store: this.store,
+      signal: request.signal,
+    });
   }
 
   private async pollUntilDone(jobId: string, request: AiProviderRequest): Promise<AiProviderResult> {
@@ -141,7 +161,7 @@ export class UploadcareDerivativeApi implements AiProvider {
         }
         const fileInfo = camelizeKeys(status) as unknown as FileInfo;
         const file = new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
-        return { url: file.cdnUrl, uuid: file.uuid, prompt: request.prompt, capability: request.capability, file };
+        return { url: file.cdnUrl, uuid: file.uuid, prompt: request.prompt, mode: request.mode, file };
       }
 
       if (status.status === 'error') {
