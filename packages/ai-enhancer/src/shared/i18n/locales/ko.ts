@@ -10,6 +10,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-cancel': '취소',
   'ai-enhancer-generate-btn': '생성',
   'ai-enhancer-done-btn': '완료',
+  'ai-enhancer-start-over': '다시 시작',
   'ai-enhancer-history-empty': '아직 프롬프트가 없습니다',
   'ai-enhancer-history-title': '최근 프롬프트',
   'ai-enhancer-busy': '생성 중…',

@@ -1,13 +1,7 @@
 import { html, LitElement, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import {
-  type AiCapability,
-  type AiEditorMode,
-  type AiTemplate,
-  CAPABILITIES,
-  CAPABILITIES_FOR_MODE,
-} from '../../../entities/capability';
+import { type AiEditorMode, type AiTemplate, MODES } from '../../../entities/mode';
 import styles from './chips.css?inline';
 
 export type TemplateSelectDetail = { template: AiTemplate };
@@ -18,9 +12,6 @@ export class UcAiChips extends LitElement {
 
   @property()
   public mode: AiEditorMode = 'generate';
-
-  @property()
-  public capability: AiCapability = 'generate';
 
   @property()
   public prompt = '';
@@ -38,7 +29,7 @@ export class UcAiChips extends LitElement {
   }
 
   public override render(): TemplateResult {
-    const templates: AiTemplate[] = CAPABILITIES_FOR_MODE[this.mode].flatMap((id) => CAPABILITIES[id].templates);
+    const templates: AiTemplate[] = MODES[this.mode].templates;
 
     return html`
       <div class="row" role="toolbar" aria-label="${this.ariaLabel ?? ''}">
@@ -47,7 +38,7 @@ export class UcAiChips extends LitElement {
             <button
               type="button"
               class="chip"
-              aria-pressed="${this.capability === tpl.capability && this.prompt === tpl.prompt}"
+              aria-pressed="${this.prompt === tpl.prompt}"
               @click=${() => this._select(tpl)}
               ?disabled=${this.busy}
             >

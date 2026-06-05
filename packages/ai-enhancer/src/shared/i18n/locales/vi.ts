@@ -10,6 +10,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-cancel': 'Hủy',
   'ai-enhancer-generate-btn': 'Tạo',
   'ai-enhancer-done-btn': 'Xong',
+  'ai-enhancer-start-over': 'Bắt đầu lại',
   'ai-enhancer-history-empty': 'Chưa có lời nhắc',
   'ai-enhancer-history-title': 'Lời nhắc gần đây',
   'ai-enhancer-busy': 'Đang tạo…',

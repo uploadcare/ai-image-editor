@@ -73,16 +73,52 @@ describe('UploadcareApiClient', () => {
   });
 
   describe('edit', () => {
-    // AI edit is not available yet — `edit()` is a throwing placeholder and
-    // sends no request. Restore the request-shape / aspect-ratio / error /
-    // abort-signal tests when the edit endpoint lands.
-    it('throws because AI edit is not available yet, without sending a request', async () => {
-      const fetchImpl = vi.fn<typeof fetch>();
+    it('POSTs pub_key + prompt + source uuid + filename to the edit endpoint', async () => {
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'job-e' }));
       const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
-      await expect(
-        client.edit({ prompt: 'remove the cat', imageUrl: 'https://ucarecdn.com/abc/', filename: 'edited.png' }),
-      ).rejects.toThrow(/not available yet/i);
-      expect(fetchImpl).not.toHaveBeenCalled();
+
+      const job = await client.edit({ prompt: 'remove the cat', source: 'src-uuid', filename: 'edited.png' });
+
+      expect(job).toEqual({ type: 'job', job_id: 'job-e' });
+      const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
+      expect(url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
+      expect(init.method).toBe('POST');
+      expect(JSON.parse(init.body as string)).toMatchObject({
+        pub_key: 'pk',
+        prompt: 'remove the cat',
+        source: 'src-uuid',
+        filename: 'edited.png',
+      });
+    });
+
+    it('includes aspect_ratio only when provided', async () => {
+      // Fresh Response per call — a single shared Response body can be read once.
+      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+
+      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png' });
+      expect(JSON.parse((fetchImpl.mock.calls[0]![1] as RequestInit).body as string).aspect_ratio).toBeUndefined();
+
+      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png', aspectRatio: [16, 9] });
+      expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).aspect_ratio).toEqual([16, 9]);
+    });
+
+    it('throws with status text on non-2xx', async () => {
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response('bad source', { status: 400, statusText: 'Bad Request' }));
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      await expect(client.edit({ prompt: 'x', source: 'u', filename: 'f.png' })).rejects.toThrow(/400/);
+    });
+
+    it('forwards the abort signal', async () => {
+      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+        expect(init?.signal).toBeInstanceOf(AbortSignal);
+        return jsonResponse({ type: 'job', job_id: 'j' });
+      });
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      const controller = new AbortController();
+      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png', signal: controller.signal });
     });
   });
 

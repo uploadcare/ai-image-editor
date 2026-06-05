@@ -1,15 +1,15 @@
 import { type FileInfo, UploadcareFile } from '@uploadcare/upload-client';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AiCapability } from '../../../entities/capability';
+import type { AiEditorMode } from '../../../entities/mode';
 import type { AiProvider, AiProviderResult } from '../../../entities/provider';
 import { GenerationController } from './GenerationController';
 
-const okResult = (url: string, prompt: string, capability: AiCapability = 'generate'): AiProviderResult => ({
+const okResult = (url: string, prompt: string, mode: AiEditorMode = 'generate'): AiProviderResult => ({
   url,
   uuid: 'uuid-1',
   prompt,
-  capability,
+  mode,
   file: new UploadcareFile({ uuid: 'uuid-1' } as unknown as FileInfo),
 });
 
@@ -74,7 +74,7 @@ describe('GenerationController', () => {
   it('flips busy to true while running and back to false on success', async () => {
     const ctrl = new GenerationController(host);
     const { provider, setNext } = createDeferredProvider();
-    const run = ctrl.run({ provider, prompt: 'x', capability: 'generate' });
+    const run = ctrl.run({ provider, prompt: 'x', mode: 'generate' });
     expect(ctrl.busy).toBe(true);
     setNext(okResult('https://example.com/a.jpg', 'x'));
     await run;
@@ -84,7 +84,7 @@ describe('GenerationController', () => {
   it('stores result and pushes a history entry on success', async () => {
     const ctrl = new GenerationController(host);
     const { provider, setNext } = createDeferredProvider();
-    const run = ctrl.run({ provider, prompt: 'mountain', capability: 'generate' });
+    const run = ctrl.run({ provider, prompt: 'mountain', mode: 'generate' });
     setNext(okResult('https://example.com/mountain.jpg', 'mountain'));
     const result = await run;
     expect(result).toEqual(okResult('https://example.com/mountain.jpg', 'mountain'));
@@ -92,7 +92,7 @@ describe('GenerationController', () => {
     expect(ctrl.history).toHaveLength(1);
     expect(ctrl.history[0]).toMatchObject({
       prompt: 'mountain',
-      capability: 'generate',
+      mode: 'generate',
       url: 'https://example.com/mountain.jpg',
     });
     expect(ctrl.history[0]?.id).toBeTypeOf('string');
@@ -101,8 +101,8 @@ describe('GenerationController', () => {
   it('returns null and does not start a new run while busy', async () => {
     const ctrl = new GenerationController(host);
     const { provider, setNext } = createDeferredProvider();
-    const first = ctrl.run({ provider, prompt: 'a', capability: 'generate' });
-    const second = await ctrl.run({ provider, prompt: 'b', capability: 'generate' });
+    const first = ctrl.run({ provider, prompt: 'a', mode: 'generate' });
+    const second = await ctrl.run({ provider, prompt: 'b', mode: 'generate' });
     expect(second).toBeNull();
     setNext(okResult('https://example.com/a.jpg', 'a'));
     await first;
@@ -112,10 +112,10 @@ describe('GenerationController', () => {
     const ctrl = new GenerationController(host);
     const provider: AiProvider = {
       id: 'fake',
-      generate: async ({ prompt, capability }) => okResult(`https://example.com/${prompt}.jpg`, prompt, capability),
+      generate: async ({ prompt, mode }) => okResult(`https://example.com/${prompt}.jpg`, prompt, mode),
     };
     for (let i = 0; i < 25; i++) {
-      await ctrl.run({ provider, prompt: `prompt-${i}`, capability: 'generate' });
+      await ctrl.run({ provider, prompt: `prompt-${i}`, mode: 'generate' });
     }
     expect(ctrl.history).toHaveLength(20);
     // Newest first.
@@ -125,7 +125,7 @@ describe('GenerationController', () => {
   it('records the error message and re-throws on non-abort errors', async () => {
     const ctrl = new GenerationController(host);
     const { provider, setNextError } = createDeferredProvider();
-    const run = ctrl.run({ provider, prompt: 'x', capability: 'generate' });
+    const run = ctrl.run({ provider, prompt: 'x', mode: 'generate' });
     setNextError(new Error('boom'));
     await expect(run).rejects.toThrow('boom');
     expect(ctrl.error).toBe('boom');
@@ -135,7 +135,7 @@ describe('GenerationController', () => {
   it('returns null and does not record an error on abort', async () => {
     const ctrl = new GenerationController(host);
     const { provider } = createDeferredProvider();
-    const run = ctrl.run({ provider, prompt: 'x', capability: 'generate' });
+    const run = ctrl.run({ provider, prompt: 'x', mode: 'generate' });
     ctrl.abort();
     const result = await run;
     expect(result).toBeNull();
@@ -146,7 +146,7 @@ describe('GenerationController', () => {
   it('abort() cancels the in-flight signal', () => {
     const ctrl = new GenerationController(host);
     const { provider, observeSignal } = createDeferredProvider();
-    void ctrl.run({ provider, prompt: 'x', capability: 'generate' });
+    void ctrl.run({ provider, prompt: 'x', mode: 'generate' });
     ctrl.abort();
     expect(observeSignal()?.aborted).toBe(true);
   });
@@ -155,9 +155,9 @@ describe('GenerationController', () => {
     const ctrl = new GenerationController(host);
     const provider: AiProvider = {
       id: 'fake',
-      generate: async ({ prompt, capability }) => okResult('https://example.com/x.jpg', prompt, capability),
+      generate: async ({ prompt, mode }) => okResult('https://example.com/x.jpg', prompt, mode),
     };
-    await ctrl.run({ provider, prompt: 'x', capability: 'generate' });
+    await ctrl.run({ provider, prompt: 'x', mode: 'generate' });
     expect(ctrl.resultUrl).not.toBeNull();
     ctrl.reset();
     expect(ctrl.resultUrl).toBeNull();
@@ -176,7 +176,7 @@ describe('GenerationController', () => {
   it('hostDisconnected aborts the in-flight request', () => {
     const ctrl = new GenerationController(host);
     const { provider, observeSignal } = createDeferredProvider();
-    void ctrl.run({ provider, prompt: 'x', capability: 'generate' });
+    void ctrl.run({ provider, prompt: 'x', mode: 'generate' });
     ctrl.hostDisconnected();
     expect(observeSignal()?.aborted).toBe(true);
   });
@@ -185,10 +185,10 @@ describe('GenerationController', () => {
     const ctrl = new GenerationController(host);
     const provider: AiProvider = {
       id: 'fake',
-      generate: async ({ prompt, capability }) => okResult('https://example.com/x.jpg', prompt, capability),
+      generate: async ({ prompt, mode }) => okResult('https://example.com/x.jpg', prompt, mode),
     };
     host.requestUpdate.mockClear();
-    await ctrl.run({ provider, prompt: 'x', capability: 'generate' });
+    await ctrl.run({ provider, prompt: 'x', mode: 'generate' });
     // One on enter-busy + one on finally.
     expect(host.requestUpdate).toHaveBeenCalledTimes(2);
   });

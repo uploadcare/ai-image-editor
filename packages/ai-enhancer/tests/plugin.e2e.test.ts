@@ -67,9 +67,12 @@ describe('AiEnhancerPlugin', () => {
     await openModal();
     await page.getByText('Generate image').click();
     await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-editor') as (Element & { mode?: string }) | null;
+      const editor = document.querySelector('uc-ai-editor') as (Element & { source?: string }) | null;
       expect(editor).toBeTruthy();
-      expect(editor?.mode).toBe('generate');
+      // No source → derived generate mode (read off the prompt-row child).
+      const promptRow = editor?.shadowRoot?.querySelector('uc-ai-prompt-row') as (Element & { mode?: string }) | null;
+      expect(promptRow?.mode).toBe('generate');
+      expect(editor?.source).toBeFalsy();
     });
     cleanup();
   });
@@ -126,10 +129,7 @@ describe('AiEnhancerPlugin', () => {
     cleanup();
   });
 
-  // AI edit is not available yet, so the AI Edit file-action button is disabled.
-  // Re-enable this test (and the file action in AiEnhancerPlugin) once the edit
-  // endpoint lands.
-  it.skip('opens the editor in edit mode when the AI Edit file action is clicked', async () => {
+  it('opens the editor in edit mode when the AI Edit file action is clicked', async () => {
     const { AiEnhancerPlugin } = await import('../src/plugin');
     await renderUploader([AiEnhancerPlugin]);
     const api = getApi();
@@ -140,9 +140,11 @@ describe('AiEnhancerPlugin', () => {
     await page.getByRole('button', { name: 'AI Edit' }).click();
 
     await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-editor') as (Element & { mode?: string; src?: string }) | null;
-      expect(editor?.mode).toBe('edit');
-      expect(editor?.src).toBeTruthy();
+      const editor = document.querySelector('uc-ai-editor') as (Element & { source?: string }) | null;
+      expect(editor?.source).toBeTruthy();
+      // A source uuid → derived edit mode (read off the prompt-row child).
+      const promptRow = editor?.shadowRoot?.querySelector('uc-ai-prompt-row') as (Element & { mode?: string }) | null;
+      expect(promptRow?.mode).toBe('edit');
     });
     cleanup();
   });

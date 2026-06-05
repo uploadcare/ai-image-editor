@@ -81,12 +81,18 @@ function clickSend(el: UcAiEditorType): void {
 const canvasUrl = (el: UcAiEditorType): string | null =>
   (el.shadowRoot!.querySelector('uc-ai-canvas') as unknown as { url: string | null }).url;
 
+/** The derived editor mode, read off the prompt-row child the editor feeds. */
+const editorMode = (el: UcAiEditorType): string =>
+  (el.shadowRoot!.querySelector('uc-ai-prompt-row') as unknown as { mode: string }).mode;
+
+const SAMPLE_UUID = '11111111-2222-3333-4444-555555555555';
+
 describe('<uc-ai-editor>', () => {
   it('registers the custom element', () => {
     expect(customElements.get('uc-ai-editor')).toBe(UcAiEditorCtor);
   });
 
-  it('mounts with default mode="generate" and renders the canvas + prompt + chips + footer', async () => {
+  it('mounts in generate mode by default and renders the canvas + prompt + chips + footer', async () => {
     const el = mount();
     await el.updateComplete;
     const root = el.shadowRoot;
@@ -95,23 +101,61 @@ describe('<uc-ai-editor>', () => {
     expect(root?.querySelector('uc-ai-chips')).toBeTruthy();
     expect(root?.querySelector('uc-ai-footer')).toBeTruthy();
     expect(root?.querySelector('uc-ai-history-popover')).toBeTruthy();
-    expect(el.mode).toBe('generate');
+    expect(editorMode(el)).toBe('generate');
   });
 
-  it('reflects mode + capability as attributes', async () => {
+  it('derives edit mode from a source uuid, generate mode without one', async () => {
     const el = mount();
-    el.mode = 'edit';
     await el.updateComplete;
-    expect(el.getAttribute('mode')).toBe('edit');
-    expect(el.getAttribute('capability')).toBeTruthy();
+    expect(editorMode(el)).toBe('generate');
+    el.source = SAMPLE_UUID;
+    await el.updateComplete;
+    expect(editorMode(el)).toBe('edit');
   });
 
-  it('auto-snaps capability to one matching the mode when mode flips', async () => {
-    const el = mount();
-    el.capability = 'object-remove';
-    el.mode = 'generate';
+  it('auto-enters edit mode after the first successful generation', async () => {
+    stubFetch({ uuid: 'result' });
+    const el = mount(STAGING);
     await el.updateComplete;
-    expect(el.capability).toBe('generate');
+    expect(editorMode(el)).toBe('generate');
+    typePrompt(el, 'a tiger');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(canvasUrl(el)).toBe('https://cdn.example.com/result/'));
+    await el.updateComplete;
+    expect(editorMode(el)).toBe('edit');
+  });
+
+  it('clears the prompt after a successful generation', async () => {
+    stubFetch({ uuid: 'result' });
+    const el = mount(STAGING);
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
+    typePrompt(el, 'a tiger');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(canvasUrl(el)).toBe('https://cdn.example.com/result/'));
+    await el.updateComplete;
+    expect(input.value).toBe('');
+  });
+
+  it('returns to generate mode after Start over', async () => {
+    stubFetch({ uuid: 'result' });
+    const el = mount(STAGING);
+    await el.updateComplete;
+    typePrompt(el, 'a tiger');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
+
+    const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
+    const startOver = Array.from(footer.shadowRoot!.querySelectorAll('.actions .btn')).find(
+      (b) => !b.classList.contains('btn--primary'),
+    ) as HTMLButtonElement;
+    startOver.click();
+    await el.updateComplete;
+    expect(editorMode(el)).toBe('generate');
+    expect(canvasUrl(el)).toBeNull();
   });
 
   it('updates internal prompt state when the user types in the prompt input', async () => {
@@ -162,11 +206,11 @@ describe('<uc-ai-editor>', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the primary disabled and fires no uc:done until a result exists (edit mode with src)', async () => {
-    const el = mount();
-    el.mode = 'edit';
-    el.src = 'https://example.com/source.jpg';
+  it('keeps the primary disabled and fires no uc:done until a result exists (edit mode with a source)', async () => {
+    const el = mount(STAGING);
+    el.source = SAMPLE_UUID;
     await el.updateComplete;
+    expect(editorMode(el)).toBe('edit');
     const onDone = vi.fn();
     el.addEventListener('uc:done', onDone);
     // A source image alone is not a result — the primary commits results only.
@@ -175,9 +219,8 @@ describe('<uc-ai-editor>', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('does not dispatch uc:done when there is no displayable image (edit mode without src)', async () => {
+  it('does not dispatch uc:done when there is no result (generate mode)', async () => {
     const el = mount();
-    el.mode = 'edit';
     await el.updateComplete;
     const onDone = vi.fn();
     el.addEventListener('uc:done', onDone);
@@ -202,8 +245,7 @@ describe('<uc-ai-editor>', () => {
 
   it('opens the popover (native Popover API) when the history button is clicked in edit mode with empty prompt', async () => {
     stubFetch();
-    // Seed history with a generation (edit-mode generation is disabled, so seed
-    // in generate mode — the history persists across the mode switch).
+    // A successful generation seeds history and auto-enters edit mode.
     const el = mount(STAGING);
     await el.updateComplete;
     typePrompt(el, 'a tiger');
@@ -214,9 +256,8 @@ describe('<uc-ai-editor>', () => {
       // @ts-expect-error reading public Lit @property
       expect(popover.entries.length).toBe(1);
     });
+    expect(editorMode(el)).toBe('edit');
     // The history button is the edit-mode affordance shown when the prompt is empty.
-    el.mode = 'edit';
-    await el.updateComplete;
     const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
     const input = promptRow.shadowRoot!.querySelector('textarea')!;
     input.value = '';
@@ -250,6 +291,9 @@ describe('<uc-ai-editor>', () => {
     expect(options.length).toBe(2);
     options[1]!.click();
     await el.updateComplete;
+    // The first run cleared the prompt — re-type so the send button reappears.
+    typePrompt(el, 'mountain again');
+    await el.updateComplete;
     clickSend(el);
     await vi.waitFor(() => expect(stub.generateBodies.length).toBe(2));
     expect(stub.generateBodies[1]!.aspect_ratio).toEqual([1, 1]);
@@ -274,15 +318,15 @@ describe('<uc-ai-editor>', () => {
     expect(onDone.mock.calls[0]![0].detail.uuid).toBe('result-123');
   });
 
-  it('hides the aspect-ratio picker in edit mode', async () => {
-    const el = mount();
-    el.mode = 'edit';
-    el.src = 'https://example.com/source.jpg';
+  it('renders the aspect-ratio picker in edit mode too', async () => {
+    const el = mount(STAGING);
+    el.source = SAMPLE_UUID;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('uc-ai-aspect-ratio')).toBeNull();
+    expect(editorMode(el)).toBe('edit');
+    expect(el.shadowRoot!.querySelector('uc-ai-aspect-ratio')).toBeTruthy();
   });
 
-  it('aborts in-flight generation and clears the result when src changes', async () => {
+  it('aborts in-flight generation and shows the new source when source changes', async () => {
     // Status hangs until the request is aborted.
     stubFetch({
       status: (signal) =>
@@ -290,7 +334,9 @@ describe('<uc-ai-editor>', () => {
           signal?.addEventListener('abort', () => rej(new DOMException('Aborted', 'AbortError')), { once: true });
         }),
     });
-    const el = mount({ ...STAGING, mode: 'edit', src: 'https://example.com/first.jpg' });
+    // Non-UUID-shaped ids keep the CDN preview helper from rewriting the URL,
+    // so the canvas URL is the bare resolved source.
+    const el = mount({ ...STAGING, source: 'first-uuid' });
     await el.updateComplete;
 
     typePrompt(el, 'try');
@@ -301,13 +347,13 @@ describe('<uc-ai-editor>', () => {
         .shadowRoot!.querySelector('.icon-btn--primary') as HTMLButtonElement
     ).click();
 
-    // Change src mid-flight — this aborts the in-flight generation.
-    el.src = 'https://example.com/second.jpg';
+    // Change source mid-flight — this aborts the in-flight generation.
+    el.source = 'second-uuid';
     await el.updateComplete;
 
-    // After the abort, the displayed image should be the new src (no result override).
+    // After the abort, the displayed image should be the new source (no result override).
     await vi.waitFor(() => {
-      expect(canvasUrl(el)).toBe('https://example.com/second.jpg');
+      expect(canvasUrl(el)).toBe('https://cdn.example.com/second-uuid/');
     });
   });
 });

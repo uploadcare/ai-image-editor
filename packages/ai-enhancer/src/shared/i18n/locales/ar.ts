@@ -10,6 +10,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-cancel': 'إلغاء',
   'ai-enhancer-generate-btn': 'إنشاء',
   'ai-enhancer-done-btn': 'تم',
+  'ai-enhancer-start-over': 'البدء من جديد',
   'ai-enhancer-history-empty': 'لا توجد مطالبات بعد',
   'ai-enhancer-history-title': 'المطالبات الأخيرة',
   'ai-enhancer-busy': 'جارٍ الإنشاء…',

@@ -35,7 +35,11 @@
   <demo-shell heading="AI Enhancer — Standalone">
     <label slot="controls">
       Public key
-      <input id="pubkey" type="text" size="20" placeholder="5f124c1a3f9e9b6303c3" />
+      <input id="pubkey" type="text" size="20" placeholder="90c654b71e238b7a4023" />
+    </label>
+    <label slot="controls">
+      Source UUID (edit mode)
+      <input id="source" type="text" size="36" placeholder="uuid to edit (blank = generate)" />
     </label>
     <label slot="controls">
       Locale
@@ -45,7 +49,7 @@
       <input id="branded" type="checkbox" /> Brand-themed
     </label>
 
-    <uc-ai-editor mode="generate"></uc-ai-editor>
+    <uc-ai-editor></uc-ai-editor>
   </demo-shell>
 
   <script type="module">
@@ -53,12 +57,12 @@
     import '../src/index.ts';
     import { LOCALE_LOADERS, SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
 
-    const DEMO_PUBKEY = '5f124c1a3f9e9b6303c3';
+    const DEMO_PUBKEY = '90c654b71e238b7a4023';
 
     const shell = document.querySelector('demo-shell');
     const editor = document.querySelector('uc-ai-editor');
-    editor.baseUrl = 'https://upload.uploadcare.com';
-    editor.cdnCnamePrefixed = 'https://ucarecd.net';
+    editor.baseUrl = 'https://upload.staging0.uploadcare.com';
+    editor.cdnCnamePrefixed = 'https://staging0.ucarecd.net';
     editor.pubkey = DEMO_PUBKEY;
 
     document.getElementById('branded').addEventListener('change', (e) => {
@@ -69,6 +73,11 @@
       const key = e.target.value.trim() || DEMO_PUBKEY;
       editor.pubkey = key;
       shell.log(`pubkey → ${key}`);
+    });
+    document.getElementById('source').addEventListener('change', (e) => {
+      const uuid = e.target.value.trim();
+      editor.source = uuid || null;
+      shell.log(uuid ? `source → ${uuid} (edit mode)` : 'source cleared (generate mode)');
     });
 
     const localeSelect = document.getElementById('locale');

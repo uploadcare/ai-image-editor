@@ -10,6 +10,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-cancel': 'Άκυρο',
   'ai-enhancer-generate-btn': 'Δημιουργία',
   'ai-enhancer-done-btn': 'Τέλος',
+  'ai-enhancer-start-over': 'Ξεκινήστε από την αρχή',
   'ai-enhancer-history-empty': 'Δεν υπάρχουν ακόμη προτροπές',
   'ai-enhancer-history-title': 'Πρόσφατες προτροπές',
   'ai-enhancer-busy': 'Δημιουργία…',

@@ -10,6 +10,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-cancel': 'Zrušiť',
   'ai-enhancer-generate-btn': 'Vygenerovať',
   'ai-enhancer-done-btn': 'Hotovo',
+  'ai-enhancer-start-over': 'Začať znova',
   'ai-enhancer-history-empty': 'Zatiaľ žiadne prompty',
   'ai-enhancer-history-title': 'Posledné prompty',
   'ai-enhancer-busy': 'Generovanie…',

@@ -11,6 +11,13 @@
   background: var(--uc-ai-background);
 }
 
+/* Right-aligned action group: [Start over] [Done]. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

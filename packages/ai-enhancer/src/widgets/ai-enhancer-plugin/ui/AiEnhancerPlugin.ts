@@ -72,9 +72,8 @@ function ensureActivityModalSize(): void {
 }
 
 export type AiEditorActivityParams = {
-  mode?: 'generate' | 'edit';
-  src?: string;
-  internalId?: string;
+  /** UUID of an image to edit. Absent → the editor opens in generate mode. */
+  source?: string;
 };
 
 /**
@@ -180,28 +179,24 @@ export const AiEnhancerPlugin: UploaderPlugin = {
       label: 'ai-enhancer-source-label',
       icon: 'ai-generate',
       onSelect: () => {
-        uploaderApi.setCurrentActivity(AI_ENHANCER_ID, { mode: 'generate' });
+        // No source → the editor opens in generate mode.
+        uploaderApi.setCurrentActivity(AI_ENHANCER_ID, {});
         uploaderApi.setModalState(true);
       },
     });
 
-    // The AI edit file-action button is temporarily disabled: AI edit is not
-    // available yet (the platform endpoint does not exist). Re-enable this once
-    // the edit API lands — it's the only public entry point into `mode: 'edit'`.
-    // registry.registerFileAction({
-    //   id: AI_ENHANCER_ID,
-    //   icon: 'ai-edit',
-    //   label: 'ai-enhancer-file-action-label',
-    //   shouldRender: (fileEntry) => Boolean(fileEntry.isImage && fileEntry.cdnUrl),
-    //   onClick: (fileEntry) => {
-    //     uploaderApi.setCurrentActivity(AI_ENHANCER_ID, {
-    //       mode: 'edit',
-    //       src: fileEntry.cdnUrl ?? undefined,
-    //       internalId: fileEntry.internalId,
-    //     });
-    //     uploaderApi.setModalState(true);
-    //   },
-    // });
+    // The AI-edit file-action: edit an already-uploaded image. Passing its UUID
+    // as `source` opens the editor straight in edit mode.
+    registry.registerFileAction({
+      id: AI_ENHANCER_ID,
+      icon: 'ai-edit',
+      label: 'ai-enhancer-file-action-label',
+      shouldRender: (fileEntry) => Boolean(fileEntry.isImage && fileEntry.uuid),
+      onClick: (fileEntry) => {
+        uploaderApi.setCurrentActivity(AI_ENHANCER_ID, { source: fileEntry.uuid ?? undefined });
+        uploaderApi.setModalState(true);
+      },
+    });
 
     registry.registerActivity({
       id: AI_ENHANCER_ID,
@@ -213,8 +208,7 @@ export const AiEnhancerPlugin: UploaderPlugin = {
 
         const params = (activityParams ?? {}) as AiEditorActivityParams;
         const editor = document.createElement('uc-ai-editor') as UcAiEditor;
-        editor.mode = params.mode ?? 'generate';
-        if (params.src) editor.src = params.src;
+        if (params.source) editor.source = params.source;
         applyUploaderTheme(editor);
 
         const refreshProviderConfig = () => {

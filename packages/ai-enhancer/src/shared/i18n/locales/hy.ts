@@ -10,6 +10,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-cancel': 'Չեղարկել',
   'ai-enhancer-generate-btn': 'Ստեղծել',
   'ai-enhancer-done-btn': 'Պատրաստ է',
+  'ai-enhancer-start-over': 'Սկսել նորից',
   'ai-enhancer-history-empty': 'Դեռ հուշումներ չկան',
   'ai-enhancer-history-title': 'Վերջին հուշումները',
   'ai-enhancer-busy': 'Ստեղծվում է…',
