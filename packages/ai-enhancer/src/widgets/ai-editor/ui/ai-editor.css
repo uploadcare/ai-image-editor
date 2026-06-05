@@ -17,6 +17,8 @@
   --uc-ai-border: light-dark(#e6e6e6, #3d3d3d);
   --uc-ai-shadow-color: light-dark(rgba(24, 24, 24, 0.18), rgba(0, 0, 0, 0.5));
   --uc-ai-destructive: #d8473e;
+  /* High-contrast error text: dark red on light, light red on dark. */
+  --uc-ai-destructive-foreground: light-dark(#b3261e, #ff9d96);
   --uc-ai-radius: 14px;
   --uc-ai-radius-input: 12px;
   --uc-ai-radius-button: 8px;
@@ -127,8 +129,11 @@ uc-ai-history-popover {
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: color-mix(in oklch, var(--uc-ai-destructive) 12%, transparent);
-  color: var(--uc-ai-destructive);
+  /* Opaque tinted panel (over the surface, not transparent) + border so it
+   * reads clearly regardless of what's on the canvas behind it. */
+  background: color-mix(in oklch, var(--uc-ai-destructive) 16%, var(--uc-ai-background));
+  color: var(--uc-ai-destructive-foreground);
+  border: 1px solid color-mix(in oklch, var(--uc-ai-destructive) 45%, transparent);
   border-radius: var(--uc-ai-radius-button);
   font-size: 13px;
 }
