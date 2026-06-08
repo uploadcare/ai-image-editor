@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Skoða á öllum skjánum',
   'ai-enhancer-exit-fullscreen': 'Loka fullum skjá',
   'ai-enhancer-aspect-ratio-aria': 'Veldu myndhlutföll',
+  'ai-enhancer-aspect-original': 'Upprunalegt',
   'ai-enhancer-aspect-square': 'Ferningur',
   'ai-enhancer-aspect-tall': 'Hátt',
   'ai-enhancer-aspect-wide': 'Breitt',

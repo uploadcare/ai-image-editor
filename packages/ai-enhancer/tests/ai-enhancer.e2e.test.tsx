@@ -269,7 +269,7 @@ describe('<uc-ai-editor>', () => {
     expect(popover.matches(':popover-open')).toBe(true);
   });
 
-  it('renders the aspect-ratio picker in generate mode and sends the selected ratio', async () => {
+  it('renders the aspect-ratio picker in generate mode (no Original) and sends the selected ratio', async () => {
     const stub = stubFetch();
     const el = mount({ ...STAGING, 'aspect-ratios': '16:9 1:1' });
     await el.updateComplete;
@@ -277,26 +277,67 @@ describe('<uc-ai-editor>', () => {
     const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
     expect(ratio).toBeTruthy();
 
-    // Default selection is the first option in the list (16:9).
-    typePrompt(el, 'mountain');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
-    expect(stub.generateBodies[0]!.aspect_ratio).toEqual([16, 9]);
-
-    // Pick the second option from the popover.
+    // Generate mode offers only the standard ratios — no "Original".
     (ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
     await el.updateComplete;
     const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
     expect(options.length).toBe(2);
+
+    // Pick the second option (1:1) before the only generate — sending flips to edit.
     options[1]!.click();
     await el.updateComplete;
-    // The first run cleared the prompt — re-type so the send button reappears.
-    typePrompt(el, 'mountain again');
+    typePrompt(el, 'mountain');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(2));
-    expect(stub.generateBodies[1]!.aspect_ratio).toEqual([1, 1]);
+    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
+    expect(stub.generateBodies[0]!.aspect_ratio).toEqual([1, 1]);
+  });
+
+  it('defaults edit mode to "Original" and omits aspect_ratio (preserving the source AR)', async () => {
+    const stub = stubFetch({ uuid: 'edited' });
+    const el = mount(STAGING);
+    el.source = SAMPLE_UUID;
+    await el.updateComplete;
+    expect(editorMode(el)).toBe('edit');
+
+    // The picker leads with an "Original" entry (generic icon, no w:h numbers).
+    const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
+    (ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
+    expect(options[0]!.textContent).toContain('Original');
+    // "Original" reserves the ratio column but shows no "w:h" numbers.
+    expect(options[0]!.querySelector('.option-ratio')?.textContent).toBe('');
+
+    typePrompt(el, 'add a hat');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
+    // Original is the default → no aspect_ratio on the wire; backend preserves it.
+    expect(stub.generateBodies[0]!.aspect_ratio).toBeUndefined();
+    expect(stub.generateBodies[0]!.source).toBe(SAMPLE_UUID);
+  });
+
+  it('sends an explicit ratio when the user reshapes in edit mode', async () => {
+    const stub = stubFetch({ uuid: 'edited' });
+    const el = mount({ ...STAGING, 'aspect-ratios': '1:1' });
+    el.source = SAMPLE_UUID;
+    await el.updateComplete;
+
+    const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
+    (ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
+    await el.updateComplete;
+    // [Original, 1:1] in edit mode — pick the concrete ratio to reshape.
+    const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
+    expect(options.length).toBe(2);
+    options[1]!.click();
+    await el.updateComplete;
+
+    typePrompt(el, 'make it square');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
+    expect(stub.generateBodies[0]!.aspect_ratio).toEqual([1, 1]);
   });
 
   it('includes the UploadcareFile and its uuid in uc:done after a generation', async () => {

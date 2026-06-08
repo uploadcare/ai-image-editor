@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Volledig scherm weergeven',
   'ai-enhancer-exit-fullscreen': 'Volledig scherm sluiten',
   'ai-enhancer-aspect-ratio-aria': 'Beeldverhouding kiezen',
+  'ai-enhancer-aspect-original': 'Origineel',
   'ai-enhancer-aspect-square': 'Vierkant',
   'ai-enhancer-aspect-tall': 'Hoog',
   'ai-enhancer-aspect-wide': 'Breed',

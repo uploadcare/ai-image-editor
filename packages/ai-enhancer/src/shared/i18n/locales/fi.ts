@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Näytä koko näytöllä',
   'ai-enhancer-exit-fullscreen': 'Poistu koko näytöstä',
   'ai-enhancer-aspect-ratio-aria': 'Valitse kuvasuhde',
+  'ai-enhancer-aspect-original': 'Alkuperäinen',
   'ai-enhancer-aspect-square': 'Neliö',
   'ai-enhancer-aspect-tall': 'Korkea',
   'ai-enhancer-aspect-wide': 'Leveä',

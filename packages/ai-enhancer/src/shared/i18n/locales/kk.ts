@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Толық экранда қарау',
   'ai-enhancer-exit-fullscreen': 'Толық экраннан шығу',
   'ai-enhancer-aspect-ratio-aria': 'Арақатынасын таңдаңыз',
+  'ai-enhancer-aspect-original': 'Бастапқы',
   'ai-enhancer-aspect-square': 'Шаршы',
   'ai-enhancer-aspect-tall': 'Биік',
   'ai-enhancer-aspect-wide': 'Кең',

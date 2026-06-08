@@ -16,6 +16,7 @@ export const enLocale = {
   'ai-enhancer-fullscreen': 'View fullscreen',
   'ai-enhancer-exit-fullscreen': 'Exit fullscreen',
   'ai-enhancer-aspect-ratio-aria': 'Pick aspect ratio',
+  'ai-enhancer-aspect-original': 'Original',
   'ai-enhancer-aspect-square': 'Square',
   'ai-enhancer-aspect-tall': 'Tall',
   'ai-enhancer-aspect-wide': 'Wide',

@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Դիտել լիաէկրան',
   'ai-enhancer-exit-fullscreen': 'Դուրս գալ լիաէկրանից',
   'ai-enhancer-aspect-ratio-aria': 'Ընտրեք կողմերի հարաբերակցությունը',
+  'ai-enhancer-aspect-original': 'Բնօրինակ',
   'ai-enhancer-aspect-square': 'Քառակուսի',
   'ai-enhancer-aspect-tall': 'Բարձր',
   'ai-enhancer-aspect-wide': 'Լայն',

@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Tam ekran bax',
   'ai-enhancer-exit-fullscreen': 'Tam ekrandan çıx',
   'ai-enhancer-aspect-ratio-aria': 'Tərəf nisbətini seçin',
+  'ai-enhancer-aspect-original': 'Orijinal',
   'ai-enhancer-aspect-square': 'Kvadrat',
   'ai-enhancer-aspect-tall': 'Hündür',
   'ai-enhancer-aspect-wide': 'Geniş',

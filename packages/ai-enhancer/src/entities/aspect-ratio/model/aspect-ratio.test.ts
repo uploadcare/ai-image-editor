@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   aspectRatioEquals,
   aspectRatioKey,
+  aspectRatioValueEquals,
+  isConcreteRatio,
   isValidAspectRatio,
   labelKeyForRatio,
+  ORIGINAL_RATIO,
   POPULAR_ASPECT_RATIOS,
   parseAspectRatioList,
   toAspectRatioOption,
@@ -54,8 +57,26 @@ describe('labelKeyForRatio', () => {
 
 describe('toAspectRatioOption', () => {
   it('packs the ratio with its label key', () => {
-    expect(toAspectRatioOption([1, 1])).toEqual({ ratio: [1, 1], labelKey: 'ai-enhancer-aspect-square' });
-    expect(toAspectRatioOption([7, 3])).toEqual({ ratio: [7, 3], labelKey: null });
+    expect(toAspectRatioOption([1, 1])).toEqual({ value: [1, 1], labelKey: 'ai-enhancer-aspect-square' });
+    expect(toAspectRatioOption([7, 3])).toEqual({ value: [7, 3], labelKey: null });
+  });
+});
+
+describe('isConcreteRatio', () => {
+  it('is true for a ratio tuple, false for the Original sentinel and null', () => {
+    expect(isConcreteRatio([16, 9])).toBe(true);
+    expect(isConcreteRatio(ORIGINAL_RATIO)).toBe(false);
+    expect(isConcreteRatio(null)).toBe(false);
+  });
+});
+
+describe('aspectRatioValueEquals', () => {
+  it('compares concrete ratios and the Original sentinel', () => {
+    expect(aspectRatioValueEquals([1, 1], [1, 1])).toBe(true);
+    expect(aspectRatioValueEquals([1, 1], [16, 9])).toBe(false);
+    expect(aspectRatioValueEquals(ORIGINAL_RATIO, ORIGINAL_RATIO)).toBe(true);
+    expect(aspectRatioValueEquals(ORIGINAL_RATIO, [1, 1])).toBe(false);
+    expect(aspectRatioValueEquals([1, 1], ORIGINAL_RATIO)).toBe(false);
   });
 });
 

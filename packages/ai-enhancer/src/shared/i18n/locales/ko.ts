@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': '전체 화면으로 보기',
   'ai-enhancer-exit-fullscreen': '전체 화면 종료',
   'ai-enhancer-aspect-ratio-aria': '화면 비율 선택',
+  'ai-enhancer-aspect-original': '원본',
   'ai-enhancer-aspect-square': '정사각형',
   'ai-enhancer-aspect-tall': '세로로 긴',
   'ai-enhancer-aspect-wide': '가로로 긴',

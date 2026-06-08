@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Visualizza a schermo intero',
   'ai-enhancer-exit-fullscreen': 'Esci da schermo intero',
   'ai-enhancer-aspect-ratio-aria': 'Scegli le proporzioni',
+  'ai-enhancer-aspect-original': 'Originale',
   'ai-enhancer-aspect-square': 'Quadrato',
   'ai-enhancer-aspect-tall': 'Alto',
   'ai-enhancer-aspect-wide': 'Largo',
