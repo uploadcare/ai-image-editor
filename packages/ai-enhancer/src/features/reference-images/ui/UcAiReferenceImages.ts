@@ -1,9 +1,16 @@
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property, query, state } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
 import { cdnSquareThumbUrl } from '../../../shared/lib/cdn';
-import { ICON_ADD_IMAGE, ICON_CLOSE } from '../../../shared/ui/icons';
+import {
+  ICON_ADD_IMAGE,
+  ICON_CLOSE,
+  ICON_SOURCE_CAMERA,
+  ICON_SOURCE_CLOUD,
+  ICON_SOURCE_LOCAL,
+  ICON_SOURCE_URL,
+} from '../../../shared/ui/icons';
 import styles from './reference-images.css?inline';
 
 export type ReferencesChangeDetail = {
@@ -25,16 +32,30 @@ type OutputEntryLike = {
   isImage: boolean;
 };
 type UploaderApi = {
-  initFlow: () => void;
+  openSystemDialog: (options?: { captureCamera?: boolean }) => void;
+  setCurrentActivity: (activity: string, params?: { externalSourceType?: string }) => void;
+  setModalState: (opened: boolean) => void;
   removeFileByInternalId: (id: string) => void;
   removeAllFiles: () => void;
   uploadAll: () => void;
   getOutputCollectionState: () => { allEntries: OutputEntryLike[] };
+  l10n: (key: string) => string;
+  on: (type: string, handler: (payload: { activity?: string }) => void) => () => void;
 };
 type CtxProvider = HTMLElement & { api: UploaderApi };
+type PopoverElement = HTMLElement & { showPopover: () => void; hidePopover: () => void };
 
 const THUMB_SIZE = 48;
 const DEFAULT_MAX = 7;
+
+/** Built-in sources with a label key that isn't simply `src-type-<id>`. */
+const SOURCE_LABEL_KEY: Record<string, string> = { url: 'src-type-from-url' };
+const SOURCE_ICON: Record<string, string> = {
+  local: ICON_SOURCE_LOCAL,
+  url: ICON_SOURCE_URL,
+  camera: ICON_SOURCE_CAMERA,
+};
+
 let styleSheetPromise: Promise<CSSStyleSheet> | undefined;
 
 /**
@@ -57,10 +78,11 @@ function loadUploaderStyleSheet(): Promise<CSSStyleSheet> {
 /**
  * Reference-images strip for edit mode. Uploads run through an isolated,
  * lazily-loaded `@uploadcare/file-uploader` context (its own `ctx-name`, so
- * uploads never mix into a host uploader's collection); this element renders
- * its own thumbnail strip and surfaces the uploaded UUIDs via
- * `uc:references-change`. The heavy uploader is imported only when the user
- * first adds a reference.
+ * uploads never mix into a host uploader's collection). The "+" tile opens our
+ * own inline source chooser; picking a source opens that source directly (OS
+ * dialog for local, the uploader's modal for url/camera/external) and the
+ * built-in upload list is suppressed. Uploaded UUIDs surface via
+ * `uc:references-change`. The heavy uploader is imported on first "+".
  */
 @customElement('uc-ai-reference-images')
 export class UcAiReferenceImages extends LitElement {
@@ -70,6 +92,8 @@ export class UcAiReferenceImages extends LitElement {
   @property({ attribute: 'base-url' }) public baseUrl?: string;
   @property({ attribute: 'cdn-cname' }) public cdnCname?: string;
   @property({ attribute: 'cdn-cname-prefixed' }) public cdnCnamePrefixed?: string;
+  /** Comma/space-separated source ids offered by the chooser. */
+  @property({ attribute: 'source-list' }) public sourceList = 'local, url, camera';
   @property({ type: Number }) public max = DEFAULT_MAX;
   @property({ type: Boolean }) public disabled = false;
   @property({ attribute: 'label' }) public label = '';
@@ -78,6 +102,10 @@ export class UcAiReferenceImages extends LitElement {
   @property({ attribute: 'error-label' }) public errorLabel = '';
 
   @state() private _items: RefItem[] = [];
+  @state() private _menuOpen = false;
+  @state() private _loading = false;
+
+  @query('.menu') private _menuEl?: PopoverElement;
 
   private readonly _ctxName = `uc-ai-ref-${crypto.randomUUID()}`;
   private _host?: HTMLElement;
@@ -112,9 +140,9 @@ export class UcAiReferenceImages extends LitElement {
 
     const config = document.createElement('uc-config');
     const uploader = document.createElement('uc-file-uploader-regular');
-    const provider = document.createElement('uc-upload-ctx-provider') as CtxProvider;
+    const provider = document.createElement('uc-upload-ctx-provider') as unknown as CtxProvider;
     for (const el of [config, uploader, provider]) el.setAttribute('ctx-name', this._ctxName);
-    // Headless: no built-in button — we drive the flow from our own "+" tile.
+    // Headless: no built-in button — we drive the flow from our own chooser.
     uploader.setAttribute('headless', '');
     this._config = config;
     this._applyConfig(config);
@@ -131,9 +159,18 @@ export class UcAiReferenceImages extends LitElement {
 
     this._host = host;
     this._provider = provider;
+
     const onChange = () => this._syncFromCollection();
     provider.addEventListener('change', onChange);
-    this._unsubscribe = () => provider.removeEventListener('change', onChange);
+    // We never use the built-in upload list; every add-flow tries to open it,
+    // so close the modal the moment it would navigate there.
+    const offActivity = provider.api.on('activity-change', ({ activity }) => {
+      if (activity === 'upload-list') provider.api.setModalState(false);
+    });
+    this._unsubscribe = () => {
+      provider.removeEventListener('change', onChange);
+      offActivity();
+    };
     return provider.api;
   }
 
@@ -147,6 +184,7 @@ export class UcAiReferenceImages extends LitElement {
     this._setOrRemoveAttr(config, 'base-url', this.baseUrl);
     this._setOrRemoveAttr(config, 'cdn-cname', this.cdnCname);
     this._setOrRemoveAttr(config, 'cdn-cname-prefixed', this.cdnCnamePrefixed);
+    config.setAttribute('source-list', this.sourceList);
     config.setAttribute('img-only', '');
     config.setAttribute('multiple', '');
     config.setAttribute('multiple-max', String(this.max));
@@ -158,7 +196,9 @@ export class UcAiReferenceImages extends LitElement {
       changed.has('pubkey') ||
       changed.has('baseUrl') ||
       changed.has('cdnCname') ||
-      changed.has('cdnCnamePrefixed')
+      changed.has('cdnCnamePrefixed') ||
+      changed.has('sourceList') ||
+      changed.has('max')
     ) {
       this._applyConfig(this._config);
     }
@@ -207,10 +247,65 @@ export class UcAiReferenceImages extends LitElement {
     );
   }
 
+  private get _sources(): string[] {
+    return this.sourceList
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  private _sourceLabel(id: string): string {
+    const key = SOURCE_LABEL_KEY[id] ?? `src-type-${id}`;
+    return this._provider?.api.l10n(key) || id;
+  }
+
+  private _setMenuOpen(next: boolean): void {
+    this._menuOpen = next;
+    const pop = this._menuEl;
+    if (!pop) return;
+    const isOpen = pop.matches(':popover-open');
+    if (next && !isOpen) pop.showPopover();
+    else if (!next && isOpen) pop.hidePopover();
+  }
+
+  private _onMenuToggle = (e: Event): void => {
+    if ((e as ToggleEvent).newState === 'closed' && this._menuOpen) this._menuOpen = false;
+  };
+
+  /** Open the source chooser, bootstrapping the uploader (for labels) on first use. */
   private async _onAdd(): Promise<void> {
-    if (this.disabled || this._items.length >= this.max) return;
-    const api = await this._ensureUploader();
-    api?.initFlow();
+    if (this.disabled || this._loading || this._items.length >= this.max) return;
+    if (this._menuOpen) {
+      this._setMenuOpen(false);
+      return;
+    }
+    if (!this._provider) {
+      this._loading = true;
+      await this._ensureUploader();
+      this._loading = false;
+    }
+    // Wait for the render flush so the popover opens with localized labels
+    // (not the raw source ids shown before the uploader's l10n is ready).
+    await this.updateComplete;
+    this._setMenuOpen(true);
+  }
+
+  private _chooseSource(id: string): void {
+    this._setMenuOpen(false);
+    const api = this._provider?.api;
+    if (!api) return;
+    if (id === 'local') {
+      api.openSystemDialog();
+      return;
+    }
+    if (id === 'url' || id === 'camera') {
+      api.setCurrentActivity(id);
+      api.setModalState(true);
+      return;
+    }
+    // Everything else is an external/cloud source (dropbox, gdrive, …).
+    api.setCurrentActivity('external', { externalSourceType: id });
+    api.setModalState(true);
   }
 
   private _onRemove(item: RefItem): void {
@@ -246,22 +341,38 @@ export class UcAiReferenceImages extends LitElement {
             </div>
           `,
         )}
-        ${
-          atMax
-            ? nothing
-            : html`
-              <button
-                type="button"
-                class="add"
-                aria-label="${this.addLabel}"
-                title="${this.addLabel}"
-                ?disabled=${this.disabled}
-                @click=${this._onAdd}
-              >
-                ${unsafeSVG(ICON_ADD_IMAGE)}
-              </button>
-            `
-        }
+        ${atMax ? nothing : this._renderAdd()}
+      </div>
+    `;
+  }
+
+  private _renderAdd(): TemplateResult {
+    return html`
+      <div class="add-wrap">
+        <button
+          type="button"
+          class="add"
+          aria-label="${this.addLabel}"
+          title="${this.addLabel}"
+          aria-haspopup="menu"
+          aria-expanded="${this._menuOpen}"
+          ?disabled=${this.disabled || this._loading}
+          @click=${this._onAdd}
+        >
+          ${this._loading ? html`<div class="spinner"></div>` : unsafeSVG(ICON_ADD_IMAGE)}
+        </button>
+        <div class="menu" popover="auto" role="menu" @toggle=${this._onMenuToggle}>
+          <div class="menu-inner">
+            ${this._sources.map(
+              (id) => html`
+                <button type="button" class="menu-item" role="menuitem" @click=${() => this._chooseSource(id)}>
+                  ${unsafeSVG(SOURCE_ICON[id] ?? ICON_SOURCE_CLOUD)}
+                  <span>${this._sourceLabel(id)}</span>
+                </button>
+              `,
+            )}
+          </div>
+        </div>
       </div>
     `;
   }
