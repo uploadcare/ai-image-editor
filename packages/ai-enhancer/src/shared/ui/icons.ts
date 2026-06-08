@@ -33,6 +33,27 @@ export const ICON_CLOSE = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://ww
   <path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
 </svg>`;
 
+// Upload-source glyphs for the reference-images source chooser.
+export const ICON_SOURCE_LOCAL = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/>
+  <path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+export const ICON_SOURCE_URL = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M9.5 14.5 14.5 9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M11 7.5 12.2 6.3a3.8 3.8 0 0 1 5.5 5.5l-1.2 1.2M13 16.5l-1.2 1.2a3.8 3.8 0 0 1-5.5-5.5L7.5 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+export const ICON_SOURCE_CAMERA = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M4 8.5h2.5L8 6.5h8l1.5 2H20a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="12" cy="13" r="3.2" stroke="currentColor" stroke-width="1.6"/>
+</svg>`;
+
+/** Generic glyph for external/cloud sources (dropbox, gdrive, …). */
+export const ICON_SOURCE_CLOUD = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M7.5 18a4 4 0 0 1-.6-7.96 5.5 5.5 0 0 1 10.7 1.04A3.5 3.5 0 0 1 17 18H7.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>`;
+
 /** Generic "source image" glyph for the edit picker's "Original" option. */
 export const ICON_ASPECT_ORIGINAL = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <rect x="2" y="3" width="12" height="10" rx="1.6" stroke="currentColor" stroke-width="1.4"/>

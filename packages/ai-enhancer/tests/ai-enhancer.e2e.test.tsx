@@ -447,3 +447,19 @@ describe('<uc-ai-editor>', () => {
     });
   });
 });
+
+describe('<uc-ai-reference-images>', () => {
+  it('renders a chooser item per configured source', async () => {
+    const el = document.createElement('uc-ai-reference-images') as HTMLElement & { updateComplete: Promise<unknown> };
+    el.setAttribute('source-list', 'local, url, camera');
+    page.render(el);
+    await el.updateComplete;
+
+    // The chooser items are always in the (hidden) popover, regardless of the
+    // heavy uploader — so this exercises source-list parsing + rendering only.
+    const items = Array.from(el.shadowRoot!.querySelectorAll('.menu-item'));
+    expect(items.length).toBe(3);
+    // No uploader bootstrapped (no pubkey) → labels fall back to the source id.
+    expect(items.map((i) => i.textContent!.trim())).toEqual(['local', 'url', 'camera']);
+  });
+});

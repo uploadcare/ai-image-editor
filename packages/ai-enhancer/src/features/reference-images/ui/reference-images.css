@@ -97,8 +97,13 @@
   }
 }
 
-.add {
+.add-wrap {
   flex: 0 0 auto;
+}
+
+.add {
+  position: relative;
+  anchor-name: --uc-ai-ref-add;
   width: 48px;
   height: 48px;
   display: grid;
@@ -127,4 +132,62 @@
 .add svg {
   width: 20px;
   height: 20px;
+}
+
+/* Inline source chooser, anchored above the "+" tile. */
+.menu {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+  width: 200px;
+  position-anchor: --uc-ai-ref-add;
+  inset: auto;
+  bottom: anchor(top);
+  left: anchor(left);
+  margin-bottom: 6px;
+}
+
+.menu:not(:popover-open) {
+  display: none;
+}
+
+.menu-inner {
+  background: var(--uc-ai-background);
+  border: 1px solid var(--uc-ai-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.25);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--uc-ai-foreground);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+}
+
+.menu-item:hover {
+  background: var(--uc-ai-secondary);
+}
+
+.menu-item svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: var(--uc-ai-muted-foreground);
 }
