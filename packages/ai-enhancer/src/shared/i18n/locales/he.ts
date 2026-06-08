@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'הצג במסך מלא',
   'ai-enhancer-exit-fullscreen': 'צא ממסך מלא',
   'ai-enhancer-aspect-ratio-aria': 'בחר יחס גובה-רוחב',
+  'ai-enhancer-aspect-original': 'מקורי',
   'ai-enhancer-aspect-square': 'ריבוע',
   'ai-enhancer-aspect-tall': 'גבוה',
   'ai-enhancer-aspect-wide': 'רחב',

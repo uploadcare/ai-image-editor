@@ -3,15 +3,17 @@ import { customElement, property, query, state } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
 import {
-  type AspectRatio,
   type AspectRatioOption,
-  aspectRatioEquals,
   aspectRatioKey,
   aspectRatioSvg,
+  type AspectRatioValue,
+  aspectRatioValueEquals,
+  isConcreteRatio,
 } from '../../../entities/aspect-ratio';
+import { ICON_ASPECT_ORIGINAL } from '../../../shared/ui/icons';
 import styles from './aspect-ratio.css?inline';
 
-export type AspectRatioSelectDetail = { ratio: AspectRatio };
+export type AspectRatioSelectDetail = { value: AspectRatioValue };
 
 type PopoverElement = HTMLElement & { showPopover: () => void; hidePopover: () => void };
 
@@ -23,7 +25,7 @@ export class UcAiAspectRatio extends LitElement {
   public options: AspectRatioOption[] = [];
 
   @property({ attribute: false })
-  public selected: AspectRatio | null = null;
+  public selected: AspectRatioValue | null = null;
 
   @property({ type: Boolean })
   public busy = false;
@@ -32,7 +34,8 @@ export class UcAiAspectRatio extends LitElement {
   public override ariaLabel: string | null = null;
 
   @property({ attribute: false })
-  public labelFor: (option: AspectRatioOption) => string = (o) => aspectRatioKey(o.ratio);
+  public labelFor: (option: AspectRatioOption) => string = (o) =>
+    isConcreteRatio(o.value) ? aspectRatioKey(o.value) : '';
 
   @state()
   public open = false;
@@ -59,10 +62,10 @@ export class UcAiAspectRatio extends LitElement {
     this._setOpen(!this.open);
   }
 
-  private _select(ratio: AspectRatio): void {
+  private _select(value: AspectRatioValue): void {
     this.dispatchEvent(
       new CustomEvent<AspectRatioSelectDetail>('uc:select', {
-        detail: { ratio },
+        detail: { value },
         bubbles: true,
         composed: true,
       }),
@@ -70,8 +73,22 @@ export class UcAiAspectRatio extends LitElement {
     this._setOpen(false);
   }
 
+  /** Icon for a selection: the ratio's shape, or the generic "Original" glyph. */
+  private _iconFor(value: AspectRatioValue): string {
+    return isConcreteRatio(value) ? aspectRatioSvg(value) : ICON_ASPECT_ORIGINAL;
+  }
+
+  private _triggerLabel(): string {
+    const sel = this.selected;
+    if (!sel) return '';
+    if (isConcreteRatio(sel)) return aspectRatioKey(sel);
+    // For "Original", reuse the matching option's human label.
+    const option = this.options.find((o) => o.value === sel);
+    return option ? this.labelFor(option) : '';
+  }
+
   public override render(): TemplateResult {
-    const triggerLabel = this.selected ? aspectRatioKey(this.selected) : '';
+    const triggerLabel = this._triggerLabel();
 
     return html`
       <button
@@ -83,23 +100,23 @@ export class UcAiAspectRatio extends LitElement {
         ?disabled=${this.busy}
         @click=${this._toggle}
       >
-        ${this.selected ? unsafeSVG(aspectRatioSvg(this.selected)) : null}
+        ${this.selected ? unsafeSVG(this._iconFor(this.selected)) : null}
         ${triggerLabel ? html`<span class="trigger-label">${triggerLabel}</span>` : null}
       </button>
       <div class="popover" popover="auto" role="listbox" @toggle=${this._onToggle}>
         <div class="popover-inner">
           ${this.options.map((option) => {
-            const isSelected = this.selected ? aspectRatioEquals(option.ratio, this.selected) : false;
+            const isSelected = this.selected ? aspectRatioValueEquals(option.value, this.selected) : false;
             return html`
               <button
                 type="button"
                 class="option"
                 role="option"
                 aria-selected="${isSelected}"
-                @click=${() => this._select(option.ratio)}
+                @click=${() => this._select(option.value)}
               >
-                ${unsafeSVG(aspectRatioSvg(option.ratio))}
-                <span class="option-ratio">${aspectRatioKey(option.ratio)}</span>
+                ${unsafeSVG(this._iconFor(option.value))}
+                <span class="option-ratio">${isConcreteRatio(option.value) ? aspectRatioKey(option.value) : ''}</span>
                 <span class="option-label">${this.labelFor(option)}</span>
               </button>
             `;

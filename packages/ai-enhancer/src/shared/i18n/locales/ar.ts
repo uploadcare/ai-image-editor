@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'عرض ملء الشاشة',
   'ai-enhancer-exit-fullscreen': 'إنهاء ملء الشاشة',
   'ai-enhancer-aspect-ratio-aria': 'اختر نسبة العرض إلى الارتفاع',
+  'ai-enhancer-aspect-original': 'الأصلي',
   'ai-enhancer-aspect-square': 'مربع',
   'ai-enhancer-aspect-tall': 'طويل',
   'ai-enhancer-aspect-wide': 'عريض',

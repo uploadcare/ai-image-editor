@@ -2,17 +2,39 @@ import type { enLocale } from '../../../shared/i18n/en';
 
 export type AspectRatio = readonly [number, number];
 
+/**
+ * Sentinel selection meaning "keep the source image's aspect ratio". On the
+ * wire it maps to *omitting* `aspect_ratio` — the edit backend then preserves
+ * the source's ratio. Only meaningful in edit mode.
+ */
+export const ORIGINAL_RATIO = 'original';
+
+/** A picker selection: a concrete ratio, or {@link ORIGINAL_RATIO}. */
+export type AspectRatioValue = AspectRatio | typeof ORIGINAL_RATIO;
+
 export type AspectRatioLabelKey = Extract<keyof typeof enLocale, `ai-enhancer-aspect-${string}`>;
 
 export type AspectRatioOption = {
-  /** Tuple [w, h] in lowest sensible terms. */
-  ratio: AspectRatio;
+  /** A concrete [w, h] ratio, or {@link ORIGINAL_RATIO}. */
+  value: AspectRatioValue;
   /**
-   * Locale key for the human label ("Square", "Tall", …). `null` when the
-   * ratio is not in the known set — the picker shows just the "w:h" string.
+   * Locale key for the human label ("Square", "Tall", "Original", …). `null`
+   * when a concrete ratio is not in the known set — the picker then shows just
+   * the "w:h" string.
    */
   labelKey: AspectRatioLabelKey | null;
 };
+
+/** Narrow a selection to a concrete ratio (everything except the sentinel). */
+export function isConcreteRatio(value: AspectRatioValue | null): value is AspectRatio {
+  return value != null && value !== ORIGINAL_RATIO;
+}
+
+/** Equality across selections, handling the {@link ORIGINAL_RATIO} sentinel. */
+export function aspectRatioValueEquals(a: AspectRatioValue, b: AspectRatioValue): boolean {
+  if (a === ORIGINAL_RATIO || b === ORIGINAL_RATIO) return a === b;
+  return aspectRatioEquals(a, b);
+}
 
 /**
  * Default ratios offered when the host gave us nothing useful — or when the
@@ -56,7 +78,7 @@ export function labelKeyForRatio(ratio: AspectRatio): AspectRatioLabelKey | null
 }
 
 export function toAspectRatioOption(ratio: AspectRatio): AspectRatioOption {
-  return { ratio, labelKey: labelKeyForRatio(ratio) };
+  return { value: ratio, labelKey: labelKeyForRatio(ratio) };
 }
 
 /**

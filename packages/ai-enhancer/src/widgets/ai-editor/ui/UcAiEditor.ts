@@ -4,8 +4,11 @@ import { customElement, property, query, state } from 'lit/decorators.js';
 import {
   type AspectRatio,
   type AspectRatioOption,
-  aspectRatioEquals,
+  type AspectRatioValue,
+  aspectRatioValueEquals,
+  isConcreteRatio,
   isValidAspectRatio,
+  ORIGINAL_RATIO,
   POPULAR_ASPECT_RATIOS,
   parseAspectRatioList,
   toAspectRatioOption,
@@ -86,11 +89,14 @@ export class UcAiEditor extends LitElement {
   private _historyOpen = false;
 
   @state()
-  private _selectedRatio: AspectRatio | null = null;
+  private _selectedRatio: AspectRatioValue | null = null;
 
   /** Display URL for {@link source}, resolved via the provider's CDN base. */
   @state()
   private _inputUrl: string | null = null;
+
+  /** Last derived mode, to (re)default the ratio selection when it flips. */
+  private _lastMode?: AiEditorMode;
 
   @query('uc-ai-prompt-row')
   private _promptRow?: UcAiPromptRow;
@@ -119,14 +125,18 @@ export class UcAiEditor extends LitElement {
     if (providerConfigChanged || changed.has('source')) {
       this._resolveInputUrl();
     }
-    if (changed.has('aspectRatios') || this._selectedRatio === null) {
-      const options = this._aspectRatioOptions();
-      if (options.length === 0) {
-        this._selectedRatio = null;
-      } else {
-        const current = this._selectedRatio;
-        const stillValid = current ? options.some((o) => aspectRatioEquals(o.ratio, current)) : false;
-        if (!stillValid) this._selectedRatio = options[0]?.ratio ?? null;
+    // Default the ratio selection when the mode flips — edit defaults to
+    // "Original" (omit aspect_ratio → backend preserves the source AR), generate
+    // to the first standard ratio — and keep a concrete pick valid when the host
+    // changes the available ratios.
+    const mode = this._mode;
+    if (mode !== this._lastMode) {
+      this._lastMode = mode;
+      this._selectedRatio = mode === 'edit' ? ORIGINAL_RATIO : this._firstStandardRatio();
+    } else if (changed.has('aspectRatios')) {
+      const sel = this._selectedRatio;
+      if (isConcreteRatio(sel) && !this._standardRatios().some((r) => aspectRatioValueEquals(r, sel))) {
+        this._selectedRatio = this._firstStandardRatio();
       }
     }
   }
@@ -182,9 +192,27 @@ export class UcAiEditor extends LitElement {
     return url ? cdnFullsizeUrl(url) : null;
   }
 
-  private _aspectRatioOptions(): AspectRatioOption[] {
-    const list = this.aspectRatios && this.aspectRatios.length > 0 ? this.aspectRatios : POPULAR_ASPECT_RATIOS;
-    return list.filter(isValidAspectRatio).map(toAspectRatioOption);
+  /** The configured (or popular) standard ratios, validated. */
+  private _standardRatios(): AspectRatio[] {
+    // Fall back to the popular set when the host gave us nothing usable — an
+    // empty or all-invalid `aspect-ratios` would otherwise hide the picker.
+    const configured = (this.aspectRatios ?? []).filter(isValidAspectRatio);
+    return configured.length > 0 ? configured : [...POPULAR_ASPECT_RATIOS];
+  }
+
+  private _firstStandardRatio(): AspectRatio | null {
+    return this._standardRatios()[0] ?? null;
+  }
+
+  /**
+   * Options for the ratio picker. In edit mode a leading "Original" entry
+   * (preserve the source AR) is the default; standard ratios follow for
+   * reshaping.
+   */
+  private _ratioOptions(mode: AiEditorMode): AspectRatioOption[] {
+    const standard = this._standardRatios().map(toAspectRatioOption);
+    if (mode !== 'edit') return standard;
+    return [{ value: ORIGINAL_RATIO, labelKey: 'ai-enhancer-aspect-original' }, ...standard];
   }
 
   private _labelForOption = (option: AspectRatioOption): string => {
@@ -201,7 +229,9 @@ export class UcAiEditor extends LitElement {
         provider,
         prompt,
         mode,
-        aspectRatio: this._selectedRatio ?? undefined,
+        // "Original" (and generate's null) omit the ratio; only a concrete pick
+        // is sent — in edit that reshapes, otherwise the source AR is preserved.
+        aspectRatio: isConcreteRatio(this._selectedRatio) ? this._selectedRatio : undefined,
         source: mode === 'edit' ? (this._currentSourceUuid ?? undefined) : undefined,
       });
       // Clear the prompt only on a produced result — a failed/aborted run keeps
@@ -250,7 +280,7 @@ export class UcAiEditor extends LitElement {
   }
 
   private _onSelectAspectRatio(e: CustomEvent<AspectRatioSelectDetail>): void {
-    this._selectedRatio = e.detail.ratio;
+    this._selectedRatio = e.detail.value;
   }
 
   private _onSelectTemplate(e: CustomEvent<TemplateSelectDetail>): void {
@@ -273,7 +303,7 @@ export class UcAiEditor extends LitElement {
       uuid: result.uuid,
       prompt: result.prompt,
       mode: result.mode,
-      aspectRatio: this._selectedRatio ?? undefined,
+      aspectRatio: isConcreteRatio(this._selectedRatio) ? this._selectedRatio : undefined,
       file: result.file,
     };
     this.dispatchEvent(new CustomEvent('uc:done', { detail, bubbles: true, composed: true }));
@@ -290,7 +320,7 @@ export class UcAiEditor extends LitElement {
     // The primary commits a generation result, so it's enabled only once one exists.
     const primaryDisabled = this._gen.busy || !this._gen.result;
 
-    const ratioOptions = this._aspectRatioOptions();
+    const ratioOptions = this._ratioOptions(mode);
 
     return html`
       <div

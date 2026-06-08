@@ -18,6 +18,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Открыть на весь экран',
   'ai-enhancer-exit-fullscreen': 'Выйти из полноэкранного режима',
   'ai-enhancer-aspect-ratio-aria': 'Выберите соотношение сторон',
+  'ai-enhancer-aspect-original': 'Оригинал',
   'ai-enhancer-aspect-square': 'Квадрат',
   'ai-enhancer-aspect-tall': 'Высокий',
   'ai-enhancer-aspect-wide': 'Широкий',
