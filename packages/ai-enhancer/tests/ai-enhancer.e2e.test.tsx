@@ -340,6 +340,55 @@ describe('<uc-ai-editor>', () => {
     expect(stub.generateBodies[0]!.aspect_ratio).toEqual([1, 1]);
   });
 
+  // The reference-images strip drives an embedded uploader; here we exercise the
+  // editor's wiring via its `uc:references-change` contract (not the live uploader).
+  const fireReferences = (el: UcAiEditorType, detail: { uuids: string[]; uploading: boolean }): void => {
+    const refs = el.shadowRoot!.querySelector('uc-ai-reference-images')!;
+    refs.dispatchEvent(new CustomEvent('uc:references-change', { detail, bubbles: true, composed: true }));
+  };
+  const sendBtn = (el: UcAiEditorType): HTMLButtonElement =>
+    el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('.icon-btn--primary') as HTMLButtonElement;
+
+  it('shows the reference-images strip only in edit mode', async () => {
+    const el = mount(STAGING);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('uc-ai-reference-images')).toBeNull();
+    el.source = SAMPLE_UUID;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('uc-ai-reference-images')).toBeTruthy();
+  });
+
+  it('blocks send while references are uploading, re-enables when ready', async () => {
+    const el = mount(STAGING);
+    el.source = SAMPLE_UUID;
+    await el.updateComplete;
+    typePrompt(el, 'add the logo');
+    await el.updateComplete;
+
+    fireReferences(el, { uuids: [], uploading: true });
+    await el.updateComplete;
+    expect(sendBtn(el).disabled).toBe(true);
+
+    fireReferences(el, { uuids: ['ref-1'], uploading: false });
+    await el.updateComplete;
+    expect(sendBtn(el).disabled).toBe(false);
+  });
+
+  it('sends reference_sources with the edit request', async () => {
+    const stub = stubFetch({ uuid: 'edited' });
+    const el = mount(STAGING);
+    el.source = SAMPLE_UUID;
+    await el.updateComplete;
+
+    fireReferences(el, { uuids: ['ref-1', 'ref-2'], uploading: false });
+    await el.updateComplete;
+    typePrompt(el, 'combine them');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
+    expect(stub.generateBodies[0]!.reference_sources).toEqual(['ref-1', 'ref-2']);
+  });
+
   it('includes the UploadcareFile and its uuid in uc:done after a generation', async () => {
     stubFetch({ uuid: 'result-123' });
     const el = mount(STAGING);

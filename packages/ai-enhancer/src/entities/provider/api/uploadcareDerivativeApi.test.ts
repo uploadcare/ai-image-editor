@@ -244,6 +244,13 @@ describe('UploadcareDerivativeApi', () => {
       expect(readSentBody(fetchImpl.mock.calls[0]![1] as RequestInit).aspect_ratio).toBeUndefined();
     });
 
+    it('forwards reference_sources to the edit endpoint', async () => {
+      const fetchImpl = routedFetch({ type: 'job', job_id: 'job-e' }, [{ status: 'success', uuid: 'e' }]);
+      const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
+      await provider.generate({ prompt: 'x', mode: 'edit', source: 'src-uuid', references: ['r1', 'r2'] });
+      expect(readSentBody(fetchImpl.mock.calls[0]![1] as RequestInit).reference_sources).toEqual(['r1', 'r2']);
+    });
+
     it('throws (without any request) when an edit has no source uuid', async () => {
       const fetchImpl = routedFetch({ type: 'job', job_id: 'j' }, [{ status: 'success', uuid: 'x' }]);
       const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });

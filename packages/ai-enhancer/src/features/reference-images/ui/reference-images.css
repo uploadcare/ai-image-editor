@@ -1,0 +1,130 @@
+:host {
+  display: block;
+}
+
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tile {
+  position: relative;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--uc-ai-radius-button);
+  background: var(--uc-ai-muted);
+  border: 1px solid var(--uc-ai-border);
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
+.tile--failed {
+  border-color: var(--uc-ai-destructive);
+}
+
+.remove {
+  position: absolute;
+  top: -7px;
+  inset-inline-end: -7px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--uc-ai-foreground);
+  color: var(--uc-ai-background);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--uc-ai-transition);
+}
+
+.tile:hover .remove,
+.remove:focus-visible {
+  opacity: 1;
+}
+
+.remove svg {
+  width: 11px;
+  height: 11px;
+}
+
+.retry {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: inherit;
+  background: color-mix(in oklch, var(--uc-ai-destructive) 22%, transparent);
+  color: var(--uc-ai-destructive);
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.spinner {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--uc-ai-border);
+  border-top-color: var(--uc-ai-foreground);
+  animation: uc-ai-ref-spin 0.7s linear infinite;
+}
+
+@keyframes uc-ai-ref-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.6s;
+  }
+}
+
+.add {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: 1px dashed var(--uc-ai-border);
+  border-radius: var(--uc-ai-radius-button);
+  color: var(--uc-ai-muted-foreground);
+  cursor: pointer;
+  transition:
+    color var(--uc-ai-transition),
+    border-color var(--uc-ai-transition);
+}
+
+.add:hover {
+  color: var(--uc-ai-foreground);
+  border-color: var(--uc-ai-muted-foreground);
+}
+
+.add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.add svg {
+  width: 20px;
+  height: 20px;
+}

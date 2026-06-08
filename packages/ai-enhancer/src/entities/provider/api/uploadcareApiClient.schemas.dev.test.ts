@@ -42,6 +42,20 @@ describe('uploadcare derivative API dev schema validation', () => {
     expect(spy.mock.calls[0]!.join(' ')).toMatch(/edit/);
   });
 
+  it('accepts an edit request with reference_sources', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    validate('edit', { pub_key: 'pk', prompt: 'x', source: 'u', reference_sources: ['a', 'b'], filename: 'f.png' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('reports more than 7 reference_sources', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const reference_sources = Array.from({ length: 8 }, (_, i) => `r${i}`);
+    validate('edit', { pub_key: 'pk', prompt: 'x', source: 'u', reference_sources, filename: 'f.png' });
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]!.join(' ')).toMatch(/edit/);
+  });
+
   it('stays silent for a well-formed job response', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     validate('job', { type: 'job', job_id: 'job-1' });

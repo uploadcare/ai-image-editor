@@ -1,7 +1,7 @@
 import { html, LitElement, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import { cdnPreviewUrl } from '../../../shared/lib/cdn';
+import { cdnSquareThumbUrl } from '../../../shared/lib/cdn';
 import type { HistoryEntry } from '../../generation';
 import styles from './history-popover.css?inline';
 
@@ -65,7 +65,7 @@ export class UcAiHistoryPopover extends LitElement {
             : this.entries.map(
                 (entry) => html`
                 <button type="button" class="item" role="option" @click=${() => this._select(entry)}>
-                  <img class="thumb" src="${cdnPreviewUrl(entry.url, THUMB_SIZE)}" alt="" loading="lazy" />
+                  <img class="thumb" src="${cdnSquareThumbUrl(entry.url, THUMB_SIZE)}" alt="" loading="lazy" />
                   <span class="text">${entry.prompt}</span>
                 </button>
               `,
