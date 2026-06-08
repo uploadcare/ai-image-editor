@@ -309,13 +309,9 @@ export class UcAiEditor extends LitElement {
   }
 
   private _onSelectTemplate(e: CustomEvent<TemplateSelectDetail>): void {
-    const { template } = e.detail;
-    this._prompt = template.prompt;
-    if (template.prompt && this._mode === 'edit') {
-      void this._generate();
-    } else {
-      queueMicrotask(() => this._promptRow?.focusInput());
-    }
+    // A preset only fills the prompt — the user still presses send to generate.
+    this._prompt = e.detail.template.prompt;
+    queueMicrotask(() => this._promptRow?.focusInput());
   }
 
   private _onPrimary(): void {
