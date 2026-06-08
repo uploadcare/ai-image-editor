@@ -216,6 +216,9 @@ export const AiEnhancerPlugin: UploaderPlugin = {
           editor.baseUrl = config.get('baseUrl');
           editor.cdnCname = config.get('cdnCname');
           editor.cdnCnamePrefixed = config.get('cdnCnamePrefixed');
+          // Inherit the uploader's secure-delivery resolver so the editor's
+          // rendered CDN urls are signed the same way.
+          editor.secureDeliveryProxyUrlResolver = config.get('secureDeliveryProxyUrlResolver') ?? undefined;
         };
         refreshProviderConfig();
         void resolveEditorL10n().then((l10n) => {
@@ -234,6 +237,7 @@ export const AiEnhancerPlugin: UploaderPlugin = {
           config.subscribe('baseUrl', refreshProviderConfig),
           config.subscribe('cdnCname', refreshProviderConfig),
           config.subscribe('cdnCnamePrefixed', refreshProviderConfig),
+          config.subscribe('secureDeliveryProxyUrlResolver', refreshProviderConfig),
           config.subscribe('localeName', refreshL10n),
           config.subscribe('localeDefinitionOverride', refreshL10n),
           config.subscribe('cropPreset', (value) => {

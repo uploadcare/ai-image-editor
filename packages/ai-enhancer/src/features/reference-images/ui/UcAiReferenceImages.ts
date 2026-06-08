@@ -3,6 +3,8 @@ import { customElement, property, query, state } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
 import { cdnSquareThumbUrl } from '../../../shared/lib/cdn';
+import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
+import type { SecureDeliveryProxyUrlResolver } from '../../../shared/lib/secureDelivery';
 import {
   ICON_ADD_IMAGE,
   ICON_CLOSE,
@@ -93,6 +95,7 @@ export class UcAiReferenceImages extends LitElement {
   @property({ attribute: 'base-url' }) public baseUrl?: string;
   @property({ attribute: 'cdn-cname' }) public cdnCname?: string;
   @property({ attribute: 'cdn-cname-prefixed' }) public cdnCnamePrefixed?: string;
+  @property({ attribute: false }) public secureResolver?: SecureDeliveryProxyUrlResolver;
   /** Comma/space-separated source ids offered by the chooser. */
   @property({ attribute: 'source-list' }) public sourceList = 'local, url, camera';
   @property({ type: Number }) public max = DEFAULT_MAX;
@@ -115,6 +118,7 @@ export class UcAiReferenceImages extends LitElement {
   private _unsubscribe?: () => void;
   /** Local preview URLs by entry id, so a thumbnail shows before the CDN one. */
   private readonly _objectUrls = new Map<string, string>();
+  private readonly _secure = new SecureUrlController(this);
   /** In-flight bootstrap, so concurrent "+" clicks share one context. */
   private _bootstrap?: Promise<UploaderApi | undefined>;
 
@@ -191,6 +195,15 @@ export class UcAiReferenceImages extends LitElement {
     config.setAttribute('img-only', '');
     config.setAttribute('multiple', '');
     config.setAttribute('multiple-max', String(this.max));
+    // Hand the secure-delivery resolver to the embedded uploader too (it signs
+    // its own internals). It's a complex config key — set as an element property.
+    (config as HTMLElement & { secureDeliveryProxyUrlResolver?: SecureDeliveryProxyUrlResolver | null }).secureDeliveryProxyUrlResolver =
+      this.secureResolver ?? null;
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    // Clear the cache before render so this render resolves against the new resolver.
+    if (changed.has('secureResolver')) this._secure.setResolver(this.secureResolver);
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -201,7 +214,8 @@ export class UcAiReferenceImages extends LitElement {
       changed.has('cdnCname') ||
       changed.has('cdnCnamePrefixed') ||
       changed.has('sourceList') ||
-      changed.has('max')
+      changed.has('max') ||
+      changed.has('secureResolver')
     ) {
       this._applyConfig(this._config);
     }
@@ -342,14 +356,21 @@ export class UcAiReferenceImages extends LitElement {
     this._provider?.api.uploadAll();
   }
 
+  /** Local previews (`blob:`) render as-is; CDN thumbs go through secure delivery. */
+  private _thumbSrc(thumbUrl: string | null): string | null {
+    if (!thumbUrl || thumbUrl.startsWith('blob:')) return thumbUrl;
+    return this._secure.resolve(thumbUrl);
+  }
+
   public override render(): TemplateResult {
     const atMax = this._items.length >= this.max;
     return html`
       <div class="strip" role="group" aria-label="${this.label}">
-        ${this._items.map(
-          (item) => html`
+        ${this._items.map((item) => {
+          const src = this._thumbSrc(item.thumbUrl);
+          return html`
             <div class="tile tile--${item.status}">
-              ${item.thumbUrl ? html`<img class="thumb" src="${item.thumbUrl}" alt="" />` : nothing}
+              ${src ? html`<img class="thumb" src="${src}" alt="" />` : nothing}
               ${item.status === 'uploading' ? html`<div class="spinner" role="progressbar"></div>` : nothing}
               ${
                 item.status === 'failed'
@@ -365,8 +386,8 @@ export class UcAiReferenceImages extends LitElement {
                 ${unsafeSVG(ICON_CLOSE)}
               </button>
             </div>
-          `,
-        )}
+          `;
+        })}
         ${atMax ? nothing : this._renderAdd()}
       </div>
     `;

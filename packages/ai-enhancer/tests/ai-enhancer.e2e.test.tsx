@@ -389,6 +389,18 @@ describe('<uc-ai-editor>', () => {
     expect(stub.generateBodies[0]!.reference_sources).toEqual(['ref-1', 'ref-2']);
   });
 
+  it('applies an async secure-delivery resolver to the canvas preview', async () => {
+    stubFetch({ uuid: 'result' });
+    const el = mount(STAGING);
+    el.secureDeliveryProxyUrlResolver = async (url: string) => `https://signed.example/${encodeURIComponent(url)}`;
+    await el.updateComplete;
+    typePrompt(el, 'a tiger');
+    await el.updateComplete;
+    clickSend(el);
+    const raw = 'https://cdn.example.com/result/';
+    await vi.waitFor(() => expect(canvasUrl(el)).toBe(`https://signed.example/${encodeURIComponent(raw)}`));
+  });
+
   it('includes the UploadcareFile and its uuid in uc:done after a generation', async () => {
     stubFetch({ uuid: 'result-123' });
     const el = mount(STAGING);

@@ -18,6 +18,8 @@ import { UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
 import { type enLocale, translate } from '../../../shared/i18n';
 import { cdnPreviewUrl } from '../../../shared/lib/cdn';
+import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
+import type { SecureDeliveryProxyUrlResolver } from '../../../shared/lib/secureDelivery';
 import '../../../features/aspect-ratio-select';
 import '../../../features/prompt-history';
 import '../../../features/prompt-input';
@@ -73,6 +75,10 @@ export class UcAiEditor extends LitElement {
   @property({ attribute: 'cdn-cname-prefixed' })
   public cdnCnamePrefixed?: string;
 
+  /** Secure-delivery resolver: signs/proxies the CDN urls the editor renders. */
+  @property({ attribute: false })
+  public secureDeliveryProxyUrlResolver?: SecureDeliveryProxyUrlResolver;
+
   /**
    * Available aspect ratios for the generate flow. When set as an attribute
    * (`aspect-ratios="16:9 5:4 1:1"`), the string is parsed. Falsy / empty
@@ -108,6 +114,7 @@ export class UcAiEditor extends LitElement {
   private _promptRow?: UcAiPromptRow;
 
   private readonly _gen = new GenerationController(this);
+  private readonly _secure = new SecureUrlController(this);
   private _provider?: UploadcareDerivativeApi;
 
   public override willUpdate(changed: PropertyValues<this>): void {
@@ -122,6 +129,9 @@ export class UcAiEditor extends LitElement {
             cdnCnamePrefixed: this.cdnCnamePrefixed,
           })
         : undefined;
+    }
+    if (changed.has('secureDeliveryProxyUrlResolver')) {
+      this._secure.setResolver(this.secureDeliveryProxyUrlResolver);
     }
     if (changed.has('source')) {
       this._gen.reset();
@@ -183,13 +193,18 @@ export class UcAiEditor extends LitElement {
     return this._gen.resultUrl ?? this._inputUrl;
   }
 
-  /** CDN-optimized rendition for the on-canvas preview. */
+  /** CDN-optimized, secure-delivery-resolved rendition for the on-canvas preview. */
   private get _previewUrl(): string | null {
     const url = this._displayUrl;
     if (!url) return null;
     // The canvas spans the editor width; measured at render time (the result
     // arrives long after first layout). Fall back for detached renders.
-    return cdnPreviewUrl(url, this.clientWidth || 1024);
+    return this._secure.resolve(cdnPreviewUrl(url, this.clientWidth || 1024));
+  }
+
+  /** Full-resolution rendition for fullscreen, secure-delivery-resolved. */
+  private get _fullsizeUrl(): string | null {
+    return this._secure.resolve(this._displayUrl);
   }
 
   /** The configured (or popular) standard ratios, validated. */
@@ -342,7 +357,7 @@ export class UcAiEditor extends LitElement {
           <div class="body-inner">
             <uc-ai-canvas
               .url=${this._previewUrl}
-              .fullsizeUrl=${this._displayUrl}
+              .fullsizeUrl=${this._fullsizeUrl}
               .busy=${this._gen.busy}
               .alt=${this._prompt}
               busy-label="${this._l('ai-enhancer-busy')}"
@@ -360,6 +375,7 @@ export class UcAiEditor extends LitElement {
                     .baseUrl=${this.baseUrl}
                     .cdnCname=${this.cdnCname}
                     .cdnCnamePrefixed=${this.cdnCnamePrefixed}
+                    .secureResolver=${this.secureDeliveryProxyUrlResolver}
                     .disabled=${this._gen.busy}
                     label="${this._l('ai-enhancer-references-label')}"
                     add-label="${this._l('ai-enhancer-references-add')}"
@@ -403,6 +419,7 @@ export class UcAiEditor extends LitElement {
               <uc-ai-history-popover
                 ?open=${this._historyOpen}
                 .entries=${this._gen.history}
+                .secureResolver=${this.secureDeliveryProxyUrlResolver}
                 empty-label="${this._l('ai-enhancer-history-empty')}"
                 @uc:select=${this._onSelectHistoryEntry}
                 @uc:close=${this._onCloseHistory}

@@ -2,6 +2,8 @@ import { html, LitElement, type PropertyValues, type TemplateResult, unsafeCSS }
 import { customElement, property } from 'lit/decorators.js';
 
 import { cdnSquareThumbUrl } from '../../../shared/lib/cdn';
+import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
+import type { SecureDeliveryProxyUrlResolver } from '../../../shared/lib/secureDelivery';
 import type { HistoryEntry } from '../../generation';
 import styles from './history-popover.css?inline';
 
@@ -23,6 +25,11 @@ export class UcAiHistoryPopover extends LitElement {
   @property({ attribute: 'empty-label' })
   public emptyLabel = '';
 
+  @property({ attribute: false })
+  public secureResolver?: SecureDeliveryProxyUrlResolver;
+
+  private readonly _secure = new SecureUrlController(this);
+
   public override connectedCallback(): void {
     super.connectedCallback();
     if (!this.hasAttribute('popover')) {
@@ -34,6 +41,10 @@ export class UcAiHistoryPopover extends LitElement {
   public override disconnectedCallback(): void {
     this.removeEventListener('toggle', this._onToggle);
     super.disconnectedCallback();
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has('secureResolver')) this._secure.setResolver(this.secureResolver);
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -62,14 +73,15 @@ export class UcAiHistoryPopover extends LitElement {
         ${
           this.entries.length === 0
             ? html`<div class="empty">${this.emptyLabel}</div>`
-            : this.entries.map(
-                (entry) => html`
+            : this.entries.map((entry) => {
+                const thumb = this._secure.resolve(cdnSquareThumbUrl(entry.url, THUMB_SIZE));
+                return html`
                 <button type="button" class="item" role="option" @click=${() => this._select(entry)}>
-                  <img class="thumb" src="${cdnSquareThumbUrl(entry.url, THUMB_SIZE)}" alt="" loading="lazy" />
+                  ${thumb ? html`<img class="thumb" src="${thumb}" alt="" loading="lazy" />` : html`<span class="thumb"></span>`}
                   <span class="text">${entry.prompt}</span>
                 </button>
-              `,
-              )
+              `;
+              })
         }
       </div>
     `;
