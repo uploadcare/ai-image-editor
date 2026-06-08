@@ -1,3 +1,4 @@
+import { serializeCdnUrl } from '@uploadcare/cdn-url';
 import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-prefix/async';
 import { type FileInfo, UploadcareFile } from '@uploadcare/upload-client';
 import { camelizeKeys } from '../../../shared/lib/camelizeKeys';
@@ -108,8 +109,7 @@ export class UploadcareDerivativeApi implements AiProvider {
    * the editor produced.
    */
   async resolveCdnUrl(uuid: string): Promise<string> {
-    const file = new UploadcareFile({ uuid } as FileInfo, { baseCDN: await this.getCdnBase() });
-    return file.cdnUrl;
+    return serializeCdnUrl({ origin: await this.getCdnBase(), uuid });
   }
 
   private async startJob(request: AiProviderRequest): Promise<string> {
@@ -144,6 +144,7 @@ export class UploadcareDerivativeApi implements AiProvider {
       prompt: request.prompt,
       source: request.source,
       aspectRatio: ratio,
+      referenceSources: request.references,
       filename: this.filename,
       store: this.store,
       signal: request.signal,

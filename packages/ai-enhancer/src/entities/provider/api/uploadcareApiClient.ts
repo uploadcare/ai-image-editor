@@ -22,6 +22,8 @@ export type EditRequestParams = {
   source: string;
   /** Target output aspect ratio. Optional; omitted to preserve the source. */
   aspectRatio?: [number, number];
+  /** UUIDs of reference images guiding the edit (max 7). Omitted when empty. */
+  referenceSources?: string[];
   filename: string;
   store?: 'auto' | boolean;
   signal?: AbortSignal;
@@ -121,6 +123,9 @@ export class UploadcareApiClient {
       filename: params.filename,
     };
     if (params.aspectRatio) body.aspect_ratio = [params.aspectRatio[0], params.aspectRatio[1]];
+    if (params.referenceSources && params.referenceSources.length > 0) {
+      body.reference_sources = params.referenceSources;
+    }
     if (params.store !== undefined) body.store = params.store;
 
     await devValidate('edit', body);

@@ -21,15 +21,15 @@ const GenerateRequestSchema = z.object({
 /**
  * Request body sent to `derivative/image/edit/`.
  *
- * The endpoint also accepts `reference_sources` (uuid[]), `output_format`, and
- * `seed`, but the editor does not surface them yet — add them here (and to the
- * request body) when they are wired up.
+ * The endpoint also accepts `output_format` and `seed`, which the editor does
+ * not surface yet — add them here (and to the request body) when wired up.
  */
 const EditRequestSchema = z.object({
   pub_key: z.string().min(1),
   prompt: z.string(),
   source: z.string().min(1),
   aspect_ratio: z.tuple([z.number(), z.number()]).optional(),
+  reference_sources: z.array(z.string().min(1)).max(7).optional(),
   filename: z.string(),
   store: z.union([z.literal('auto'), z.boolean()]).optional(),
 });

@@ -17,16 +17,18 @@ import { type AiEditorMode, MODES } from '../../../entities/mode';
 import { UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
 import { type enLocale, translate } from '../../../shared/i18n';
-import { cdnFullsizeUrl, cdnPreviewUrl } from '../../../shared/lib/cdn';
+import { cdnPreviewUrl } from '../../../shared/lib/cdn';
 import '../../../features/aspect-ratio-select';
 import '../../../features/prompt-history';
 import '../../../features/prompt-input';
+import '../../../features/reference-images';
 import '../../../features/template-chips';
 import '../../../shared/ui/canvas';
 import '../../../shared/ui/footer';
 import type { AspectRatioSelectDetail } from '../../../features/aspect-ratio-select';
 import type { HistorySelectDetail } from '../../../features/prompt-history';
 import type { PromptInputDetail, UcAiPromptRow } from '../../../features/prompt-input';
+import type { ReferencesChangeDetail } from '../../../features/reference-images';
 import type { TemplateSelectDetail } from '../../../features/template-chips';
 import styles from './ai-editor.css?inline';
 
@@ -94,6 +96,10 @@ export class UcAiEditor extends LitElement {
   /** Display URL for {@link source}, resolved via the provider's CDN base. */
   @state()
   private _inputUrl: string | null = null;
+
+  /** Reference images for the edit (UUIDs + whether any are still uploading). */
+  @state()
+  private _references: ReferencesChangeDetail = { uuids: [], uploading: false };
 
   /** Last derived mode, to (re)default the ratio selection when it flips. */
   private _lastMode?: AiEditorMode;
@@ -186,12 +192,6 @@ export class UcAiEditor extends LitElement {
     return cdnPreviewUrl(url, this.clientWidth || 1024);
   }
 
-  /** Full-quality rendition shown in fullscreen. */
-  private get _fullsizeUrl(): string | null {
-    const url = this._displayUrl;
-    return url ? cdnFullsizeUrl(url) : null;
-  }
-
   /** The configured (or popular) standard ratios, validated. */
   private _standardRatios(): AspectRatio[] {
     // Fall back to the popular set when the host gave us nothing usable — an
@@ -233,6 +233,7 @@ export class UcAiEditor extends LitElement {
         // is sent — in edit that reshapes, otherwise the source AR is preserved.
         aspectRatio: isConcreteRatio(this._selectedRatio) ? this._selectedRatio : undefined,
         source: mode === 'edit' ? (this._currentSourceUuid ?? undefined) : undefined,
+        references: mode === 'edit' && this._references.uuids.length > 0 ? this._references.uuids : undefined,
       });
       // Clear the prompt only on a produced result — a failed/aborted run keeps
       // the text so the user can retry or tweak it.
@@ -247,7 +248,14 @@ export class UcAiEditor extends LitElement {
     this.source = null;
     this._inputUrl = null;
     this._prompt = '';
+    // The reference strip unmounts with edit mode (clearing its uploads); drop
+    // our mirror so a fresh edit starts with no references.
+    this._references = { uuids: [], uploading: false };
     this._gen.reset();
+  }
+
+  private _onReferencesChange(e: CustomEvent<ReferencesChangeDetail>): void {
+    this._references = e.detail;
   }
 
   private _onPromptInput(e: CustomEvent<PromptInputDetail>): void {
@@ -265,6 +273,8 @@ export class UcAiEditor extends LitElement {
   private _onSelectHistoryEntry(e: CustomEvent<HistorySelectDetail>): void {
     const { entry } = e.detail;
     this._prompt = entry.prompt;
+    // Restoring stays in edit mode, so the reference strip (and our `_references`
+    // mirror of it) persists intact — the user keeps any references they added.
     this._gen.setResult({
       url: entry.url,
       uuid: entry.file.uuid,
@@ -332,7 +342,7 @@ export class UcAiEditor extends LitElement {
           <div class="body-inner">
             <uc-ai-canvas
               .url=${this._previewUrl}
-              .fullsizeUrl=${this._fullsizeUrl}
+              .fullsizeUrl=${this._displayUrl}
               .busy=${this._gen.busy}
               .alt=${this._prompt}
               busy-label="${this._l('ai-enhancer-busy')}"
@@ -342,12 +352,31 @@ export class UcAiEditor extends LitElement {
             ></uc-ai-canvas>
             ${this._gen.error ? html`<div class="error-banner" role="alert">${this._gen.error}</div>` : nothing}
             <div class="bottom">
+            ${
+              mode === 'edit'
+                ? html`
+                  <uc-ai-reference-images
+                    .pubkey=${this.pubkey}
+                    .baseUrl=${this.baseUrl}
+                    .cdnCname=${this.cdnCname}
+                    .cdnCnamePrefixed=${this.cdnCnamePrefixed}
+                    .disabled=${this._gen.busy}
+                    label="${this._l('ai-enhancer-references-label')}"
+                    add-label="${this._l('ai-enhancer-references-add')}"
+                    remove-label="${this._l('ai-enhancer-references-remove')}"
+                    error-label="${this._l('ai-enhancer-references-error')}"
+                    @uc:references-change=${this._onReferencesChange}
+                  ></uc-ai-reference-images>
+                `
+                : nothing
+            }
             <div class="history-wrap">
               <uc-ai-prompt-row
                 .mode=${mode}
                 .value=${this._prompt}
                 .placeholder=${this._l(placeholderKey)}
                 .busy=${this._gen.busy}
+                ?send-disabled=${this._references.uploading}
                 ?history-open=${this._historyOpen}
                 history-aria-label="${this._l('ai-enhancer-history-title')}"
                 send-aria-label="${this._l('ai-enhancer-generate-btn')}"

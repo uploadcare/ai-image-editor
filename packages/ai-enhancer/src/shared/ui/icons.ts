@@ -20,6 +20,19 @@ export const ICON_ARROW_THICK = `<svg viewBox="0 0 16 16" fill="none" xmlns="htt
   <path d="M3 6.74251L8 2L13 6.74251M7.99961 14V2.10636" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
+/** "Add reference image" — a framed image with a plus. */
+export const ICON_ADD_IMAGE = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="8.5" cy="9" r="1.4" stroke="currentColor" stroke-width="1.4"/>
+  <path d="m4 17 4.5-4 3 2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18 15v6M15 18h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+
+/** Small "✕" used to remove a reference thumbnail. */
+export const ICON_CLOSE = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+
 /** Generic "source image" glyph for the edit picker's "Original" option. */
 export const ICON_ASPECT_ORIGINAL = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <rect x="2" y="3" width="12" height="10" rx="1.6" stroke="currentColor" stroke-width="1.4"/>
