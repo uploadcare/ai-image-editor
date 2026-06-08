@@ -30,6 +30,7 @@ type OutputEntryLike = {
   uuid: string | null;
   cdnUrl: string | null;
   isImage: boolean;
+  file: File | Blob | null;
 };
 type UploaderApi = {
   openSystemDialog: (options?: { captureCamera?: boolean }) => void;
@@ -112,6 +113,8 @@ export class UcAiReferenceImages extends LitElement {
   private _config?: HTMLElement;
   private _provider?: CtxProvider;
   private _unsubscribe?: () => void;
+  /** Local preview URLs by entry id, so a thumbnail shows before the CDN one. */
+  private readonly _objectUrls = new Map<string, string>();
   /** In-flight bootstrap, so concurrent "+" clicks share one context. */
   private _bootstrap?: Promise<UploaderApi | undefined>;
 
@@ -217,22 +220,45 @@ export class UcAiReferenceImages extends LitElement {
     this._config = undefined;
     this._provider = undefined;
     this._items = [];
+    for (const url of this._objectUrls.values()) URL.revokeObjectURL(url);
+    this._objectUrls.clear();
   }
 
   private _syncFromCollection(): void {
     const api = this._provider?.api;
     if (!api) return;
-    this._items = api
-      .getOutputCollectionState()
-      .allEntries.filter((e) => e.status !== 'removed' && e.status !== 'idle')
-      .map((e) => ({
-        internalId: e.internalId,
-        // The filter above leaves only uploading | success | failed.
-        status: e.status as RefStatus,
-        uuid: e.status === 'success' ? e.uuid : null,
-        thumbUrl: e.cdnUrl ? cdnSquareThumbUrl(e.cdnUrl, THUMB_SIZE) : null,
-      }));
+    const entries = api.getOutputCollectionState().allEntries.filter((e) => e.status !== 'removed');
+    this._items = entries.map((e) => ({
+      internalId: e.internalId,
+      status: e.status === 'success' ? 'success' : e.status === 'failed' ? 'failed' : 'uploading',
+      uuid: e.status === 'success' ? e.uuid : null,
+      thumbUrl: this._thumbFor(e),
+    }));
+    // Release local preview URLs for entries that are gone.
+    const live = new Set(entries.map((e) => e.internalId));
+    for (const [id, url] of this._objectUrls) {
+      if (!live.has(id)) {
+        URL.revokeObjectURL(url);
+        this._objectUrls.delete(id);
+      }
+    }
     this._emitChange();
+  }
+
+  /**
+   * Thumbnail for an entry: a local object URL (instant, shown while uploading)
+   * when we have the file bytes — kept for the entry's life so it never flashes
+   * to the CDN rendition — otherwise the CDN thumbnail once available.
+   */
+  private _thumbFor(e: OutputEntryLike): string | null {
+    const cached = this._objectUrls.get(e.internalId);
+    if (cached) return cached;
+    if (e.file) {
+      const url = URL.createObjectURL(e.file);
+      this._objectUrls.set(e.internalId, url);
+      return url;
+    }
+    return e.cdnUrl ? cdnSquareThumbUrl(e.cdnUrl, THUMB_SIZE) : null;
   }
 
   private _emitChange(): void {

@@ -31,6 +31,11 @@
   border-color: var(--uc-ai-destructive);
 }
 
+/* Dim the instant local preview while the upload is still in flight. */
+.tile--uploading .thumb {
+  opacity: 0.45;
+}
+
 .remove {
   position: absolute;
   top: -7px;
