@@ -34,8 +34,15 @@
 <body>
   <demo-shell heading="AI Enhancer — Standalone">
     <label slot="controls">
+      Environment
+      <select id="env">
+        <option value="production">production</option>
+        <option value="staging">staging</option>
+      </select>
+    </label>
+    <label slot="controls">
       Public key
-      <input id="pubkey" type="text" size="20" placeholder="90c654b71e238b7a4023" />
+      <input id="pubkey" type="text" size="20" />
     </label>
     <label slot="controls">
       Source UUID (edit mode)
@@ -57,21 +64,49 @@
     import '../src/index.ts';
     import { LOCALE_LOADERS, SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
 
-    const DEMO_PUBKEY = '90c654b71e238b7a4023';
+    const ENVIRONMENTS = {
+      // Production is the SDK default — no need to set URLs explicitly.
+      production: {
+        pubkey: '5f124c1a3f9e9b6303c3',
+      },
+      staging: {
+        pubkey: '90c654b71e238b7a4023',
+        baseUrl: 'https://upload.staging0.uploadcare.com',
+        cdnCnamePrefixed: 'https://staging0.ucarecd.net',
+      },
+    };
 
     const shell = document.querySelector('demo-shell');
     const editor = document.querySelector('uc-ai-editor');
-    editor.baseUrl = 'https://upload.staging0.uploadcare.com';
-    editor.cdnCnamePrefixed = 'https://staging0.ucarecd.net';
-    editor.pubkey = DEMO_PUBKEY;
+    const pubkeyInput = document.getElementById('pubkey');
+    const envSelect = document.getElementById('env');
+
+    let currentEnv = 'production';
+
+    function applyEnv(name) {
+      const env = ENVIRONMENTS[name];
+      currentEnv = name;
+      editor.baseUrl = env.baseUrl;
+      editor.cdnCnamePrefixed = env.cdnCnamePrefixed;
+      editor.pubkey = env.pubkey;
+      pubkeyInput.value = env.pubkey;
+    }
+
+    applyEnv(currentEnv);
+
+    envSelect.addEventListener('change', (e) => {
+      applyEnv(e.target.value);
+      shell.log(`env → ${currentEnv}`);
+    });
 
     document.getElementById('branded').addEventListener('change', (e) => {
       editor.classList.toggle('brand-overrides', e.target.checked);
       shell.log(`brand-themed: ${e.target.checked}`);
     });
-    document.getElementById('pubkey').addEventListener('change', (e) => {
-      const key = e.target.value.trim() || DEMO_PUBKEY;
+    pubkeyInput.addEventListener('change', (e) => {
+      const key = e.target.value.trim() || ENVIRONMENTS[currentEnv].pubkey;
       editor.pubkey = key;
+      pubkeyInput.value = key;
       shell.log(`pubkey → ${key}`);
     });
     document.getElementById('source').addEventListener('change', (e) => {
