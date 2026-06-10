@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Genera',
   'ai-enhancer-done-btn': 'Fet',
   'ai-enhancer-start-over': 'Comença de nou',
-  'ai-enhancer-history-empty': 'Encara no hi ha indicacions',
   'ai-enhancer-history-title': 'Indicacions recents',
   'ai-enhancer-busy': 'S’està generant…',
   'ai-enhancer-error': 'Hi ha hagut un error. Torna-ho a provar.',

@@ -18,12 +18,16 @@
   font: inherit;
   transition:
     background var(--uc-ai-transition),
-    color var(--uc-ai-transition);
+    transform 140ms var(--uc-ai-ease-out, ease);
 }
 
 .trigger:hover,
 .trigger[aria-expanded="true"] {
   background: var(--uc-ai-secondary-hover);
+}
+
+.trigger:active {
+  transform: scale(0.97);
 }
 
 .trigger:disabled {
@@ -34,17 +38,18 @@
 .trigger svg {
   width: 14px;
   height: 14px;
-  color: var(--uc-ai-muted-foreground);
+  color: var(--uc-ai-foreground);
 }
 
 .trigger-label {
   font-variant-numeric: tabular-nums;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 20px;
 }
 
+/* Popover opens upward, anchored to the trigger's top-right. */
 .popover {
   margin: 0;
   padding: 0;
@@ -58,17 +63,33 @@
   bottom: anchor(top);
   right: anchor(right);
   margin-bottom: 6px;
+  /* Grow from the trigger (bottom edge) when opening. */
+  transform-origin: bottom right;
+  transition:
+    opacity 150ms var(--uc-ai-ease-out, ease),
+    transform 150ms var(--uc-ai-ease-out, ease),
+    display 150ms allow-discrete,
+    overlay 150ms allow-discrete;
 }
 
 .popover:not(:popover-open) {
   display: none;
+  opacity: 0;
+  transform: scale(0.96) translateY(4px);
+}
+
+@starting-style {
+  .popover:popover-open {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
 }
 
 .popover-inner {
   background: var(--uc-ai-background);
   border: 1px solid var(--uc-ai-border);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.25);
+  border-radius: var(--uc-ai-radius-input, 12px);
+  box-shadow: var(--uc-ai-dialog-shadow);
   padding: 5px;
   display: flex;
   flex-direction: column;
@@ -83,12 +104,13 @@
   padding: 6px 10px;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--uc-ai-radius-button);
   cursor: pointer;
   color: var(--uc-ai-foreground);
   font: inherit;
   font-size: 13px;
   text-align: left;
+  transition: background 120ms ease;
 }
 
 .option:hover {
@@ -116,4 +138,19 @@
 .option-label {
   flex: 1;
   color: var(--uc-ai-muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger,
+  .popover {
+    transition-property: opacity, background, display, overlay;
+  }
+
+  .trigger:active {
+    transform: none;
+  }
+
+  .popover:not(:popover-open) {
+    transform: none;
+  }
 }

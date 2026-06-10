@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': '생성',
   'ai-enhancer-done-btn': '완료',
   'ai-enhancer-start-over': '다시 시작',
-  'ai-enhancer-history-empty': '아직 프롬프트가 없습니다',
   'ai-enhancer-history-title': '최근 프롬프트',
   'ai-enhancer-busy': '생성 중…',
   'ai-enhancer-error': '문제가 발생했습니다. 다시 시도하세요.',

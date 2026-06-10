@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Згенерувати',
   'ai-enhancer-done-btn': 'Готово',
   'ai-enhancer-start-over': 'Почати заново',
-  'ai-enhancer-history-empty': 'Ще немає промптів',
   'ai-enhancer-history-title': 'Останні промпти',
   'ai-enhancer-busy': 'Генерування…',
   'ai-enhancer-error': 'Щось пішло не так. Спробуйте ще раз.',

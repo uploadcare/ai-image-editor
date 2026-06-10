@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': '生成',
   'ai-enhancer-done-btn': '完成',
   'ai-enhancer-start-over': '重新开始',
-  'ai-enhancer-history-empty': '暂无提示词',
   'ai-enhancer-history-title': '最近的提示词',
   'ai-enhancer-busy': '生成中…',
   'ai-enhancer-error': '出了点问题，请重试。',

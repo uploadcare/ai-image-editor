@@ -26,7 +26,7 @@ export {
 } from './entities/provider';
 export { type AspectRatioSelectDetail, UcAiAspectRatio } from './features/aspect-ratio-select';
 export { GenerationController, type HistoryEntry } from './features/generation';
-export { type HistorySelectDetail, UcAiHistoryPopover } from './features/prompt-history';
+export { type HistorySelectDetail, UcAiHistory } from './features/prompt-history';
 export { type PromptInputDetail, UcAiPromptRow } from './features/prompt-input';
 export { type TemplateSelectDetail, UcAiChips } from './features/template-chips';
 export { enLocale, translate } from './shared/i18n';

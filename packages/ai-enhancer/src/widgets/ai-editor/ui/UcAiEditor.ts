@@ -1,6 +1,7 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
 import {
   type AspectRatio,
   type AspectRatioOption,
@@ -30,6 +31,7 @@ import type { AspectRatioSelectDetail } from '../../../features/aspect-ratio-sel
 import type { HistorySelectDetail } from '../../../features/prompt-history';
 import type { PromptInputDetail, UcAiPromptRow } from '../../../features/prompt-input';
 import type { TemplateSelectDetail } from '../../../features/template-chips';
+import type { UcAiCanvas } from '../../../shared/ui/canvas';
 import styles from './ai-editor.css?inline';
 
 export type { HistoryEntry } from '../../../features/generation';
@@ -92,9 +94,6 @@ export class UcAiEditor extends LitElement {
   private _prompt = '';
 
   @state()
-  private _historyOpen = false;
-
-  @state()
   private _selectedRatio: AspectRatioValue | null = null;
 
   /** Display URL for {@link source}, resolved via the provider's CDN base. */
@@ -106,6 +105,18 @@ export class UcAiEditor extends LitElement {
 
   @query('uc-ai-prompt-row')
   private _promptRow?: UcAiPromptRow;
+
+  @query('.stage')
+  private _stageEl?: HTMLElement;
+
+  @query('.composer')
+  private _composerEl?: HTMLElement;
+
+  @query('uc-ai-canvas')
+  private _canvasEl?: UcAiCanvas;
+
+  /** Keeps the canvas viewport's reserved bottom space synced to the composer. */
+  private _composerObserver?: ResizeObserver;
 
   private readonly _gen = new GenerationController(this);
   private readonly _secure = new SecureUrlController(this);
@@ -149,6 +160,30 @@ export class UcAiEditor extends LitElement {
         this._selectedRatio = this._firstStandardRatio();
       }
     }
+  }
+
+  protected override firstUpdated(): void {
+    // Reserve room in the canvas viewport for the floating composer, so the
+    // image frame sits above it. Tracks the composer's live height (which grows
+    // with the history strip / multi-line prompt).
+    if (typeof ResizeObserver === 'function' && this._composerEl) {
+      this._composerObserver = new ResizeObserver(() => this._syncComposerSpace());
+      this._composerObserver.observe(this._composerEl);
+    }
+    this._syncComposerSpace();
+  }
+
+  public override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._composerObserver?.disconnect();
+  }
+
+  /** Bottom anchor (20px) + composer height + a 16px breathing gap. */
+  private _syncComposerSpace(): void {
+    const composer = this._composerEl;
+    const stage = this._stageEl;
+    if (!composer || !stage) return;
+    stage.style.setProperty('--uc-ai-composer-space', `${20 + composer.offsetHeight + 16}px`);
   }
 
   private _l(key: keyof typeof enLocale): string {
@@ -257,6 +292,8 @@ export class UcAiEditor extends LitElement {
     this._inputUrl = null;
     this._prompt = '';
     this._gen.reset();
+    // Return the dot grid to its empty state regardless of mid-reveal state.
+    this._canvasEl?.resetGrid();
   }
 
   private _onPromptInput(e: CustomEvent<PromptInputDetail>): void {
@@ -265,10 +302,6 @@ export class UcAiEditor extends LitElement {
 
   private _onSend(): void {
     void this._generate();
-  }
-
-  private _onToggleHistory(): void {
-    this._historyOpen = !this._historyOpen;
   }
 
   private _onSelectHistoryEntry(e: CustomEvent<HistorySelectDetail>): void {
@@ -281,11 +314,6 @@ export class UcAiEditor extends LitElement {
       mode: entry.mode,
       file: entry.file,
     });
-    this._historyOpen = false;
-  }
-
-  private _onCloseHistory(): void {
-    this._historyOpen = false;
   }
 
   private _onSelectAspectRatio(e: CustomEvent<AspectRatioSelectDetail>): void {
@@ -326,6 +354,13 @@ export class UcAiEditor extends LitElement {
     const primaryDisabled = this._gen.busy || !this._gen.result;
 
     const ratioOptions = this._ratioOptions(mode);
+    const hasImage = this._displayUrl != null;
+    // A concrete pick sizes the frame (as width/height); "Original"/null lets
+    // the canvas fall back to the displayed image's natural ratio.
+    const frameRatio = isConcreteRatio(this._selectedRatio)
+      ? this._selectedRatio[0] / this._selectedRatio[1]
+      : null;
+    const stageClasses = { stage: true, 'is-empty': !hasImage };
 
     return html`
       <div
@@ -333,76 +368,85 @@ export class UcAiEditor extends LitElement {
         role="region"
         aria-label="${this._l(mode === 'edit' ? 'ai-enhancer-edit-title' : 'ai-enhancer-generate-title')}"
       >
-        <div class="body">
-          <div class="body-inner">
-            <uc-ai-canvas
-              .url=${this._previewUrl}
-              .fullsizeUrl=${this._fullsizeUrl}
-              .busy=${this._gen.busy}
-              .alt=${this._prompt}
-              busy-label="${this._l('ai-enhancer-busy')}"
-              error-label="${this._l('ai-enhancer-error')}"
-              fullscreen-label="${this._l('ai-enhancer-fullscreen')}"
-              exit-fullscreen-label="${this._l('ai-enhancer-exit-fullscreen')}"
-            ></uc-ai-canvas>
-            ${this._gen.error ? html`<div class="error-banner" role="alert">${this._gen.error}</div>` : nothing}
-            <div class="bottom">
-            <div class="history-wrap">
-              <uc-ai-prompt-row
-                .mode=${mode}
-                .value=${this._prompt}
-                .placeholder=${this._l(placeholderKey)}
-                .busy=${this._gen.busy}
-                ?history-open=${this._historyOpen}
-                history-aria-label="${this._l('ai-enhancer-history-title')}"
-                send-aria-label="${this._l('ai-enhancer-generate-btn')}"
-                @uc:input=${this._onPromptInput}
-                @uc:send=${this._onSend}
-                @uc:toggle-history=${this._onToggleHistory}
-              >
-                ${
-                  ratioOptions.length > 0
-                    ? html`
-                      <uc-ai-aspect-ratio
-                        slot="aspect-ratio"
-                        .options=${ratioOptions}
-                        .selected=${this._selectedRatio}
-                        .busy=${this._gen.busy}
-                        .labelFor=${this._labelForOption}
-                        aria-label-text="${this._l('ai-enhancer-aspect-ratio-aria')}"
-                        @uc:select=${this._onSelectAspectRatio}
-                      ></uc-ai-aspect-ratio>
-                    `
-                    : nothing
-                }
-              </uc-ai-prompt-row>
-              <uc-ai-history-popover
-                ?open=${this._historyOpen}
-                .entries=${this._gen.history}
-                .secureResolver=${this.secureDeliveryProxyUrlResolver}
-                empty-label="${this._l('ai-enhancer-history-empty')}"
-                @uc:select=${this._onSelectHistoryEntry}
-                @uc:close=${this._onCloseHistory}
-              ></uc-ai-history-popover>
-            </div>
-            <uc-ai-chips
+        <div class=${classMap(stageClasses)}>
+          <uc-ai-canvas
+            .url=${this._previewUrl}
+            .ratio=${frameRatio}
+            .fullsizeUrl=${this._fullsizeUrl}
+            .busy=${this._gen.busy}
+            .alt=${this._prompt}
+            busy-label="${this._l('ai-enhancer-busy')}"
+            error-label="${this._l('ai-enhancer-error')}"
+            fullscreen-label="${this._l('ai-enhancer-fullscreen')}"
+            exit-fullscreen-label="${this._l('ai-enhancer-exit-fullscreen')}"
+          ></uc-ai-canvas>
+
+          <!-- Bottom hover strip that raises the docked composer. -->
+          <div class="dock-hotzone" aria-hidden="true"></div>
+
+          <div class="composer">
+            ${
+              // Only mount the strip when it has something to show (results, or
+              // the edit-mode "Start over"); avoids a dead gap in generate mode.
+              this._gen.history.length > 0 || mode === 'edit'
+                ? html`
+                  <uc-ai-history
+                    .entries=${this._gen.history}
+                    .selectedUuid=${this._gen.result?.uuid ?? null}
+                    ?show-start-over=${mode === 'edit'}
+                    start-over-label="${this._l('ai-enhancer-start-over')}"
+                    list-label="${this._l('ai-enhancer-history-title')}"
+                    .secureResolver=${this.secureDeliveryProxyUrlResolver}
+                    @uc:select=${this._onSelectHistoryEntry}
+                    @uc:start-over=${this._onStartOver}
+                  ></uc-ai-history>
+                `
+                : nothing
+            }
+
+            <uc-ai-prompt-row
               .mode=${mode}
-              .prompt=${this._prompt}
+              .value=${this._prompt}
+              .placeholder=${this._l(placeholderKey)}
               .busy=${this._gen.busy}
-              @uc:select=${this._onSelectTemplate}
-            ></uc-ai-chips>
-            </div>
+              send-aria-label="${this._l('ai-enhancer-generate-btn')}"
+              @uc:input=${this._onPromptInput}
+              @uc:send=${this._onSend}
+            >
+              <uc-ai-chips
+                slot="chips"
+                .mode=${mode}
+                .prompt=${this._prompt}
+                .busy=${this._gen.busy}
+                @uc:select=${this._onSelectTemplate}
+              ></uc-ai-chips>
+              ${
+                ratioOptions.length > 0
+                  ? html`
+                    <uc-ai-aspect-ratio
+                      slot="aspect-ratio"
+                      .options=${ratioOptions}
+                      .selected=${this._selectedRatio}
+                      .busy=${this._gen.busy}
+                      .labelFor=${this._labelForOption}
+                      aria-label-text="${this._l('ai-enhancer-aspect-ratio-aria')}"
+                      @uc:select=${this._onSelectAspectRatio}
+                    ></uc-ai-aspect-ratio>
+                  `
+                  : nothing
+              }
+            </uc-ai-prompt-row>
           </div>
+
+          ${this._gen.error ? html`<div class="error-banner" role="alert">${this._gen.error}</div>` : nothing}
         </div>
+
         <uc-ai-footer
           cancel-label="${this._l('ai-enhancer-cancel')}"
           primary-label="${this._l('ai-enhancer-done-btn')}"
           ?primary-disabled=${primaryDisabled}
-          start-over-label="${this._l('ai-enhancer-start-over')}"
-          ?show-start-over=${mode === 'edit'}
           @uc:cancel=${this._onCancel}
           @uc:primary=${this._onPrimary}
-          @uc:start-over=${this._onStartOver}
         ></uc-ai-footer>
       </div>
     `;

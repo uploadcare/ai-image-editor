@@ -9,7 +9,6 @@ export const enLocale = {
   'ai-enhancer-generate-btn': 'Generate',
   'ai-enhancer-done-btn': 'Done',
   'ai-enhancer-start-over': 'Start over',
-  'ai-enhancer-history-empty': 'No prompts yet',
   'ai-enhancer-history-title': 'Recent prompts',
   'ai-enhancer-busy': 'Generating…',
   'ai-enhancer-error': 'Something went wrong. Try again.',

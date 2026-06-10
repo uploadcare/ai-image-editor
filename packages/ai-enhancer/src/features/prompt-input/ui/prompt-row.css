@@ -2,96 +2,45 @@
   display: block;
 }
 
-.row {
+.card {
+  width: 100%;
   box-sizing: border-box;
+  background: var(--uc-ai-floating, var(--uc-ai-background));
+  border: 1px solid var(--uc-ai-floating-border, transparent);
+  border-radius: var(--uc-ai-radius-card, 16px);
+  box-shadow: var(--uc-ai-dialog-shadow);
+  /* Overflow visible so the aspect-ratio menu can open above the card. */
+  overflow: visible;
+}
+
+.body {
   display: flex;
-  align-items: flex-end;
-  gap: 5px;
-  background: var(--uc-ai-background);
-  border: 1px solid var(--uc-ai-border);
-  border-radius: var(--uc-ai-radius-input);
-  padding: 5px;
-  min-height: 42px;
-}
-
-.icon-btn {
-  flex: 0 0 var(--uc-ai-button-size);
-  width: var(--uc-ai-button-size);
-  height: var(--uc-ai-button-size);
-  display: grid;
-  place-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: var(--uc-ai-radius-button);
-  cursor: pointer;
-  color: var(--uc-ai-muted-foreground);
-  transition:
-    background var(--uc-ai-transition),
-    color var(--uc-ai-transition);
-  padding: 0;
-}
-
-.icon-btn:hover,
-.icon-btn[aria-expanded="true"] {
-  background: var(--uc-ai-secondary-hover);
-  color: var(--uc-ai-foreground);
-}
-
-.icon-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-.icon-btn--primary {
-  background: var(--uc-ai-primary);
-  color: var(--uc-ai-primary-foreground);
-}
-
-.icon-btn--primary:hover {
-  background: var(--uc-ai-primary-hover);
-  color: var(--uc-ai-primary-foreground);
-}
-
-.icon-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.divider {
-  flex: 0 0 1px;
-  align-self: stretch;
-  margin: 8px 0;
-  background: var(--uc-ai-border);
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
 }
 
 .input {
   box-sizing: border-box;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  /* Grows with content up to N lines, then scrolls internally. */
+  max-height: var(--uc-ai-prompt-max-height, calc(var(--uc-ai-prompt-max-lines, 6) * 1.5em + 10px));
+  resize: none;
   border: 0;
+  outline: none;
+  padding: 0 3px;
   background: transparent;
   font-family: inherit;
   font-size: var(--uc-ai-font-size);
-  line-height: 1.5;
+  line-height: 20px;
   color: var(--uc-ai-foreground);
-  outline: none;
-  padding: 5px;
-  /* Single line: 1.5em text + 10px padding ≈ 31px, bottom-aligned with the 32px buttons. */
-  min-height: calc(1.5em + 10px);
-  /*
-   * Grows with content up to N lines, then scrolls internally. Token defaults
-   * live in ai-editor.css :host; fallbacks here keep the row usable standalone.
-   */
-  max-height: var(--uc-ai-prompt-max-height, calc(var(--uc-ai-prompt-max-lines, 4) * 1.5em + 10px));
-  resize: none;
   overflow-y: auto;
-  /* Height is driven inline by the JS fallback; transition smooths growth. */
-  transition: height var(--uc-ai-transition);
   scrollbar-width: thin;
   scrollbar-color: var(--uc-ai-border) transparent;
+  transition: height 160ms var(--uc-ai-ease-out, ease);
 }
 
-/* Modern browsers: let CSS auto-size the textarea, no JS measurement needed. */
 @supports (field-sizing: content) {
   .input {
     field-sizing: content;
@@ -99,20 +48,181 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .input {
-    transition: none;
-  }
+.input::placeholder {
+  color: var(--uc-ai-muted-foreground);
 }
 
-/* Dim the prompt text while generating (the textarea is disabled). */
 .input:disabled {
   color: var(--uc-ai-muted-foreground);
-  /* WebKit overrides disabled text color otherwise. */
   -webkit-text-fill-color: var(--uc-ai-muted-foreground);
   cursor: not-allowed;
 }
 
-.input::placeholder {
-  color: var(--uc-ai-muted-foreground);
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Preset chips, left side. The slotted chips scroll horizontally themselves. */
+.actions {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.actions::slotted(*) {
+  min-width: 0;
+}
+
+/* Aspect-ratio selector + send button, right side. */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: none;
+}
+
+.send {
+  margin-left: 5px;
+  width: var(--uc-ai-button-size, 32px);
+  height: var(--uc-ai-button-size, 32px);
+  flex: none;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: var(--uc-ai-primary);
+  color: var(--uc-ai-primary-foreground);
+  border: none;
+  border-radius: var(--uc-ai-radius-button);
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    width 220ms var(--uc-ai-ease-out, ease),
+    margin-left 220ms var(--uc-ai-ease-out, ease),
+    opacity 150ms var(--uc-ai-ease-out, ease),
+    transform 150ms var(--uc-ai-ease-out, ease),
+    background var(--uc-ai-transition);
+}
+
+.send:hover:not(:disabled) {
+  background: var(--uc-ai-primary-hover);
+}
+
+.send:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.send:disabled {
+  cursor: default;
+}
+
+/* Hidden state collapses width to zero (instead of display:none) so the ratio
+   button slides over as the send button reveals/conceals. */
+.send[hidden] {
+  display: inline-flex;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  margin-left: 0;
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+/* Arrow + spinner are stacked; they cross-fade (opacity + scale + blur). */
+.send__icon,
+.send__spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  transition:
+    opacity 200ms var(--uc-ai-ease-out, ease),
+    transform 200ms var(--uc-ai-ease-out, ease),
+    filter 200ms var(--uc-ai-ease-out, ease);
+}
+
+.send__icon {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  filter: blur(0);
+}
+
+.send__icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.send__spinner {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.95);
+  filter: blur(3px);
+}
+
+/* Circular spinner: a faint full ring under a spinning arc. */
+.send__spinner::before,
+.send__spinner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+}
+
+.send__spinner::before {
+  opacity: 0.3;
+}
+
+.send__spinner::after {
+  border-top-color: transparent;
+  animation: send-spin 0.7s linear infinite;
+}
+
+@keyframes send-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Generating: cross-fade arrow → spinner, keep the button fully opaque. */
+.send--busy .send__icon {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.95);
+  filter: blur(3px);
+}
+
+.send--busy .send__spinner {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  filter: blur(0);
+}
+
+.send--busy:disabled {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input,
+  .send {
+    transition-property: opacity, background, width, margin-left;
+  }
+
+  .send__icon,
+  .send__spinner {
+    transition-property: opacity;
+  }
+
+  .send__spinner::after {
+    animation: none;
+  }
+
+  .send:active:not(:disabled) {
+    transform: none;
+  }
 }

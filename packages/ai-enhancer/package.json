@@ -29,6 +29,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@lit-labs/motion": "^1.1.0",
     "@uploadcare/cdn-url": "6.19.0-alpha.0",
     "@uploadcare/cname-prefix": "^6.18.4",
     "@uploadcare/upload-client": "^6.18.4",

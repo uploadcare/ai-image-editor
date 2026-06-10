@@ -11,18 +11,24 @@ async function mount(overrides: Partial<UcAiPromptRow> = {}): Promise<UcAiPrompt
 }
 
 const textarea = (el: UcAiPromptRow) => el.shadowRoot!.querySelector<HTMLTextAreaElement>('textarea.input')!;
-const sendBtn = (el: UcAiPromptRow) => el.shadowRoot!.querySelector('.icon-btn--primary');
-const historyBtn = (el: UcAiPromptRow) => el.shadowRoot!.querySelector('[data-testid="history-btn"]');
+const sendBtn = (el: UcAiPromptRow) => el.shadowRoot!.querySelector<HTMLButtonElement>('.send');
 
 const keydown = (el: UcAiPromptRow, init: KeyboardEventInit) =>
   textarea(el).dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, composed: true, ...init }));
 
 describe('UcAiPromptRow', () => {
-  it('renders a multiline textarea instead of a single-line input', async () => {
+  it('renders a multiline textarea inside the composer card', async () => {
     const el = await mount({ placeholder: 'Describe your image' });
     expect(textarea(el)).toBeTruthy();
     expect(el.shadowRoot!.querySelector('input')).toBeNull();
+    expect(el.shadowRoot!.querySelector('.card')).toBeTruthy();
     expect(textarea(el).placeholder).toBe('Describe your image');
+  });
+
+  it('exposes slots for chips and the aspect-ratio picker', async () => {
+    const el = await mount();
+    expect(el.shadowRoot!.querySelector('slot[name="chips"]')).toBeTruthy();
+    expect(el.shadowRoot!.querySelector('slot[name="aspect-ratio"]')).toBeTruthy();
   });
 
   it('emits uc:send on Enter when the value is non-empty', async () => {
@@ -92,27 +98,27 @@ describe('UcAiPromptRow', () => {
     expect(focus).toHaveBeenCalledOnce();
   });
 
-  it('disables the textarea while busy', async () => {
+  it('disables the textarea and send button while busy', async () => {
     const el = await mount({ value: 'hi', busy: true });
     expect(textarea(el).disabled).toBe(true);
-    expect((sendBtn(el) as HTMLButtonElement).disabled).toBe(true);
+    expect(sendBtn(el)!.disabled).toBe(true);
+    expect(sendBtn(el)!.classList.contains('send--busy')).toBe(true);
   });
 
-  it('shows the send button only when the value is non-empty', async () => {
+  it('hides (collapses) the send button when empty and reveals it otherwise', async () => {
     const el = await mount();
-    expect(sendBtn(el)).toBeNull();
+    expect(sendBtn(el)!.hidden).toBe(true);
 
     el.value = 'hi';
     await el.updateComplete;
-    expect(sendBtn(el)).toBeTruthy();
+    expect(sendBtn(el)!.hidden).toBe(false);
   });
 
-  it('shows the history button only in edit mode with an empty value', async () => {
-    const el = await mount({ mode: 'edit' });
-    expect(historyBtn(el)).toBeTruthy();
-
-    el.value = 'x';
-    await el.updateComplete;
-    expect(historyBtn(el)).toBeNull();
+  it('emits uc:send when the send button is clicked', async () => {
+    const el = await mount({ value: 'a cat' });
+    const onSend = vi.fn();
+    el.addEventListener('uc:send', onSend);
+    sendBtn(el)!.click();
+    expect(onSend).toHaveBeenCalledOnce();
   });
 });

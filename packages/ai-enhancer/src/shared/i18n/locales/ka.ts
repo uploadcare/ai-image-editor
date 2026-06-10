@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'გენერაცია',
   'ai-enhancer-done-btn': 'მზადაა',
   'ai-enhancer-start-over': 'თავიდან დაწყება',
-  'ai-enhancer-history-empty': 'ჯერ არ არის მოთხოვნები',
   'ai-enhancer-history-title': 'ბოლო მოთხოვნები',
   'ai-enhancer-busy': 'გენერირდება…',
   'ai-enhancer-error': 'რაღაც ვერ მოხერხდა. სცადეთ თავიდან.',

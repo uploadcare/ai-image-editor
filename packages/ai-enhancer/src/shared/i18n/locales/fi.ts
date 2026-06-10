@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Luo',
   'ai-enhancer-done-btn': 'Valmis',
   'ai-enhancer-start-over': 'Aloita alusta',
-  'ai-enhancer-history-empty': 'Ei vielä kehotteita',
   'ai-enhancer-history-title': 'Viimeisimmät kehotteet',
   'ai-enhancer-busy': 'Luodaan…',
   'ai-enhancer-error': 'Jotain meni pieleen. Yritä uudelleen.',

@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Жасау',
   'ai-enhancer-done-btn': 'Дайын',
   'ai-enhancer-start-over': 'Қайтадан бастау',
-  'ai-enhancer-history-empty': 'Әзірге сұраулар жоқ',
   'ai-enhancer-history-title': 'Соңғы сұраулар',
   'ai-enhancer-busy': 'Жасалуда…',
   'ai-enhancer-error': 'Бірдеңе дұрыс болмады. Қайталап көріңіз.',

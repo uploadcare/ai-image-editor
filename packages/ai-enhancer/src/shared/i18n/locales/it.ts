@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Genera',
   'ai-enhancer-done-btn': 'Fatto',
   'ai-enhancer-start-over': 'Ricomincia',
-  'ai-enhancer-history-empty': 'Ancora nessun prompt',
   'ai-enhancer-history-title': 'Prompt recenti',
   'ai-enhancer-busy': 'Generazione…',
   'ai-enhancer-error': 'Qualcosa è andato storto. Riprova.',

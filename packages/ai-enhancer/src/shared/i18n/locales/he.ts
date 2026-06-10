@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'יצירה',
   'ai-enhancer-done-btn': 'סיום',
   'ai-enhancer-start-over': 'התחל מחדש',
-  'ai-enhancer-history-empty': 'אין עדיין הנחיות',
   'ai-enhancer-history-title': 'הנחיות אחרונות',
   'ai-enhancer-busy': 'יוצר…',
   'ai-enhancer-error': 'משהו השתבש. נסה שוב.',

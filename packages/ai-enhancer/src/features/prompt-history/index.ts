@@ -1,1 +1,1 @@
-export { type HistorySelectDetail, UcAiHistoryPopover } from './ui/UcAiHistoryPopover';
+export { type HistorySelectDetail, UcAiHistory } from './ui/UcAiHistory';
