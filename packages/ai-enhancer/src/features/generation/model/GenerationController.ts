@@ -19,8 +19,6 @@ export type RunArgs = {
   aspectRatio?: AspectRatio;
   /** UUID of the source image to edit (when `mode` is `edit`). */
   source?: string;
-  /** UUIDs of reference images guiding the edit (when `mode` is `edit`). */
-  references?: string[];
 };
 
 const MAX_HISTORY = 20;
@@ -85,7 +83,6 @@ export class GenerationController implements ReactiveController {
         mode: args.mode,
         aspectRatio: args.aspectRatio,
         source: args.source,
-        references: args.references,
         signal: controller.signal,
       });
       if (controller.signal.aborted) return null;

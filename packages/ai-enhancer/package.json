@@ -37,6 +37,11 @@
   "peerDependencies": {
     "@uploadcare/file-uploader": ">=1.31.0"
   },
+  "peerDependenciesMeta": {
+    "@uploadcare/file-uploader": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@uploadcare/file-uploader": "1.31.1-alpha.0",
     "@vitest/browser": "^3.0.9",

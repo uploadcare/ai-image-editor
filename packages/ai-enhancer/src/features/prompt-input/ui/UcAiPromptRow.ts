@@ -24,10 +24,6 @@ export class UcAiPromptRow extends LitElement {
   @property({ type: Boolean })
   public busy = false;
 
-  /** Disables only the send button (not the textarea) — e.g. while references upload. */
-  @property({ type: Boolean, attribute: 'send-disabled' })
-  public sendDisabled = false;
-
   @property({ type: Boolean, attribute: 'history-open' })
   public historyOpen = false;
 
@@ -74,7 +70,7 @@ export class UcAiPromptRow extends LitElement {
   private _onKeydown(e: KeyboardEvent): void {
     // Enter sends; Shift+Enter falls through and inserts a newline natively.
     // Ignore Enter that confirms an IME composition candidate.
-    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && this.value.trim() && !this.sendDisabled && !this.busy) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && this.value.trim() && !this.busy) {
       e.preventDefault();
       this._emitSend();
     }
@@ -138,7 +134,7 @@ export class UcAiPromptRow extends LitElement {
                 class="icon-btn icon-btn--primary"
                 aria-label="${this.sendAriaLabel}"
                 @click=${this._emitSend}
-                ?disabled=${this.busy || this.sendDisabled || !this.value.trim()}
+                ?disabled=${this.busy || !this.value.trim()}
               >
                 ${unsafeSVG(ICON_ARROW_THICK)}
               </button>

@@ -103,20 +103,6 @@ describe('UploadcareApiClient', () => {
       expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).aspect_ratio).toEqual([16, 9]);
     });
 
-    it('includes reference_sources only when non-empty', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
-
-      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png', referenceSources: [] });
-      expect(JSON.parse((fetchImpl.mock.calls[0]![1] as RequestInit).body as string).reference_sources).toBeUndefined();
-
-      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png', referenceSources: ['r1', 'r2'] });
-      expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).reference_sources).toEqual([
-        'r1',
-        'r2',
-      ]);
-    });
-
     it('throws with status text on non-2xx', async () => {
       const fetchImpl = vi
         .fn<typeof fetch>()
