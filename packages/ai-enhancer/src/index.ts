@@ -28,7 +28,6 @@ export { type AspectRatioSelectDetail, UcAiAspectRatio } from './features/aspect
 export { GenerationController, type HistoryEntry } from './features/generation';
 export { type HistorySelectDetail, UcAiHistoryPopover } from './features/prompt-history';
 export { type PromptInputDetail, UcAiPromptRow } from './features/prompt-input';
-export { type ReferencesChangeDetail, UcAiReferenceImages } from './features/reference-images';
 export { type TemplateSelectDetail, UcAiChips } from './features/template-chips';
 export { enLocale, translate } from './shared/i18n';
 export { SecureUrlController } from './shared/lib/SecureUrlController';

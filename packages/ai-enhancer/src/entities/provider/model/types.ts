@@ -12,8 +12,6 @@ export type AiProviderRequest = {
   aspectRatio?: AspectRatio;
   /** UUID of the source image to edit. Required when `mode` is `edit`. */
   source?: string;
-  /** UUIDs of reference images guiding the edit (edit only, max 7). */
-  references?: string[];
   signal?: AbortSignal;
 };
 

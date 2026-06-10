@@ -144,7 +144,6 @@ export class UploadcareDerivativeApi implements AiProvider {
       prompt: request.prompt,
       source: request.source,
       aspectRatio: ratio,
-      referenceSources: request.references,
       filename: this.filename,
       store: this.store,
       signal: request.signal,
