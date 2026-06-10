@@ -7,38 +7,37 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: var(--uc-ai-padding);
   background: var(--uc-ai-background);
-}
-
-/* Right-aligned action group: [Start over] [Done]. */
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   height: var(--uc-ai-button-size);
   padding: 0 14px;
-  background: var(--uc-ai-secondary);
-  color: var(--uc-ai-secondary-foreground);
   border: 0;
   border-radius: var(--uc-ai-radius-button);
   font-family: inherit;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
   cursor: pointer;
   transition:
-    background var(--uc-ai-transition),
-    color var(--uc-ai-transition);
+    background 150ms ease,
+    filter 150ms ease,
+    transform 140ms var(--uc-ai-ease-out, ease);
 }
 
-.btn:hover {
-  background: var(--uc-ai-secondary-hover);
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn--ghost {
+  background: var(--uc-ai-secondary);
+  color: var(--uc-ai-secondary-foreground);
 }
 
 .btn--primary {
@@ -46,8 +45,14 @@
   color: var(--uc-ai-primary-foreground);
 }
 
-.btn--primary:hover {
-  background: var(--uc-ai-primary-hover);
+@media (hover: hover) and (pointer: fine) {
+  .btn--ghost:hover {
+    background: var(--uc-ai-secondary-hover);
+  }
+
+  .btn--primary:hover {
+    background: var(--uc-ai-primary-hover);
+  }
 }
 
 .btn--primary:disabled {
@@ -61,8 +66,12 @@
   height: 14px;
 }
 
-@container (max-width: 380px) {
-  .footer {
-    padding: 8px var(--uc-ai-padding);
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition-property: background, filter;
+  }
+
+  .btn:active {
+    transform: none;
   }
 }

@@ -1,0 +1,160 @@
+:host {
+  display: block;
+}
+
+.strip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+
+/* No results yet (edit-from-source): only the start-over control shows. */
+.strip--empty {
+  justify-content: center;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  margin-right: -11px;
+  background: var(--uc-ai-floating, var(--uc-ai-background));
+  border: 1px solid transparent;
+  border-radius: calc(var(--uc-ai-radius-button, 8px) + 2px);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  /* scale(1) gives every chip a stacking context so they paint in DOM order —
+     later (newer) chips overlap earlier ones even when scaled. */
+  transform: scale(1);
+  transition:
+    margin 300ms var(--uc-ai-ease-out, ease),
+    border-color 225ms ease,
+    transform 270ms var(--uc-ai-ease-out, ease),
+    opacity 330ms var(--uc-ai-ease-out, ease);
+}
+
+.chip:last-child {
+  margin-right: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover {
+    transform: scale(1.1);
+  }
+
+  /* On hover, spread the chips apart instead of overlapping. */
+  .strip:hover .chip {
+    margin-right: 7px;
+  }
+
+  .strip:hover .chip:last-child {
+    margin-right: 0;
+  }
+}
+
+.chip--selected {
+  border-color: var(--uc-ai-primary);
+  transform: scale(1.2);
+}
+
+.thumb {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--uc-ai-radius-button, 8px);
+  background-color: var(--uc-ai-muted);
+  background-size: cover;
+  background-position: center;
+}
+
+/*
+ * "Start over": a floating surface holding a chip button, placed just left of
+ * the strip so it's out of flow — revealing it can't shift the centred chips.
+ */
+.startover {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  display: flex;
+  align-items: center;
+  background: var(--uc-ai-floating, var(--uc-ai-background));
+  border: 1px solid var(--uc-ai-floating-border, transparent);
+  border-radius: calc(var(--uc-ai-radius-button, 8px) + 2px);
+  box-shadow: var(--uc-ai-dialog-shadow);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-50%) translateX(-6px) scale(0.95);
+  transform-origin: right center;
+  pointer-events: none;
+  transition:
+    opacity 260ms var(--uc-ai-ease-out, ease),
+    transform 260ms var(--uc-ai-ease-out, ease);
+}
+
+.strip:hover .startover,
+.strip:focus-within .startover {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0) scale(1);
+  pointer-events: auto;
+}
+
+/* With no result chips, the start-over control sits in flow and stays visible. */
+.strip--empty .startover {
+  position: static;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.startover__btn {
+  height: var(--uc-ai-button-size, 32px);
+  padding: 0 12px;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  color: var(--uc-ai-foreground);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.startover__btn:hover {
+  background: var(--uc-ai-secondary);
+}
+
+/* Invisible hover bridge to the left so moving from a chip out to the
+   start-over button keeps :hover alive. */
+.strip::before {
+  content: "";
+  position: absolute;
+  right: 100%;
+  top: -12px;
+  bottom: -12px;
+  width: 200px;
+}
+
+.strip--empty::before {
+  content: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip,
+  .startover {
+    transition-property: opacity, border-color, margin;
+  }
+
+  .chip:hover,
+  .chip--selected {
+    transform: scale(1);
+  }
+
+  /* Keep vertical centring on the floating (non-empty) strip; drop the slide.
+     The empty-strip start-over is position:static (transform:none) — leave it. */
+  .strip:not(.strip--empty) .startover,
+  .strip:not(.strip--empty):hover .startover,
+  .strip:not(.strip--empty):focus-within .startover {
+    transform: translateY(-50%);
+  }
+}

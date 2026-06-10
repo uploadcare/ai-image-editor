@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Genereeri',
   'ai-enhancer-done-btn': 'Valmis',
   'ai-enhancer-start-over': 'Alusta uuesti',
-  'ai-enhancer-history-empty': 'Veel pole viipasid',
   'ai-enhancer-history-title': 'Hiljutised viiped',
   'ai-enhancer-busy': 'Genereerimine…',
   'ai-enhancer-error': 'Midagi läks valesti. Proovi uuesti.',

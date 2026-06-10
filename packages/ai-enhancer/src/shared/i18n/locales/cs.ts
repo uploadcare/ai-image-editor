@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Vygenerovat',
   'ai-enhancer-done-btn': 'Hotovo',
   'ai-enhancer-start-over': 'Začít znovu',
-  'ai-enhancer-history-empty': 'Zatím žádné prompty',
   'ai-enhancer-history-title': 'Poslední prompty',
   'ai-enhancer-busy': 'Generování…',
   'ai-enhancer-error': 'Něco se pokazilo. Zkuste to znovu.',

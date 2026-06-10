@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Generer',
   'ai-enhancer-done-btn': 'Ferdig',
   'ai-enhancer-start-over': 'Start på nytt',
-  'ai-enhancer-history-empty': 'Ingen prompts ennå',
   'ai-enhancer-history-title': 'Nylige prompts',
   'ai-enhancer-busy': 'Genererer…',
   'ai-enhancer-error': 'Noe gikk galt. Prøv igjen.',

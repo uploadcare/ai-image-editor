@@ -12,44 +12,52 @@ async function mount(url: string | null, errorLabel = 'Failed to load'): Promise
 }
 
 const preloadImg = (el: UcAiCanvas) => el.shadowRoot!.querySelector('img.preload');
-const shownImg = (el: UcAiCanvas) => el.shadowRoot!.querySelector('img.shown');
+const shownImg = (el: UcAiCanvas) => el.shadowRoot!.querySelector('img.canvas__image');
 const errorState = (el: UcAiCanvas) => el.shadowRoot!.querySelector('.error-state');
-const loaderActive = (el: UcAiCanvas) =>
-  el.shadowRoot!.querySelector('.busy-overlay')!.classList.contains('busy-overlay--active');
+const canvasEl = (el: UcAiCanvas) => el.shadowRoot!.querySelector('.canvas')!;
+const isEmpty = (el: UcAiCanvas) => canvasEl(el).classList.contains('is-empty');
+const isLoading = (el: UcAiCanvas) => canvasEl(el).classList.contains('is-loading');
 
 describe('UcAiCanvas', () => {
-  it('shows a loader and preloads the new url before displaying it', async () => {
+  it('preloads the new url before displaying it', async () => {
     const el = await mount('https://example.com/a.png');
-    // Before load: loader visible, nothing shown yet, preloader present.
-    expect(loaderActive(el)).toBe(true);
+    // Before load: empty state (dot grid shown), nothing displayed, preloader present.
+    expect(isEmpty(el)).toBe(true);
     expect(shownImg(el)).toBeNull();
     expect(preloadImg(el)).toBeTruthy();
 
     preloadImg(el)!.dispatchEvent(new Event('load'));
     await el.updateComplete;
 
-    // After load: the image is shown, loader and preloader are gone.
+    // After load: the image is displayed, empty state cleared, preloader gone.
     expect(shownImg(el)?.getAttribute('src')).toBe('https://example.com/a.png');
-    expect(loaderActive(el)).toBe(false);
+    expect(isEmpty(el)).toBe(false);
     expect(preloadImg(el)).toBeNull();
   });
 
-  it('keeps the previous image while a new one preloads (smooth swap)', async () => {
+  it('keeps the current image while a new one preloads (smooth swap)', async () => {
     const el = await mount('https://example.com/a.png');
     preloadImg(el)!.dispatchEvent(new Event('load'));
     await el.updateComplete;
     expect(shownImg(el)?.getAttribute('src')).toBe('https://example.com/a.png');
 
-    // Request a second image: the first stays shown, loader is up, second preloads.
+    // Request a second image: the first stays shown while the second preloads.
     el.url = 'https://example.com/b.png';
     await el.updateComplete;
     expect(shownImg(el)?.getAttribute('src')).toBe('https://example.com/a.png');
-    expect(loaderActive(el)).toBe(true);
     expect(preloadImg(el)?.getAttribute('src')).toBe('https://example.com/b.png');
 
     preloadImg(el)!.dispatchEvent(new Event('load'));
     await el.updateComplete;
     expect(shownImg(el)?.getAttribute('src')).toBe('https://example.com/b.png');
+  });
+
+  it('sizes the frame to the given aspect ratio', async () => {
+    const el = await mount('https://example.com/a.png');
+    el.ratio = 16 / 9;
+    await el.updateComplete;
+    // The frame element exists and is the box the image is cropped into.
+    expect(el.shadowRoot!.querySelector('.canvas__frame')).toBeTruthy();
   });
 
   it('shows an error state and emits uc:image-error when the image fails to load', async () => {
@@ -63,7 +71,6 @@ describe('UcAiCanvas', () => {
     expect(onError).toHaveBeenCalledOnce();
     expect((onError.mock.calls[0]![0] as CustomEvent).detail.url).toBe('https://example.com/broken.png');
     expect(errorState(el)?.textContent).toContain('Failed to load');
-    expect(loaderActive(el)).toBe(false);
   });
 
   it('clears the error and retries when the url changes', async () => {
@@ -79,11 +86,13 @@ describe('UcAiCanvas', () => {
     expect(preloadImg(el)?.getAttribute('src')).toBe('https://example.com/fresh.png');
   });
 
-  it('shows the loader while busy even without a url', async () => {
+  it('marks the canvas as loading while busy', async () => {
     const el = await mount(null);
+    expect(isLoading(el)).toBe(false);
     el.busy = true;
     await el.updateComplete;
-    expect(loaderActive(el)).toBe(true);
+    expect(isLoading(el)).toBe(true);
+    expect(isEmpty(el)).toBe(true);
   });
 
   describe('fullscreen button', () => {

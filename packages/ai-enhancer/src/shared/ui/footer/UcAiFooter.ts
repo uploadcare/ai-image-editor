@@ -1,8 +1,13 @@
-import { html, LitElement, nothing, type TemplateResult, unsafeCSS } from 'lit';
+import { html, LitElement, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 import styles from './footer.css?inline';
 
+/**
+ * The editor's action bar: a ghost "Cancel" on the left and a primary "Done"
+ * on the right. "Done" commits the current generation result and is disabled
+ * until one exists. ("Start over" lives in the history strip, not here.)
+ */
 @customElement('uc-ai-footer')
 export class UcAiFooter extends LitElement {
   public static override styles = unsafeCSS(styles);
@@ -16,12 +21,6 @@ export class UcAiFooter extends LitElement {
   @property({ type: Boolean, attribute: 'primary-disabled' })
   public primaryDisabled = false;
 
-  @property({ attribute: 'start-over-label' })
-  public startOverLabel = '';
-
-  @property({ type: Boolean, attribute: 'show-start-over' })
-  public showStartOver = false;
-
   private _emitCancel(): void {
     this.dispatchEvent(new CustomEvent('uc:cancel', { bubbles: true, composed: true }));
   }
@@ -30,30 +29,20 @@ export class UcAiFooter extends LitElement {
     this.dispatchEvent(new CustomEvent('uc:primary', { bubbles: true, composed: true }));
   }
 
-  private _emitStartOver(): void {
-    this.dispatchEvent(new CustomEvent('uc:start-over', { bubbles: true, composed: true }));
-  }
-
   public override render(): TemplateResult {
     return html`
       <div class="footer">
-        <button type="button" class="btn" @click=${this._emitCancel}>
+        <button type="button" class="btn btn--ghost" @click=${this._emitCancel}>
           <span>${this.cancelLabel}</span>
         </button>
-        <div class="actions">
-          ${
-            this.showStartOver
-              ? html`
-                <button type="button" class="btn" @click=${this._emitStartOver}>
-                  <span>${this.startOverLabel}</span>
-                </button>
-              `
-              : nothing
-          }
-          <button type="button" class="btn btn--primary" @click=${this._emitPrimary} ?disabled=${this.primaryDisabled}>
-            <span>${this.primaryLabel}</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          class="btn btn--primary"
+          @click=${this._emitPrimary}
+          ?disabled=${this.primaryDisabled}
+        >
+          <span>${this.primaryLabel}</span>
+        </button>
       </div>
     `;
   }

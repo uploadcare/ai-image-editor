@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Ģenerēt',
   'ai-enhancer-done-btn': 'Gatavs',
   'ai-enhancer-start-over': 'Sākt no jauna',
-  'ai-enhancer-history-empty': 'Vēl nav uzvedņu',
   'ai-enhancer-history-title': 'Nesenās uzvednes',
   'ai-enhancer-busy': 'Ģenerē…',
   'ai-enhancer-error': 'Radās kļūda. Mēģiniet vēlreiz.',

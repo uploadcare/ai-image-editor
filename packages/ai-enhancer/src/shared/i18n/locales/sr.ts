@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Generiši',
   'ai-enhancer-done-btn': 'Gotovo',
   'ai-enhancer-start-over': 'Почни изнова',
-  'ai-enhancer-history-empty': 'Još nema upita',
   'ai-enhancer-history-title': 'Nedavni upiti',
   'ai-enhancer-busy': 'Generisanje…',
   'ai-enhancer-error': 'Nešto je pošlo po zlu. Pokušajte ponovo.',

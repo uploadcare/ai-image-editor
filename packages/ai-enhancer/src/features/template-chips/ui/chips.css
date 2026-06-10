@@ -1,55 +1,85 @@
 :host {
   display: block;
+  min-width: 0;
 }
 
 .row {
   display: flex;
   flex-wrap: nowrap;
+  align-items: center;
   gap: 5px;
   overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--uc-ai-border) transparent;
+  scrollbar-width: none;
 }
 
 .row::-webkit-scrollbar {
-  height: 4px;
+  display: none;
 }
 
-.row::-webkit-scrollbar-thumb {
-  background: var(--uc-ai-border);
-  border-radius: 4px;
+/* 10px gradient fades at the scroll edges, toggled by scroll position. */
+.row.fade-left.fade-right {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+}
+
+.row.fade-left:not(.fade-right) {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10px);
+  mask-image: linear-gradient(to right, transparent 0, #000 10px);
+}
+
+.row.fade-right:not(.fade-left) {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 10px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 10px), transparent 100%);
 }
 
 .chip {
-  flex: 0 0 auto;
+  flex: none;
+  height: var(--uc-ai-button-size, 32px);
   display: inline-flex;
   align-items: center;
-  height: var(--uc-ai-button-size);
+  justify-content: center;
   padding: 0 10px;
-  background: transparent;
-  color: var(--uc-ai-foreground);
-  border: 1px solid var(--uc-ai-border);
+  background: var(--uc-ai-secondary);
+  border: 0;
   border-radius: var(--uc-ai-radius-button);
   font-family: inherit;
   font-size: 13px;
+  line-height: 20px;
+  color: var(--uc-ai-secondary-foreground);
   cursor: pointer;
-  transition:
-    background var(--uc-ai-transition),
-    border-color var(--uc-ai-transition);
   white-space: nowrap;
+  transition:
+    background 150ms ease,
+    transform 140ms var(--uc-ai-ease-out, ease);
 }
 
-.chip:hover {
-  background: var(--uc-ai-secondary);
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover {
+    background: var(--uc-ai-secondary-hover);
+  }
+}
+
+.chip:active {
+  background: var(--uc-ai-secondary-hover);
+  transform: scale(0.97);
 }
 
 .chip[aria-pressed="true"] {
   background: var(--uc-ai-primary);
   color: var(--uc-ai-primary-foreground);
-  border-color: var(--uc-ai-primary);
 }
 
 .chip:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    transition-property: background;
+  }
+
+  .chip:active {
+    transform: none;
+  }
 }

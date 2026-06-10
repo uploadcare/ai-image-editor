@@ -30,8 +30,12 @@ export class UcAiAspectRatio extends LitElement {
   @property({ type: Boolean })
   public busy = false;
 
+  /**
+   * Accessible label for the trigger. A plain property (not the inherited
+   * `ariaLabel`) so it doesn't also stamp `aria-label` on the host element.
+   */
   @property({ attribute: 'aria-label-text' })
-  public override ariaLabel: string | null = null;
+  public labelText: string | null = null;
 
   @property({ attribute: false })
   public labelFor: (option: AspectRatioOption) => string = (o) =>
@@ -95,8 +99,8 @@ export class UcAiAspectRatio extends LitElement {
         type="button"
         class="trigger"
         aria-haspopup="listbox"
-        aria-expanded="${this.open}"
-        aria-label="${this.ariaLabel ?? 'Aspect ratio'}"
+        aria-expanded="${this.open ? 'true' : 'false'}"
+        aria-label="${this.labelText ?? 'Aspect ratio'}"
         ?disabled=${this.busy}
         @click=${this._toggle}
       >
@@ -112,7 +116,7 @@ export class UcAiAspectRatio extends LitElement {
                 type="button"
                 class="option"
                 role="option"
-                aria-selected="${isSelected}"
+                aria-selected="${isSelected ? 'true' : 'false'}"
                 @click=${() => this._select(option.value)}
               >
                 ${unsafeSVG(this._iconFor(option.value))}

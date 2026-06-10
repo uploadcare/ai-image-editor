@@ -1,13 +1,21 @@
-import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
+import { html, LitElement, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
 import type { AiEditorMode } from '../../../entities/mode';
-import { ICON_ARROW_THICK, ICON_HISTORY } from '../../../shared/ui/icons';
+import { ICON_ARROW_THICK } from '../../../shared/ui/icons';
 import styles from './prompt-row.css?inline';
 
 export type PromptInputDetail = { value: string };
 
+/**
+ * The floating composer card: an auto-growing prompt textarea above a control
+ * row that holds the preset chips (slotted, left), the aspect-ratio picker
+ * (slotted) and the send button. The send button reveals itself (sliding the
+ * ratio picker over) only once there's something to send, and cross-fades its
+ * arrow into a spinner while a generation is running.
+ */
 @customElement('uc-ai-prompt-row')
 export class UcAiPromptRow extends LitElement {
   public static override styles = unsafeCSS(styles);
@@ -23,12 +31,6 @@ export class UcAiPromptRow extends LitElement {
 
   @property({ type: Boolean })
   public busy = false;
-
-  @property({ type: Boolean, attribute: 'history-open' })
-  public historyOpen = false;
-
-  @property({ attribute: 'history-aria-label' })
-  public historyAriaLabel = '';
 
   @property({ attribute: 'send-aria-label' })
   public sendAriaLabel = '';
@@ -80,67 +82,51 @@ export class UcAiPromptRow extends LitElement {
     this.dispatchEvent(new CustomEvent('uc:send', { bubbles: true, composed: true }));
   }
 
-  private _emitToggleHistory(): void {
-    this.dispatchEvent(new CustomEvent('uc:toggle-history', { bubbles: true, composed: true }));
-  }
-
   public override render(): TemplateResult {
-    const showHistory = this.mode === 'edit' && !this.value;
-    const showArrow = this.value.trim().length > 0;
+    const empty = this.value.trim().length === 0;
 
     return html`
-      <div class="row">
-        ${
-          showHistory
-            ? html`
+      <div class="card">
+        <div class="body">
+          <textarea
+            class="input"
+            rows="1"
+            .value=${this.value}
+            placeholder="${this.placeholder}"
+            aria-label="${this.placeholder}"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            name="uc-ai-prompt"
+            data-1p-ignore
+            data-lpignore="true"
+            data-form-type="other"
+            @input=${this._onInput}
+            @keydown=${this._onKeydown}
+            ?disabled=${this.busy}
+          ></textarea>
+
+          <div class="row">
+            <div class="actions">
+              <slot name="chips"></slot>
+            </div>
+            <div class="controls">
+              <slot name="aspect-ratio"></slot>
               <button
                 type="button"
-                class="icon-btn"
-                data-testid="history-btn"
-                aria-label="${this.historyAriaLabel}"
-                aria-expanded="${this.historyOpen}"
-                @click=${this._emitToggleHistory}
-              >
-                ${unsafeSVG(ICON_HISTORY)}
-              </button>
-              <div class="divider" role="separator"></div>
-            `
-            : nothing
-        }
-        <textarea
-          class="input"
-          rows="1"
-          .value=${this.value}
-          placeholder="${this.placeholder}"
-          aria-label="${this.placeholder}"
-          autocomplete="off"
-          autocorrect="off"
-          autocapitalize="off"
-          spellcheck="false"
-          name="uc-ai-prompt"
-          data-1p-ignore
-          data-lpignore="true"
-          data-form-type="other"
-          @input=${this._onInput}
-          @keydown=${this._onKeydown}
-          ?disabled=${this.busy}
-        ></textarea>
-        <slot name="aspect-ratio"></slot>
-        ${
-          showArrow
-            ? html`
-              <button
-                type="button"
-                class="icon-btn icon-btn--primary"
+                class=${classMap({ send: true, 'send--busy': this.busy })}
                 aria-label="${this.sendAriaLabel}"
+                ?hidden=${empty}
+                ?disabled=${this.busy || empty}
                 @click=${this._emitSend}
-                ?disabled=${this.busy || !this.value.trim()}
               >
-                ${unsafeSVG(ICON_ARROW_THICK)}
+                <span class="send__icon">${unsafeSVG(ICON_ARROW_THICK)}</span>
+                <span class="send__spinner" aria-hidden="true"></span>
               </button>
-            `
-            : nothing
-        }
+            </div>
+          </div>
+        </div>
       </div>
     `;
   }

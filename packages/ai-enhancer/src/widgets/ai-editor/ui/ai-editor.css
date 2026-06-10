@@ -1,25 +1,31 @@
 :host {
   /*
    * Theming tokens exposed under the --uc-ai-* namespace so consumers can
-   * override them via CSS custom properties. Defaults come from the Figma
-   * design system.
+   * override them via CSS custom properties. Values track the Uploadcare
+   * widget-common design system (theme.css).
    */
-  --uc-ai-foreground: light-dark(#181818, #ffffff);
+  --uc-ai-foreground: light-dark(#181818, #e1e1e1);
   --uc-ai-background: light-dark(#ffffff, #1b1b1b);
+  --uc-ai-floating: light-dark(#ffffff, #242424);
+  --uc-ai-floating-border: light-dark(transparent, rgba(255, 255, 255, 0.05));
   --uc-ai-muted: light-dark(#f5f5f5, #242424);
   --uc-ai-muted-foreground: light-dark(#717171, #989898);
   --uc-ai-primary: light-dark(#174bd7, #579aff);
   --uc-ai-primary-hover: light-dark(#1141c0, #4a8aef);
   --uc-ai-primary-foreground: light-dark(#ffffff, #000000);
-  --uc-ai-secondary: light-dark(#f0f0f0, rgba(255, 255, 255, 0.07));
-  --uc-ai-secondary-hover: light-dark(#e6e6e6, rgba(255, 255, 255, 0.12));
-  --uc-ai-secondary-foreground: light-dark(#181818, #ffffff);
-  --uc-ai-border: light-dark(#e6e6e6, #3d3d3d);
+  --uc-ai-primary-transparent: light-dark(rgba(23, 75, 215, 0.07), rgba(87, 154, 255, 0.07));
+  --uc-ai-secondary: light-dark(rgba(24, 24, 24, 0.05), rgba(225, 225, 225, 0.07));
+  --uc-ai-secondary-hover: light-dark(rgba(24, 24, 24, 0.08), rgba(225, 225, 225, 0.1));
+  --uc-ai-secondary-foreground: light-dark(#181818, #e1e1e1);
+  --uc-ai-border: light-dark(#e4e4e8, #3d3d3d);
   --uc-ai-shadow-color: light-dark(rgba(24, 24, 24, 0.18), rgba(0, 0, 0, 0.5));
+  --uc-ai-dialog-shadow: light-dark(0 6px 20px rgba(0, 0, 0, 0.1), 0 6px 20px rgba(0, 0, 0, 0.25));
   --uc-ai-destructive: #d8473e;
   /* High-contrast error text: dark red on light, light red on dark. */
   --uc-ai-destructive-foreground: light-dark(#b3261e, #ff9d96);
   --uc-ai-radius: 14px;
+  --uc-ai-radius-card: 16px;
+  --uc-ai-radius-frame: 18px;
   --uc-ai-radius-input: 12px;
   --uc-ai-radius-button: 8px;
   --uc-ai-padding: 10px;
@@ -27,6 +33,11 @@
   --uc-ai-font-family: system-ui, -apple-system, sans-serif;
   --uc-ai-font-size: 14px;
   --uc-ai-transition: 0.2s ease;
+  /* Strong custom easings — the built-in CSS easings lack punch. */
+  --uc-ai-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --uc-ai-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  /* Empty/loading dot-grid overlay; tints with the foreground so it adapts. */
+  --uc-ai-dot-grid-color: color-mix(in srgb, var(--uc-ai-foreground) 15%, transparent);
   /* Prompt textarea growth cap: N lines of text plus its vertical padding. */
   --uc-ai-prompt-max-lines: 6;
   --uc-ai-prompt-max-height: calc(var(--uc-ai-prompt-max-lines) * 1.5em + 10px);
@@ -47,9 +58,7 @@
 
 /*
  * Theme overrides. Mirrors the file-uploader's pattern: place `.uc-light` or
- * `.uc-dark` on any ancestor (or the editor itself) to force a theme. The
- * editor and every shadow-DOM child inherits `color-scheme`, which makes all
- * `light-dark()` tokens re-resolve to the chosen branch.
+ * `.uc-dark` on any ancestor (or the editor itself) to force a theme.
  */
 :host(.uc-light),
 :host-context(.uc-light) {
@@ -67,73 +76,104 @@
   background: var(--uc-ai-background);
   border-radius: var(--uc-ai-radius);
   overflow: hidden;
-  box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.1);
-  /*
-   * Fill the host when it's given an explicit height (e.g. the file-uploader
-   * plugin's maximized modal). When the host is content-height (standalone),
-   * a percentage height resolves to auto, so this is a no-op there.
-   */
+  box-shadow: var(--uc-ai-dialog-shadow);
+  /* Fill the host when it's given an explicit height (e.g. the plugin's
+     maximized modal). Standalone hosts are content-height, so this is a no-op. */
   height: 100%;
 }
 
-.body {
-  display: flex;
-  flex-direction: column;
-  padding: var(--uc-ai-padding) var(--uc-ai-padding) 0;
-  /* Grow to fill the shell so the footer stays pinned to the bottom. */
+/* The canvas stage: the image fills it; the composer floats over the bottom. */
+.stage {
+  position: relative;
   flex: 1;
-  min-height: 0;
+  min-height: 360px;
+  overflow: hidden;
+  background: var(--uc-ai-background);
 }
 
 uc-ai-canvas {
-  /* Grow to fill the available body height (the image stays object-contain). */
-  flex: 1;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
 }
 
-.body-inner {
+/* Bottom hover strip that raises the docked composer. */
+.dock-hotzone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100px;
+  pointer-events: none;
+}
+
+.composer {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: 700px;
+  max-width: calc(100% - 40px);
   display: flex;
   flex-direction: column;
-  gap: var(--uc-ai-padding);
-  padding: var(--uc-ai-padding);
-  background: var(--uc-ai-muted);
-  border-radius: var(--uc-ai-radius-button);
-  flex: 1 0 auto;
-  min-height: 0;
+  gap: 14px;
+  align-items: center;
+  transition:
+    transform 480ms var(--uc-ai-ease-out),
+    opacity 480ms var(--uc-ai-ease-out);
 }
 
-.bottom {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.history-wrap {
-  position: relative;
-}
-
+uc-ai-history,
 uc-ai-prompt-row {
-  anchor-name: --uc-ai-history-anchor;
+  width: 100%;
 }
 
-uc-ai-history-popover {
-  position-anchor: --uc-ai-history-anchor;
-  inset: auto;
-  bottom: anchor(top);
-  left: anchor(left);
-  margin: 0 0 6px;
+/* Once an image exists the composer docks down (peeking ~40px) until hovered. */
+.stage:not(.is-empty) .dock-hotzone {
+  pointer-events: auto;
+}
+
+.stage:not(.is-empty) .composer {
+  /* Drop by its own height minus 20px so the bottom:20px anchor keeps 40px
+     visible above the stage edge. */
+  transform: translateX(-50%) translateY(calc(100% - 20px));
+}
+
+/* Hovering the bottom strip — or the composer — raises it back up. */
+.stage:not(.is-empty):has(.dock-hotzone:hover) .composer,
+.stage:not(.is-empty):has(.composer:hover) .composer,
+.stage:not(.is-empty):has(.composer:focus-within) .composer {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* While raised, grow the catch zone so moving up to the history row doesn't
+   drop out of the hover area and re-dock the composer. */
+.stage:not(.is-empty):has(.dock-hotzone:hover) .dock-hotzone,
+.stage:not(.is-empty):has(.composer:hover) .dock-hotzone,
+.stage:not(.is-empty):has(.composer:focus-within) .dock-hotzone {
+  height: 320px;
 }
 
 .error-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
-  /* Opaque tinted panel (over the surface, not transparent) + border so it
-   * reads clearly regardless of what's on the canvas behind it. */
+  max-width: calc(100% - 24px);
+  padding: 8px 12px;
   background: color-mix(in oklch, var(--uc-ai-destructive) 16%, var(--uc-ai-background));
   color: var(--uc-ai-destructive-foreground);
   border: 1px solid color-mix(in oklch, var(--uc-ai-destructive) 45%, transparent);
   border-radius: var(--uc-ai-radius-button);
+  box-shadow: var(--uc-ai-dialog-shadow);
   font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer {
+    transition: none;
+  }
 }

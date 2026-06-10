@@ -11,7 +11,6 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-generate-btn': 'Générer',
   'ai-enhancer-done-btn': 'Terminé',
   'ai-enhancer-start-over': 'Recommencer',
-  'ai-enhancer-history-empty': 'Aucune invite pour le moment',
   'ai-enhancer-history-title': 'Invites récentes',
   'ai-enhancer-busy': 'Génération…',
   'ai-enhancer-error': 'Une erreur s’est produite. Réessayez.',
