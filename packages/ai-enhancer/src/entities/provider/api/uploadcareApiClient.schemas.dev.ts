@@ -21,15 +21,15 @@ const GenerateRequestSchema = z.object({
 /**
  * Request body sent to `derivative/image/edit/`.
  *
- * The endpoint also accepts `output_format` and `seed`, which the editor does
- * not surface yet — add them here (and to the request body) when wired up.
+ * The endpoint also accepts `reference_sources`, `output_format` and `seed`,
+ * which the editor does not surface — add them here (and to the request body)
+ * when wired up.
  */
 const EditRequestSchema = z.object({
   pub_key: z.string().min(1),
   prompt: z.string(),
   source: z.string().min(1),
   aspect_ratio: z.tuple([z.number(), z.number()]).optional(),
-  reference_sources: z.array(z.string().min(1)).max(7).optional(),
   filename: z.string(),
   store: z.union([z.literal('auto'), z.boolean()]).optional(),
 });
@@ -40,10 +40,54 @@ const JobResponseSchema: z.ZodType<UploadcareJobResponse> = z.object({
   job_id: z.string().optional(),
 });
 
+/** Snake_case mirror of upload-client's `ImageInfo`. */
+const ImageInfoSchema = z.object({
+  height: z.number(),
+  width: z.number(),
+  geo_location: z.object({ latitude: z.number(), longitude: z.number() }).nullable(),
+  datetime_original: z.string().nullable(),
+  format: z.string(),
+  color_mode: z.string(),
+  dpi: z.object({ '0': z.number(), '1': z.number() }).nullable(),
+  orientation: z.number().nullable(),
+  sequence: z.boolean().nullable(),
+});
+
+/** Snake_case mirror of upload-client's `VideoInfo`. */
+const VideoInfoSchema = z.object({
+  duration: z.number(),
+  format: z.string(),
+  bitrate: z.number(),
+  audio: z
+    .object({
+      bitrate: z.number().nullable(),
+      codec: z.string().nullable(),
+      sample_rate: z.number().nullable(),
+      channels: z.string().nullable(),
+    })
+    .nullable(),
+  video: z.object({
+    height: z.number(),
+    width: z.number(),
+    frame_rate: z.number(),
+    bitrate: z.number(),
+    codec: z.string(),
+  }),
+});
+
+/** Snake_case mirror of upload-client's `ContentInfo`. */
+const ContentInfoSchema = z.object({
+  mime: z.object({ mime: z.string(), type: z.string(), subtype: z.string() }).optional(),
+  image: ImageInfoSchema.optional(),
+  video: VideoInfoSchema.optional(),
+});
+
 /**
- * Status frames from `derivative/status/`, discriminated on `status`. Each
- * variant is non-strict, so the full upload-info bag returned on `success`
- * validates without enumerating every field.
+ * Status frames from `derivative/status/`, discriminated on `status`. The
+ * `success` frame is the snake_case `FileInfo` upload-info bag: `uuid` is always
+ * present, the remaining `FileInfo` fields are optional (the frame may omit
+ * them) but type-checked when supplied. Objects are non-strict, so unknown
+ * extra fields still validate.
  */
 const StatusResponseSchema: z.ZodType<UploadcareJobStatus> = z.discriminatedUnion('status', [
   z.object({ type: z.literal('job').optional(), status: z.literal('processing') }),
@@ -56,10 +100,25 @@ const StatusResponseSchema: z.ZodType<UploadcareJobStatus> = z.discriminatedUnio
     error: z.string().optional(),
   }),
   z.object({
+    type: z.literal('job').optional(),
     status: z.literal('success'),
-    // On success the endpoint returns the upload-info bag, which always carries
-    // the uploaded file's `uuid` (see platform PR #1497's status test).
+    // Always present on success — the uploaded file's `uuid` (see platform PR #1497).
     uuid: z.string(),
+    size: z.number().optional(),
+    done: z.number().optional(),
+    total: z.number().optional(),
+    file_id: z.string().optional(),
+    original_filename: z.string().optional(),
+    filename: z.string().optional(),
+    mime_type: z.string().optional(),
+    is_image: z.boolean().optional(),
+    is_stored: z.boolean().optional(),
+    is_ready: z.string().optional(),
+    image_info: ImageInfoSchema.nullable().optional(),
+    video_info: VideoInfoSchema.nullable().optional(),
+    content_info: ContentInfoSchema.nullable().optional(),
+    s3_bucket: z.string().optional(),
+    metadata: z.record(z.string(), z.string()).optional(),
   }),
 ]);
 

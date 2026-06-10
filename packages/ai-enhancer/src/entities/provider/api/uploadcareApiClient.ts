@@ -1,3 +1,6 @@
+import type { FileInfo } from '@uploadcare/upload-client';
+import type { SnakeCasedPropertiesDeep } from '../../../shared/lib/camelizeKeys';
+
 export type UploadcareApiClientOptions = {
   publicKey: string;
   /** Base URL for the upload API. Defaults to https://upload.uploadcare.com. */
@@ -22,8 +25,6 @@ export type EditRequestParams = {
   source: string;
   /** Target output aspect ratio. Optional; omitted to preserve the source. */
   aspectRatio?: [number, number];
-  /** UUIDs of reference images guiding the edit (max 7). Omitted when empty. */
-  referenceSources?: string[];
   filename: string;
   store?: 'auto' | boolean;
   signal?: AbortSignal;
@@ -50,8 +51,14 @@ export type UploadcareJobErrorStatus = {
   error?: string;
 };
 
-/** The job finished; the payload is the upload-info bag, keyed by the file's UUID. */
-export type UploadcareJobSuccessStatus = {
+/**
+ * The job finished. The payload is the upload-info bag: the raw (snake_case)
+ * form of upload-client's `FileInfo`, which {@link camelizeKeys} turns into the
+ * `FileInfo` that `UploadcareFile` consumes. Fields beyond `uuid` are treated as
+ * best-effort (the frame may omit them), but `uuid` is always present.
+ */
+export type UploadcareJobSuccessStatus = Partial<SnakeCasedPropertiesDeep<FileInfo>> & {
+  type?: 'job';
   status: 'success';
   /** Always present on success — the uploaded file's UUID (see platform PR #1497). */
   uuid: string;
@@ -123,9 +130,6 @@ export class UploadcareApiClient {
       filename: params.filename,
     };
     if (params.aspectRatio) body.aspect_ratio = [params.aspectRatio[0], params.aspectRatio[1]];
-    if (params.referenceSources && params.referenceSources.length > 0) {
-      body.reference_sources = params.referenceSources;
-    }
     if (params.store !== undefined) body.store = params.store;
 
     await devValidate('edit', body);
