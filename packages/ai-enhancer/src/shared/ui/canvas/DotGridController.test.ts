@@ -26,8 +26,8 @@ describe('DotGridController', () => {
     const frame = document.createElement('div');
 
     expect(() => ctrl.attach({ surface, viewport, frame, getImage: () => null })).not.toThrow();
-    expect(() => ctrl.sync({ shimmering: true, empty: false })).not.toThrow();
-    expect(() => ctrl.sync({ shimmering: false, empty: true })).not.toThrow();
+    expect(() => ctrl.sync({ shimmering: true, empty: false, generating: true })).not.toThrow();
+    expect(() => ctrl.sync({ shimmering: false, empty: true, generating: false })).not.toThrow();
     expect(() => ctrl.onImageLoad()).not.toThrow();
     expect(() => ctrl.refreshColor()).not.toThrow();
     expect(() => ctrl.reset()).not.toThrow();

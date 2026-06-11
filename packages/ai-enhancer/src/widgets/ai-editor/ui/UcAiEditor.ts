@@ -161,6 +161,9 @@ export class UcAiEditor extends LitElement {
         this._selectedRatio = this._defaultGenerateRatio();
       }
     }
+    // The ratio option set only depends on `aspectRatios`; drop the memo when it
+    // changes so the picker child isn't handed a fresh array every render.
+    if (changed.has('aspectRatios')) this._ratioOptionsCache.clear();
   }
 
   protected override firstUpdated(): void {
@@ -168,7 +171,7 @@ export class UcAiEditor extends LitElement {
     // image frame sits above it. Tracks the composer's live height (which grows
     // with the history strip / multi-line prompt).
     if (typeof ResizeObserver === 'function' && this._composerEl) {
-      this._composerObserver = new ResizeObserver(() => this._syncComposerSpace());
+      this._composerObserver = new ResizeObserver(() => this._scheduleComposerSpace());
       this._composerObserver.observe(this._composerEl);
     }
     this._syncComposerSpace();
@@ -177,6 +180,20 @@ export class UcAiEditor extends LitElement {
   public override disconnectedCallback(): void {
     super.disconnectedCallback();
     this._composerObserver?.disconnect();
+    if (this._composerSpaceRaf) cancelAnimationFrame(this._composerSpaceRaf);
+    this._composerSpaceRaf = 0;
+  }
+
+  private _composerSpaceRaf = 0;
+
+  /** Coalesce composer-resize notifications (typing grows the textarea) into one
+   *  rAF write, so we don't read+write layout synchronously on every keystroke. */
+  private _scheduleComposerSpace(): void {
+    if (this._composerSpaceRaf) return;
+    this._composerSpaceRaf = requestAnimationFrame(() => {
+      this._composerSpaceRaf = 0;
+      this._syncComposerSpace();
+    });
   }
 
   /** Bottom anchor (20px) + composer height + a 16px breathing gap. */
@@ -223,13 +240,23 @@ export class UcAiEditor extends LitElement {
     return this._gen.resultUrl ?? this._inputUrl;
   }
 
+  /** Last non-null resolved preview, kept on screen while an async resolver runs. */
+  private _lastPreviewUrl: string | null = null;
+
   /** CDN-optimized, secure-delivery-resolved rendition for the on-canvas preview. */
   private get _previewUrl(): string | null {
     const url = this._displayUrl;
-    if (!url) return null;
+    if (!url) {
+      this._lastPreviewUrl = null;
+      return null;
+    }
     // The canvas spans the editor width; measured at render time (the result
     // arrives long after first layout). Fall back for detached renders.
-    return this._secure.resolve(cdnPreviewUrl(url, this.clientWidth || 1024));
+    const resolved = this._secure.resolve(cdnPreviewUrl(url, this.clientWidth || 1024));
+    // An async resolver returns `null` while pending; keep the previous preview
+    // on screen (rather than blanking the canvas) until the new one resolves.
+    if (resolved != null) this._lastPreviewUrl = resolved;
+    return this._lastPreviewUrl;
   }
 
   /** Full-resolution rendition for fullscreen, secure-delivery-resolved. */
@@ -260,10 +287,18 @@ export class UcAiEditor extends LitElement {
    * (preserve the source AR) is the default; standard ratios follow for
    * reshaping.
    */
+  private readonly _ratioOptionsCache = new Map<AiEditorMode, AspectRatioOption[]>();
+
   private _ratioOptions(mode: AiEditorMode): AspectRatioOption[] {
+    // Memoized by mode (invalidated in willUpdate when `aspectRatios` changes) so
+    // the aspect-ratio child receives a stable array reference across renders.
+    const cached = this._ratioOptionsCache.get(mode);
+    if (cached) return cached;
     const standard = this._standardRatios().map(toAspectRatioOption);
-    if (mode !== 'edit') return standard;
-    return [{ value: ORIGINAL_RATIO, labelKey: 'ai-enhancer-aspect-original' }, ...standard];
+    const options: AspectRatioOption[] =
+      mode === 'edit' ? [{ value: ORIGINAL_RATIO, labelKey: 'ai-enhancer-aspect-original' }, ...standard] : standard;
+    this._ratioOptionsCache.set(mode, options);
+    return options;
   }
 
   private _labelForOption = (option: AspectRatioOption): string => {
