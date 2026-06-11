@@ -104,10 +104,12 @@ let GLITCH_SIZE = 0; // extra size spike on torn rows (× base); 0 = none
 let GLITCH_SPACING = 0; // seconds between brief glitch bursts; 0 = continuous
 let GLITCH_RANDOM = 0; // 0..1 — jitter each burst's timing so gaps are irregular
 
-// Cap the backing store at retina density. The idle dots are crisp flat-alpha
-// squares, so rendering 1:1 with the device keeps their edges sharp —
-// supersampling would only blur them on the CSS downscale.
-let MAX_DPR = 2;
+// Cap the backing store density. Rendering 1:1 with the device keeps the crisp
+// flat-alpha squares sharp; the cap only bounds the buffer size on extreme
+// ratios. Must cover hi-dpi screens *and* browser zoom (zoom multiplies the
+// devicePixelRatio) — capping below the real ratio upscale-blurs the dots into
+// soft circles, so keep this at/above the highest ratio we expect to render at.
+let MAX_DPR = 3;
 
 // Optional reveal supersampling. Crisp squares are sharp at native density, and
 // supersampling a regular grid then CSS-downscaling beats into moiré *rings* — so
@@ -599,9 +601,12 @@ export class DotGridController implements ReactiveController {
 
   private _scaleFor(bell: boolean): number {
     const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-    // Crisp idle squares render 1:1 with the device; the animated bells are
-    // supersampled so their gradient has enough pixels to stay smooth.
-    return bell ? Math.min(Math.max(dpr, REVEAL_SS_MIN), REVEAL_SS_MAX) : dpr;
+    if (!bell) return dpr;
+    // The shimmer/reveal renders at *at least* native density — capping below it
+    // (e.g. REVEAL_SS_MAX < dpr on a 3× screen or under zoom) would upscale-blur
+    // the dots into soft circles. REVEAL_SS_* can only push *above* native, for
+    // the lab to demonstrate the moiré that supersampling a regular grid causes.
+    return Math.max(dpr, Math.min(Math.max(dpr, REVEAL_SS_MIN), REVEAL_SS_MAX));
   }
 
   /** Size the backing store to `scale`× the viewport. Note: setting width/height
