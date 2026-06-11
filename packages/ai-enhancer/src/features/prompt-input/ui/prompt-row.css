@@ -5,9 +5,12 @@
 .card {
   width: 100%;
   box-sizing: border-box;
-  background: var(--uc-ai-floating, var(--uc-ai-background));
+  /* Slightly translucent + blur for the prototype's frosted composer. */
+  background: color-mix(in srgb, var(--uc-ai-floating, var(--uc-ai-background)) 97%, transparent);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   border: 1px solid var(--uc-ai-floating-border, transparent);
-  border-radius: var(--uc-ai-radius-card, 16px);
+  border-radius: var(--uc-ai-radius-frame, 18px);
   box-shadow: var(--uc-ai-dialog-shadow);
   /* Overflow visible so the aspect-ratio menu can open above the card. */
   overflow: visible;

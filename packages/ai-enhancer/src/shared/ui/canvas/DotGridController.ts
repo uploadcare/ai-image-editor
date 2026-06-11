@@ -37,9 +37,22 @@ const EPI_RADIUS_RATIO = 0.4; // falloff radius as a fraction of frame width
 const EPI_SPEED = 0.5; // travel speed, px per ms
 const EPI_WANDER = 0.05; // max heading jitter per frame, in radians
 
-// ----- Static state: dots fade in size towards the grid centre -----
-const STATIC_CENTER_SCALE = 0.5; // dot size at the centre (fraction of base)
-const FALLOFF_POWER = 3; // higher = more aggressive centre-to-edge falloff
+// ----- Static (no-image) state -----
+const IDLE_SCALE = 0.9; // uniform dot size — the idle grid is one flat colour
+
+// ----- Soft dot sprite -----
+// Each dot is a pre-rendered radial *bell*: brightest at the centre, fading
+// smoothly to a transparent edge (no flat core, no hard ring). Rendered once at
+// high resolution; per-dot draws downscale it, which removes the 8-bit gradient
+// banding that makes a small faint gradient look stepped.
+const SPRITE_PX = 64; // sprite backing size (its radius = SPRITE_PX / 2)
+const DOT_PEAK = 1.6; // centre-alpha boost (so the bell's average ≈ the base alpha)
+const DOT_GLOW = 2.4; // drawn dot radius relative to its base half-size
+
+// Backing-store supersampling: dots are small, so render at ≥SS_MIN× the display
+// (CSS downscales it) to give each dot's gradient enough pixels to stay smooth.
+const SS_MIN = 2.5;
+const SS_MAX = 3;
 
 // ----- Frame mask softening -----
 const EDGE_TAU = 80; // ms — time constant easing a dot toward its in/out target
@@ -77,6 +90,10 @@ export class DotGridController implements ReactiveController {
   private readonly _baseRadius = (CELL_SIZE * DOT_RATIO) / 2;
 
   private _dotColor = 'rgba(0, 0, 0, 0.16)';
+  /** Pre-rendered soft radial-bell dot (theme colour baked in) for idle/shimmer. */
+  private _dotSprite: HTMLCanvasElement | null = null;
+  /** Opaque radial-bell used as the image-reveal mask (alpha = how much shows). */
+  private _maskSprite: HTMLCanvasElement | null = null;
 
   // Viewport pixel size + grid layout (depends only on the viewport size).
   private _w = 0;
@@ -85,9 +102,6 @@ export class DotGridController implements ReactiveController {
   private _rows = 0;
   private _offsetX = 0;
   private _offsetY = 0;
-  private _cx = 0;
-  private _cy = 0;
-  private _maxDist = 1;
   private _epiRadius = 1;
 
   /** Per-dot mask factor (1 = fully in frame, 0 = clipped). */
@@ -243,6 +257,57 @@ export class DotGridController implements ReactiveController {
     if (!this._refs) return;
     const c = getComputedStyle(this._refs.surface).color;
     if (c) this._dotColor = c;
+    this._buildSprites();
+  }
+
+  /** Parse the resolved overlay colour into rgb (0–255) + alpha (0–1). */
+  private _parseDotColor(): { r: number; g: number; b: number; a: number } {
+    const nums = this._dotColor.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi)?.map(Number) ?? [];
+    if (nums.length < 3) return { r: 225, g: 225, b: 225, a: 0.15 };
+    // `color(srgb r g b / a)` gives channels in 0–1; `rgb()/rgba()` in 0–255.
+    const unit = /srgb|color\(/i.test(this._dotColor);
+    const ch = (n: number): number => Math.round(unit ? n * 255 : n);
+    return { r: ch(nums[0]!), g: ch(nums[1]!), b: ch(nums[2]!), a: nums.length >= 4 ? nums[3]! : 1 };
+  }
+
+  /**
+   * (Re)rasterise the dot sprites: the theme-coloured bell for idle/shimmer, and
+   * an opaque bell whose alpha masks the image during the reveal — so the result
+   * materialises through soft, smoothly-graded dots instead of hard squares.
+   */
+  private _buildSprites(): void {
+    if (typeof document === 'undefined') {
+      this._dotSprite = null;
+      this._maskSprite = null;
+      return;
+    }
+    const { r, g, b, a } = this._parseDotColor();
+    this._dotSprite = this._makeBellSprite(r, g, b, a * DOT_PEAK);
+    this._maskSprite = this._makeBellSprite(0, 0, 0, 1);
+  }
+
+  /** A radial bell: opaque-ish centre fading smoothly (no flat core) to a clear edge. */
+  private _makeBellSprite(r: number, g: number, b: number, peak: number): HTMLCanvasElement | null {
+    const cvs = document.createElement('canvas');
+    cvs.width = SPRITE_PX;
+    cvs.height = SPRITE_PX;
+    const sg = cvs.getContext('2d');
+    if (!sg) return null;
+    const c = SPRITE_PX / 2;
+    const grad = sg.createRadialGradient(c, c, 0, c, c, c);
+    const stops: ReadonlyArray<readonly [number, number]> = [
+      [0, 1],
+      [0.2, 0.82],
+      [0.4, 0.55],
+      [0.6, 0.3],
+      [0.78, 0.13],
+      [0.9, 0.04],
+      [1, 0],
+    ];
+    for (const [t, k] of stops) grad.addColorStop(t, `rgba(${r}, ${g}, ${b}, ${peak * k})`);
+    sg.fillStyle = grad;
+    sg.fillRect(0, 0, SPRITE_PX, SPRITE_PX);
+    return cvs;
   }
 
   private _hasImage(): boolean {
@@ -338,9 +403,6 @@ export class DotGridController implements ReactiveController {
     this._rows = Math.max(1, Math.round(this._h / CELL_SIZE));
     this._offsetX = (this._w - (this._cols - 1) * CELL_SIZE) / 2;
     this._offsetY = (this._h - (this._rows - 1) * CELL_SIZE) / 2;
-    this._cx = (this._cols - 1) / 2;
-    this._cy = (this._rows - 1) / 2;
-    this._maxDist = Math.hypot(this._cx, this._cy) || 1;
     this._clip = new Float32Array(this._cols * this._rows);
     this._snapClip();
   }
@@ -349,17 +411,20 @@ export class DotGridController implements ReactiveController {
     const refs = this._refs;
     const ctx = this._ctx;
     if (!refs || !ctx) return;
-    // Cap the backing-store resolution: the grid is a soft halftone, so a 3×
-    // store buys nothing visible while tripling per-pixel fill cost.
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // Supersample the backing store. The dots are small and dense (~5px), so at
+    // 1× each spans too few pixels to render its radial gradient — it collapses
+    // to a flat-topped blob. Rendering at ≥SS_MIN× gives the gradient room, and
+    // CSS downscales the canvas to the display, anti-aliasing the result smooth.
+    const dpr = window.devicePixelRatio || 1;
+    const scale = Math.min(Math.max(dpr, SS_MIN), SS_MAX);
     this._w = refs.viewport.clientWidth;
     this._h = refs.viewport.clientHeight;
     if (this._w <= 0 || this._h <= 0) return; // no layout yet (e.g. detached)
-    refs.surface.width = Math.round(this._w * dpr);
-    refs.surface.height = Math.round(this._h * dpr);
+    refs.surface.width = Math.round(this._w * scale);
+    refs.surface.height = Math.round(this._h * scale);
     refs.surface.style.width = `${this._w}px`;
     refs.surface.style.height = `${this._h}px`;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
     this._allocate();
   }
 
@@ -416,10 +481,8 @@ export class DotGridController implements ReactiveController {
     return best;
   }
 
-  private _staticScale(col: number, row: number): number {
-    const dist = Math.hypot(col - this._cx, row - this._cy) / this._maxDist;
-    const eased = dist ** FALLOFF_POWER;
-    return STATIC_CENTER_SCALE + (1 - STATIC_CENTER_SCALE) * eased;
+  private _staticScale(): number {
+    return IDLE_SCALE;
   }
 
   private _shimmerScale(px: number, py: number): number {
@@ -500,18 +563,21 @@ export class DotGridController implements ReactiveController {
     if (!(this._state.shimmering || this._state.empty || mask)) return;
 
     ctx.clearRect(0, 0, this._w, this._h);
-    ctx.fillStyle = mask ? '#000' : this._dotColor;
 
     // Falloff radius tracks the live frame width (rides the AR transition).
     const fr = this._frameRect();
     this._epiRadius = (fr.right - fr.left) * EPI_RADIUS_RATIO || 1;
 
     const fullHalf = CELL_SIZE / 2;
-    // Batch every dot into one Path2D and a single fill() — far fewer context
-    // calls than thousands of fillRect()s per frame. (Path2D is always present
-    // in the browsers that give us a 2D context; guarded just in case.)
-    const usePath = typeof Path2D === 'function';
-    const path = usePath ? new Path2D() : null;
+    // Every dot is a soft radial bell (smooth centre→edge transparency) drawn from
+    // a pre-rendered sprite — the theme-coloured one idle, the opaque one as the
+    // image mask. Full coverage at the end of the reveal comes from the real <img>
+    // fading in (handled by _setOpacity), so the bells needn't tile.
+    const sprite = mask ? this._maskSprite : this._dotSprite;
+    const useSprite = sprite !== null;
+    if (!useSprite) ctx.fillStyle = mask ? '#000' : this._dotColor;
+    // Squares batch into one Path2D + a single fill(); sprites draw per dot.
+    const path = !useSprite && typeof Path2D === 'function' ? new Path2D() : null;
     let i = 0;
     for (let row = 0; row < this._rows; row++) {
       const y = this._offsetY + row * CELL_SIZE;
@@ -525,7 +591,7 @@ export class DotGridController implements ReactiveController {
           const smallHalf = this._baseRadius * animated;
           half = (fullHalf + this._env * (smallHalf - fullHalf)) * c;
         } else {
-          let scale = this._staticScale(col, row);
+          let scale = this._staticScale();
           if (!this._reduceMotion && this._shimMix > 0) {
             const shim = this._shimmerScale(x, y);
             scale += (shim - scale) * this._shimMix;
@@ -533,9 +599,16 @@ export class DotGridController implements ReactiveController {
           half = this._baseRadius * scale * c;
         }
         if (half <= 0) continue;
-        const side = half * 2;
-        if (path) path.rect(x - half, y - half, side, side);
-        else ctx.fillRect(x - half, y - half, side, side);
+        if (useSprite) {
+          const rad = half * DOT_GLOW;
+          ctx.drawImage(sprite!, x - rad, y - rad, rad * 2, rad * 2);
+        } else if (path) {
+          const side = half * 2;
+          path.rect(x - half, y - half, side, side);
+        } else {
+          const side = half * 2;
+          ctx.fillRect(x - half, y - half, side, side);
+        }
       }
     }
     if (path) ctx.fill(path);

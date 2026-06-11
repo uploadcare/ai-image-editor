@@ -7,6 +7,7 @@ import {
   type AspectRatioOption,
   type AspectRatioValue,
   aspectRatioValueEquals,
+  DEFAULT_GENERATE_RATIO,
   isConcreteRatio,
   isValidAspectRatio,
   ORIGINAL_RATIO,
@@ -153,11 +154,11 @@ export class UcAiEditor extends LitElement {
     const mode = this._mode;
     if (mode !== this._lastMode) {
       this._lastMode = mode;
-      this._selectedRatio = mode === 'edit' ? ORIGINAL_RATIO : this._firstStandardRatio();
+      this._selectedRatio = mode === 'edit' ? ORIGINAL_RATIO : this._defaultGenerateRatio();
     } else if (changed.has('aspectRatios')) {
       const sel = this._selectedRatio;
       if (isConcreteRatio(sel) && !this._standardRatios().some((r) => aspectRatioValueEquals(r, sel))) {
-        this._selectedRatio = this._firstStandardRatio();
+        this._selectedRatio = this._defaultGenerateRatio();
       }
     }
   }
@@ -244,8 +245,14 @@ export class UcAiEditor extends LitElement {
     return configured.length > 0 ? configured : [...POPULAR_ASPECT_RATIOS];
   }
 
-  private _firstStandardRatio(): AspectRatio | null {
-    return this._standardRatios()[0] ?? null;
+  /**
+   * The ratio the generate flow starts on: the prototype's landscape default
+   * ({@link DEFAULT_GENERATE_RATIO}) when it's in the available set, else the
+   * first available ratio.
+   */
+  private _defaultGenerateRatio(): AspectRatio | null {
+    const ratios = this._standardRatios();
+    return ratios.find((r) => aspectRatioValueEquals(r, DEFAULT_GENERATE_RATIO)) ?? ratios[0] ?? null;
   }
 
   /**
@@ -380,9 +387,6 @@ export class UcAiEditor extends LitElement {
             fullscreen-label="${this._l('ai-enhancer-fullscreen')}"
             exit-fullscreen-label="${this._l('ai-enhancer-exit-fullscreen')}"
           ></uc-ai-canvas>
-
-          <!-- Bottom hover strip that raises the docked composer. -->
-          <div class="dock-hotzone" aria-hidden="true"></div>
 
           <div class="composer">
             ${

@@ -96,16 +96,7 @@ uc-ai-canvas {
   inset: 0;
 }
 
-/* Bottom hover strip that raises the docked composer. */
-.dock-hotzone {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 100px;
-  pointer-events: none;
-}
-
+/* The composer stays fully visible at all times (no docking auto-hide). */
 .composer {
   position: absolute;
   left: 50%;
@@ -117,40 +108,11 @@ uc-ai-canvas {
   flex-direction: column;
   gap: 14px;
   align-items: center;
-  transition:
-    transform 480ms var(--uc-ai-ease-out),
-    opacity 480ms var(--uc-ai-ease-out);
 }
 
 uc-ai-history,
 uc-ai-prompt-row {
   width: 100%;
-}
-
-/* Once an image exists the composer docks down (peeking ~40px) until hovered. */
-.stage:not(.is-empty) .dock-hotzone {
-  pointer-events: auto;
-}
-
-.stage:not(.is-empty) .composer {
-  /* Drop by its own height minus 20px so the bottom:20px anchor keeps 40px
-     visible above the stage edge. */
-  transform: translateX(-50%) translateY(calc(100% - 20px));
-}
-
-/* Hovering the bottom strip — or the composer — raises it back up. */
-.stage:not(.is-empty):has(.dock-hotzone:hover) .composer,
-.stage:not(.is-empty):has(.composer:hover) .composer,
-.stage:not(.is-empty):has(.composer:focus-within) .composer {
-  transform: translateX(-50%) translateY(0);
-}
-
-/* While raised, grow the catch zone so moving up to the history row doesn't
-   drop out of the hover area and re-dock the composer. */
-.stage:not(.is-empty):has(.dock-hotzone:hover) .dock-hotzone,
-.stage:not(.is-empty):has(.composer:hover) .dock-hotzone,
-.stage:not(.is-empty):has(.composer:focus-within) .dock-hotzone {
-  height: 320px;
 }
 
 .error-banner {
@@ -170,10 +132,4 @@ uc-ai-prompt-row {
   border-radius: var(--uc-ai-radius-button);
   box-shadow: var(--uc-ai-dialog-shadow);
   font-size: 13px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .composer {
-    transition: none;
-  }
 }

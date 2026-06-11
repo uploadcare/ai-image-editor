@@ -48,6 +48,12 @@ export const POPULAR_ASPECT_RATIOS: readonly AspectRatio[] = [
   [16, 9],
 ];
 
+/**
+ * Aspect ratio the generate flow starts on (matches the design prototype's
+ * landscape default). Used when present in the available set, else the first.
+ */
+export const DEFAULT_GENERATE_RATIO: AspectRatio = [3, 2];
+
 const LABEL_BY_RATIO: Record<string, AspectRatioLabelKey> = {
   '1:1': 'ai-enhancer-aspect-square',
   '2:3': 'ai-enhancer-aspect-tall',

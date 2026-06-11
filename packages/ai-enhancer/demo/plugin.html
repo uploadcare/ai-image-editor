@@ -86,8 +86,13 @@
     };
 
     const shell = document.querySelector('demo-shell');
-    document.getElementById('env').addEventListener('change', (e) => {
-      const env = ENVIRONMENTS[e.target.value];
+    const envSelect = document.getElementById('env');
+
+    // Persist the env choice across reloads (shared with the standalone demo).
+    const ENV_STORAGE_KEY = 'uc-ai-demo-env';
+
+    function applyEnv(name) {
+      const env = ENVIRONMENTS[name];
       config.setAttribute('pubkey', env.pubkey);
       if (env.baseUrl) {
         config.setAttribute('base-url', env.baseUrl);
@@ -96,6 +101,17 @@
         config.removeAttribute('base-url');
         config.removeAttribute('cdn-cname-prefixed');
       }
+    }
+
+    const savedEnv = localStorage.getItem(ENV_STORAGE_KEY);
+    if (ENVIRONMENTS[savedEnv]) {
+      envSelect.value = savedEnv;
+      applyEnv(savedEnv);
+    }
+
+    envSelect.addEventListener('change', (e) => {
+      localStorage.setItem(ENV_STORAGE_KEY, e.target.value);
+      applyEnv(e.target.value);
       shell.log(`env → ${e.target.value}`);
     });
 
