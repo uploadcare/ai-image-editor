@@ -22,6 +22,7 @@ export default defineConfig(({ command, mode }) => {
             index: resolve(__dirname, 'demo/index.html'),
             standalone: resolve(__dirname, 'demo/standalone.html'),
             plugin: resolve(__dirname, 'demo/plugin.html'),
+            'shimmer-lab': resolve(__dirname, 'demo/shimmer-lab.html'),
           },
         },
       },

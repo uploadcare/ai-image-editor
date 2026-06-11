@@ -17,55 +17,235 @@ export type DotGridRefs = {
 
 /** Visual mode the grid should reflect on the next {@link DotGridController.sync}. */
 export type DotGridState = {
-  /** A generation/edit is running — dots shimmer (and mask the image). */
+  /** Dots cover the frame (a generation runs, or an image swap is loading). */
   shimmering: boolean;
   /** No image yet — the static centre-falloff grid is shown. */
   empty: boolean;
+  /** A real generation is in progress (vs. a plain image switch). Only then do
+   *  the epicenters wander; switches/reveals use a uniform, ring-free growth. */
+  generating: boolean;
 };
 
+// Tunable shimmer parameters. They are module-level `let`s (not `const`) so the
+// calibration demo can adjust them live via {@link applyShimmerParams}; every
+// read below sees the current value. Production never mutates them — the defaults
+// here are the shipped look.
+
 // ----- Grid spacing -----
-const CELL_SIZE = 6; // distance between dot centres, in px
-const DOT_RATIO = 0.4; // dot diameter relative to the cell size
+let CELL_SIZE = 6; // distance between dot centres, in px
+let DOT_RATIO = 0.4; // dot diameter relative to the cell size
 
 // ----- Shimmer (size only) -----
-const MIN_SCALE = 0.5; // smallest dot, as a fraction of its base size
+let MIN_SCALE = 0.5; // smallest dot, as a fraction of its base size
 
 // Shimmer roams two "epicenters" around the frame, bouncing off its edges; dots
 // grow within a falloff radius around them and shrink back outside it.
-const EPI_COUNT = 2;
-const EPI_RADIUS_RATIO = 0.4; // falloff radius as a fraction of frame width
-const EPI_SPEED = 0.5; // travel speed, px per ms
-const EPI_WANDER = 0.05; // max heading jitter per frame, in radians
+let EPI_COUNT = 2;
+let EPI_RADIUS_RATIO = 0.4; // falloff radius as a fraction of frame width
+let EPI_SPEED = 0.5; // travel speed, px per ms
+let EPI_WANDER = 0.05; // max heading jitter per frame, in radians
+let EPI_FALLOFF = 1; // falloff curve exponent: >1 tightens the hotspot, <1 broadens it
+let PEAK_SCALE = 1; // dot size at an epicentre's centre, as a fraction of base
+// Low-frequency warp of the falloff distance field: bends the iso-distance
+// contours off perfect circles so the gradient's banding dissolves into a smooth
+// organic falloff (a noise-free alternative/complement to dither). 0 = off.
+let FALLOFF_WARP = 0;
 
 // ----- Static (no-image) state -----
-const IDLE_SCALE = 0.9; // uniform dot size — the idle grid is one flat colour
+let IDLE_SCALE = 0.9; // uniform dot size — the idle grid is one flat colour
 
 // Per-dot size dither (in scale units) applied to the shimmer, scaled by the
-// brightness wave. Breaks the low-contrast falloff's 8-bit banding (concentric
-// "stepped" rings) into imperceptible noise without softening the dots.
-const SHIM_DITHER = 0.16;
+// brightness wave. An alternative ring-breaker; left off in favour of position
+// jitter, which avoids size scatter (see POS_JITTER).
+let SHIM_DITHER = 0;
+
+// Per-dot opacity (value) dither: varies each dot's alpha so neighbours cross the
+// 8-bit brightness step at different points. This attacks the *banding itself*
+// (the dots' colour), unlike size/position jitter which only move/resize them.
+let ALPHA_DITHER = 0;
+const ALPHA_DITHER_BUCKETS = 8; // distinct alpha levels (one batched fill each)
+
+// Carry the epicentre brightness in the dots' ALPHA via a real radial gradient
+// (browsers dither gradients → smooth, ring-free) multiplied onto the grid. Set
+// MIN_SCALE = PEAK_SCALE = 1 alongside this for a pure, size-flat alpha shimmer.
+let ALPHA_FALLOFF = 0; // 0 = off; 1 = outer dots fully fade out toward the edge
+
+// Shimmer brightness model. When ALPHA_SHIMMER is on the dots keep a CONSTANT
+// size (PEAK_SCALE) and the epicentre wave is carried purely in their ALPHA via
+// the native radial gradient above — browsers dither gradients, so it grades
+// smoothly with no rings. This is the default: size-scaling sub-2px dots can
+// only render a few discrete sizes, which quantises the wave into concentric
+// rings (most visible over an image). 0 = legacy size-wave (the proto look).
+let ALPHA_SHIMMER = 1;
+// Brightness of dots far from any epicentre, as a fraction of the peak (the
+// epicentre centre is 1). The travelling wave grades floor → 1 → floor.
+let SHIM_FLOOR = 0.3;
+
+// Per-dot position jitter (as a fraction of the cell), scaled by the shimmer
+// intensity. De-aligns the equidistant dots so the epicenter falloff doesn't
+// quantise into coherent concentric rings — breaks banding without size scatter.
+let POS_JITTER = 0;
+// Re-roll rate (Hz) for the dither + position jitter, so the breakup pattern
+// animates and the eye time-averages residual banding away. 0 = static.
+let TEMPORAL_JITTER = 0;
+
+// ----- Dot shape + global pulse -----
+let ROUNDNESS = 0; // 0 = square, 1 = circle (corner radius as a fraction of half-size)
+let PULSE_AMOUNT = 0; // global size "breathing" amplitude (× size); 0 = off
+let PULSE_SPEED = 1; // breaths per second
+
+// ----- Glitch (digital row-tear) -----
+// Random rows jump horizontally and spike in size, re-rolling GLITCH_SPEED times
+// a second — a VHS/datamosh feel. GLITCH_AMOUNT is the fraction of rows hit; 0 = off.
+let GLITCH_AMOUNT = 0; // 0..1 — share of rows torn each glitch frame
+let GLITCH_SPEED = 10; // glitch re-rolls per second (flicker rate within a burst)
+let GLITCH_SHIFT = 2; // max horizontal jump of a torn row, in cells
+let GLITCH_SIZE = 0; // extra size spike on torn rows (× base); 0 = none
+let GLITCH_SPACING = 0; // seconds between brief glitch bursts; 0 = continuous
+let GLITCH_RANDOM = 0; // 0..1 — jitter each burst's timing so gaps are irregular
 
 // Cap the backing store at retina density. The idle dots are crisp flat-alpha
 // squares, so rendering 1:1 with the device keeps their edges sharp —
 // supersampling would only blur them on the CSS downscale.
-const MAX_DPR = 2;
+let MAX_DPR = 2;
 
-// The reveal supersamples the backing so each soft bell has enough pixels for a
-// smooth gradient (idle squares stay at device density — see `_scaleFor`).
-const REVEAL_SS_MIN = 2.5;
-const REVEAL_SS_MAX = 3;
+// Optional reveal supersampling. Crisp squares are sharp at native density, and
+// supersampling a regular grid then CSS-downscaling beats into moiré *rings* — so
+// this defaults to off (1 = native floor; the cap keeps retina at device density).
+// Left tunable for the lab — raise it to *see* the moiré it causes.
+let REVEAL_SS_MIN = 1;
+let REVEAL_SS_MAX = 2;
 
 // ----- Frame mask softening -----
-const EDGE_TAU = 80; // ms — time constant easing a dot toward its in/out target
+let EDGE_TAU = 80; // ms — time constant easing a dot toward its in/out target
 
 // ----- Progress enter/exit envelope -----
-const ENTER_MS = 380;
-const EXIT_MS = 420;
+let ENTER_MS = 380;
+let EXIT_MS = 420;
 const easeOut = (t: number): number => 1 - (1 - t) ** 3;
 
 // ----- Initial-state -> shimmer blend (no image) -----
-const SHIM_ENTER_MS = 450;
-const SHIM_EXIT_MS = 450;
+let SHIM_ENTER_MS = 450;
+let SHIM_EXIT_MS = 450;
+
+/** Snapshot of the live-tunable shimmer parameters (see the `let`s above). */
+export type ShimmerParams = {
+  cellSize: number;
+  dotRatio: number;
+  minScale: number;
+  epiCount: number;
+  epiRadiusRatio: number;
+  epiSpeed: number;
+  epiWander: number;
+  epiFalloff: number;
+  peakScale: number;
+  falloffWarp: number;
+  idleScale: number;
+  dither: number;
+  alphaDither: number;
+  alphaFalloff: number;
+  alphaShimmer: number;
+  shimFloor: number;
+  posJitter: number;
+  temporalJitter: number;
+  roundness: number;
+  pulseAmount: number;
+  pulseSpeed: number;
+  glitchAmount: number;
+  glitchSpeed: number;
+  glitchShift: number;
+  glitchSize: number;
+  glitchSpacing: number;
+  glitchRandom: number;
+  maxDpr: number;
+  revealSsMin: number;
+  revealSsMax: number;
+  edgeTau: number;
+  enterMs: number;
+  exitMs: number;
+  shimEnterMs: number;
+  shimExitMs: number;
+};
+
+/** Current shimmer parameters — used by the calibration demo to seed its controls. */
+export function getShimmerParams(): ShimmerParams {
+  return {
+    cellSize: CELL_SIZE,
+    dotRatio: DOT_RATIO,
+    minScale: MIN_SCALE,
+    epiCount: EPI_COUNT,
+    epiRadiusRatio: EPI_RADIUS_RATIO,
+    epiSpeed: EPI_SPEED,
+    epiWander: EPI_WANDER,
+    epiFalloff: EPI_FALLOFF,
+    peakScale: PEAK_SCALE,
+    falloffWarp: FALLOFF_WARP,
+    idleScale: IDLE_SCALE,
+    dither: SHIM_DITHER,
+    alphaDither: ALPHA_DITHER,
+    alphaFalloff: ALPHA_FALLOFF,
+    alphaShimmer: ALPHA_SHIMMER,
+    shimFloor: SHIM_FLOOR,
+    posJitter: POS_JITTER,
+    temporalJitter: TEMPORAL_JITTER,
+    roundness: ROUNDNESS,
+    pulseAmount: PULSE_AMOUNT,
+    pulseSpeed: PULSE_SPEED,
+    glitchAmount: GLITCH_AMOUNT,
+    glitchSpeed: GLITCH_SPEED,
+    glitchShift: GLITCH_SHIFT,
+    glitchSize: GLITCH_SIZE,
+    glitchSpacing: GLITCH_SPACING,
+    glitchRandom: GLITCH_RANDOM,
+    maxDpr: MAX_DPR,
+    revealSsMin: REVEAL_SS_MIN,
+    revealSsMax: REVEAL_SS_MAX,
+    edgeTau: EDGE_TAU,
+    enterMs: ENTER_MS,
+    exitMs: EXIT_MS,
+    shimEnterMs: SHIM_ENTER_MS,
+    shimExitMs: SHIM_EXIT_MS,
+  };
+}
+
+/** Overwrite shimmer parameters live (calibration demo only). */
+export function applyShimmerParams(p: Partial<ShimmerParams>): void {
+  if (p.cellSize != null) CELL_SIZE = p.cellSize;
+  if (p.dotRatio != null) DOT_RATIO = p.dotRatio;
+  if (p.minScale != null) MIN_SCALE = p.minScale;
+  if (p.epiCount != null) EPI_COUNT = p.epiCount;
+  if (p.epiRadiusRatio != null) EPI_RADIUS_RATIO = p.epiRadiusRatio;
+  if (p.epiSpeed != null) EPI_SPEED = p.epiSpeed;
+  if (p.epiWander != null) EPI_WANDER = p.epiWander;
+  if (p.epiFalloff != null) EPI_FALLOFF = p.epiFalloff;
+  if (p.peakScale != null) PEAK_SCALE = p.peakScale;
+  if (p.falloffWarp != null) FALLOFF_WARP = p.falloffWarp;
+  if (p.idleScale != null) IDLE_SCALE = p.idleScale;
+  if (p.dither != null) SHIM_DITHER = p.dither;
+  if (p.alphaDither != null) ALPHA_DITHER = p.alphaDither;
+  if (p.alphaFalloff != null) ALPHA_FALLOFF = p.alphaFalloff;
+  if (p.alphaShimmer != null) ALPHA_SHIMMER = p.alphaShimmer;
+  if (p.shimFloor != null) SHIM_FLOOR = p.shimFloor;
+  if (p.posJitter != null) POS_JITTER = p.posJitter;
+  if (p.temporalJitter != null) TEMPORAL_JITTER = p.temporalJitter;
+  if (p.roundness != null) ROUNDNESS = p.roundness;
+  if (p.pulseAmount != null) PULSE_AMOUNT = p.pulseAmount;
+  if (p.pulseSpeed != null) PULSE_SPEED = p.pulseSpeed;
+  if (p.glitchAmount != null) GLITCH_AMOUNT = p.glitchAmount;
+  if (p.glitchSpeed != null) GLITCH_SPEED = p.glitchSpeed;
+  if (p.glitchShift != null) GLITCH_SHIFT = p.glitchShift;
+  if (p.glitchSize != null) GLITCH_SIZE = p.glitchSize;
+  if (p.glitchSpacing != null) GLITCH_SPACING = p.glitchSpacing;
+  if (p.glitchRandom != null) GLITCH_RANDOM = p.glitchRandom;
+  if (p.maxDpr != null) MAX_DPR = p.maxDpr;
+  if (p.revealSsMin != null) REVEAL_SS_MIN = p.revealSsMin;
+  if (p.revealSsMax != null) REVEAL_SS_MAX = p.revealSsMax;
+  if (p.edgeTau != null) EDGE_TAU = p.edgeTau;
+  if (p.enterMs != null) ENTER_MS = p.enterMs;
+  if (p.exitMs != null) EXIT_MS = p.exitMs;
+  if (p.shimEnterMs != null) SHIM_ENTER_MS = p.shimEnterMs;
+  if (p.shimExitMs != null) SHIM_EXIT_MS = p.shimExitMs;
+}
 
 type Epicenter = { x: number; y: number; vx: number; vy: number };
 type Rect = { left: number; top: number; right: number; bottom: number };
@@ -76,9 +256,11 @@ type Rect = { left: number; top: number; right: number; bottom: number };
  * to it; dots whose footprint falls outside the (live, animating) frame shrink
  * to 0, so changing the aspect ratio animates dots in/out rather than clipping.
  *
- * While a generation runs the in-frame dots shimmer by animating their *size*
- * (never colour). When masking an existing image the grid becomes the image's
- * mask (`source-in` compositing), so the result "materialises" out of the dots.
+ * While a generation runs the in-frame dots shimmer: a travelling epicentre
+ * brightens them via a smooth alpha gradient (ALPHA_SHIMMER) — dot size stays
+ * flat, so the wave never quantises into rings. When masking an existing image
+ * the grid becomes the image's mask (`source-in` compositing), so the result
+ * "materialises" out of the dots and the wave grades how much image shows.
  *
  * Degrades to a no-op when there's no 2D context (e.g. the happy-dom unit-test
  * environment), so mounting the canvas never throws there.
@@ -88,7 +270,10 @@ export class DotGridController implements ReactiveController {
   private _ctx: CanvasRenderingContext2D | null = null;
 
   private readonly _reduceMotion: boolean;
-  private readonly _baseRadius = (CELL_SIZE * DOT_RATIO) / 2;
+  /** Dot half-size in px. A getter so live CELL_SIZE/DOT_RATIO tweaks apply. */
+  private get _baseRadius(): number {
+    return (CELL_SIZE * DOT_RATIO) / 2;
+  }
 
   private _dotColor = 'rgba(0, 0, 0, 0.16)';
 
@@ -102,6 +287,11 @@ export class DotGridController implements ReactiveController {
   private _epiRadius = 1;
   /** Backing-store scale currently applied (device px per CSS px). */
   private _appliedScale = 0;
+  /** Time-quantised seed offset for dither/jitter (drives TEMPORAL_JITTER). */
+  private _noiseSeed = 0;
+  /** Offscreen alpha mask for the radial ALPHA_FALLOFF (browser-dithered gradient). */
+  private _maskCanvas: HTMLCanvasElement | null = null;
+  private _maskCtx: CanvasRenderingContext2D | null = null;
 
   /** Per-dot mask factor (1 = fully in frame, 0 = clipped). */
   private _clip = new Float32Array(0);
@@ -132,7 +322,7 @@ export class DotGridController implements ReactiveController {
   private _rafId: number | null = null;
   private _lastTime = 0;
 
-  private _state: DotGridState = { shimmering: false, empty: true };
+  private _state: DotGridState = { shimmering: false, empty: true, generating: false };
   private readonly _epis: Epicenter[] = [];
 
   private _resizeObserver?: ResizeObserver;
@@ -215,6 +405,9 @@ export class DotGridController implements ReactiveController {
     } else if (!shim && this._prevShim) {
       // Leaving progress.
       if (this._hasImage()) {
+        // Snap to fully covered first, so a fast/cached image still materialises
+        // out of the dots rather than popping in (the cover may not have finished).
+        this._env = 1;
         this._startEnv(0, EXIT_MS);
         this._shimMix = 0;
       } else if (state.empty) {
@@ -232,6 +425,16 @@ export class DotGridController implements ReactiveController {
     else if (this._rafId === null) this._draw();
   }
 
+  /** Re-apply layout-affecting params (grid spacing, backing scale, epicenter
+   *  count) after a live {@link applyShimmerParams} change. Calibration demo only;
+   *  purely dynamic params are picked up by the running animation frame. */
+  public recalibrate(): void {
+    if (!this._ctx) return;
+    this._resize();
+    if (this._epis.length !== EPI_COUNT) this._initEpicenters();
+    if (this._rafId === null) this._draw();
+  }
+
   /** Hard reset to the static initial (no-image) grid (used by "Start over"). */
   public reset(): void {
     this._env = 0;
@@ -241,7 +444,7 @@ export class DotGridController implements ReactiveController {
     this._exitPending = false;
     this._prevShim = false;
     this._epis.length = 0;
-    this._state = { shimmering: false, empty: true };
+    this._state = { shimmering: false, empty: true, generating: false };
     this._restoreOpacity();
     if (!this._ctx) return;
     this._snapClip();
@@ -297,6 +500,10 @@ export class DotGridController implements ReactiveController {
     this._ensureLoop();
   }
 
+  /** Frame rect cached for the duration of one animation tick (cleared after),
+   *  so the several readers in a frame share a single forced layout. */
+  private _rectCache: Rect | null = null;
+
   /** Frame rectangle in viewport coordinates, read from the *live* layout. */
   private _frameRect(): Rect {
     const refs = this._refs!;
@@ -305,6 +512,11 @@ export class DotGridController implements ReactiveController {
     const left = fr.left - vp.left;
     const top = fr.top - vp.top;
     return { left, top, right: left + fr.width, bottom: top + fr.height };
+  }
+
+  /** The frame rect, reusing the per-tick cache when one is active. */
+  private _liveRect(): Rect {
+    return this._rectCache ?? this._frameRect();
   }
 
   private _inFrame(x: number, y: number, r: Rect): boolean {
@@ -329,7 +541,7 @@ export class DotGridController implements ReactiveController {
 
   /** Ease the mask toward the live frame. Returns true while still settling. */
   private _followFrame(dt: number): boolean {
-    const r = this._frameRect();
+    const r = this._liveRect();
     const k = this._reduceMotion ? 1 : 1 - Math.exp(-dt / EDGE_TAU);
     let settling = false;
     let i = 0;
@@ -355,8 +567,6 @@ export class DotGridController implements ReactiveController {
     this._snapClip();
   }
 
-  /** Backing density for the current mode: device px for crisp idle squares,
-   *  supersampled for the reveal's soft bells (so their gradient stays smooth). */
   /** True whenever the dots are animated bells (shimmer or reveal) rather than
    *  the static crisp-square idle grid. */
   private _wantsBell(): boolean {
@@ -418,7 +628,7 @@ export class DotGridController implements ReactiveController {
 
   private _moveEpicenters(dt: number): void {
     if (this._epis.length === 0) this._initEpicenters();
-    const r = this._frameRect();
+    const r = this._liveRect();
     for (const e of this._epis) {
       const a = Math.atan2(e.vy, e.vx) + (Math.random() - 0.5) * EPI_WANDER;
       e.vx = Math.cos(a) * EPI_SPEED;
@@ -444,11 +654,16 @@ export class DotGridController implements ReactiveController {
 
   private _epiIntensity(px: number, py: number): number {
     let best = 0;
+    // Low-frequency smooth warp of the distance field — bends the iso-distance
+    // contours off perfect circles so the falloff's banding dissolves smoothly.
+    const k = FALLOFF_WARP > 0 ? (Math.PI * 2) / (this._epiRadius * 0.7 || 1) : 0;
+    const warp = k > 0 ? FALLOFF_WARP * this._epiRadius * Math.sin(px * k + 1.3) * Math.cos(py * k * 0.9) : 0;
     for (const e of this._epis) {
-      const d = Math.hypot(px - e.x, py - e.y);
+      const d = Math.max(0, Math.hypot(px - e.x, py - e.y) + warp);
       if (d >= this._epiRadius) continue;
       const t = 1 - d / this._epiRadius;
-      const f = t * t * (3 - 2 * t); // smoothstep
+      let f = t * t * (3 - 2 * t); // smoothstep
+      if (EPI_FALLOFF !== 1) f = Math.pow(f, EPI_FALLOFF);
       if (f > best) best = f;
     }
     return best;
@@ -470,8 +685,8 @@ export class DotGridController implements ReactiveController {
     // stay clean). The brightness wave is so low-contrast that its smooth falloff
     // otherwise quantises into visible concentric rings ("stepped gradient"); the
     // jitter breaks those bands into imperceptible noise.
-    const jitter = (this._hash(col, row) - 0.5) * SHIM_DITHER * intensity;
-    return MIN_SCALE + (1 - MIN_SCALE) * intensity + jitter;
+    const jitter = (this._hash(col, row + this._noiseSeed) - 0.5) * SHIM_DITHER * intensity;
+    return MIN_SCALE + (PEAK_SCALE - MIN_SCALE) * intensity + jitter;
   }
 
   private _drawCover(r: Rect): void {
@@ -537,6 +752,54 @@ export class DotGridController implements ReactiveController {
     this._showHiddenImage();
   }
 
+  /**
+   * Multiply the just-drawn dots' alpha by a radial gradient centred on each
+   * epicentre (full at the centre, fading to `1 − ALPHA_FALLOFF` outside). The
+   * gradient is a native canvas gradient — the browser dithers it, so the
+   * brightness grades smoothly with no banding/rings.
+   */
+  private _applyAlphaFalloff(amount: number = ALPHA_FALLOFF): void {
+    const ctx = this._ctx!;
+    const surf = this._refs!.surface;
+    let mc = this._maskCanvas;
+    if (!mc) {
+      mc = document.createElement('canvas');
+      this._maskCanvas = mc;
+      this._maskCtx = mc.getContext('2d');
+    }
+    const mctx = this._maskCtx;
+    if (!mctx) return;
+    if (mc.width !== surf.width || mc.height !== surf.height) {
+      mc.width = surf.width;
+      mc.height = surf.height;
+    }
+    // Build the mask in the same (scaled) coordinate space as the grid.
+    mctx.setTransform(this._appliedScale, 0, 0, this._appliedScale, 0, 0);
+    mctx.globalCompositeOperation = 'source-over';
+    mctx.clearRect(0, 0, this._w, this._h);
+    // Floor brightness for dots far from any epicentre.
+    mctx.fillStyle = `rgba(255,255,255,${1 - amount})`;
+    mctx.fillRect(0, 0, this._w, this._h);
+    // Additive radial boosts toward each epicentre (union ≈ lighter).
+    mctx.globalCompositeOperation = 'lighter';
+    const rad = this._epiRadius;
+    for (const e of this._epis) {
+      const g = mctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, rad);
+      g.addColorStop(0, `rgba(255,255,255,${amount})`);
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      mctx.fillStyle = g;
+      mctx.fillRect(e.x - rad, e.y - rad, rad * 2, rad * 2);
+    }
+    mctx.globalCompositeOperation = 'source-over';
+    // Multiply the grid's alpha by the mask (1:1 device pixels).
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(mc, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
+
   private _draw(): void {
     const ctx = this._ctx;
     if (!ctx || this._w <= 0 || this._h <= 0) return;
@@ -554,8 +817,11 @@ export class DotGridController implements ReactiveController {
     ctx.clearRect(0, 0, this._w, this._h);
 
     // Falloff radius tracks the live frame width (rides the AR transition).
-    const fr = this._frameRect();
+    const fr = this._liveRect();
     this._epiRadius = (fr.right - fr.left) * EPI_RADIUS_RATIO || 1;
+    // Animate the dither/jitter pattern when TEMPORAL_JITTER > 0 (time-averaged smoothing).
+    this._noiseSeed =
+      TEMPORAL_JITTER > 0 && !this._reduceMotion ? Math.floor(this._now() * 0.001 * TEMPORAL_JITTER) : 0;
 
     const fullHalf = CELL_SIZE / 2;
     // Crisp flat-alpha squares everywhere, batched into one Path2D + fill(). While
@@ -563,38 +829,125 @@ export class DotGridController implements ReactiveController {
     // materialises out of the grid; full coverage at the reveal's end comes from
     // the real <img> fading in.
     ctx.fillStyle = mask ? '#000' : this._dotColor;
-    const path = typeof Path2D === 'function' ? new Path2D() : null;
+    const hasPath = typeof Path2D === 'function';
+    // Value (opacity) dither: split dots into N alpha buckets, each its own Path2D
+    // filled at a different globalAlpha — so the dot *colour* carries the noise that
+    // breaks the brightness banding. Only while a gradient exists (not the flat idle).
+    const ditherOn = ALPHA_DITHER > 0 && hasPath && (this._state.generating || mask || this._shimMix > 0);
+    const buckets = ALPHA_DITHER_BUCKETS;
+    const paths: Path2D[] | null = hasPath ? Array.from({ length: ditherOn ? buckets : 1 }, () => new Path2D()) : null;
+    // Global "breathing": one sine applied to every dot's size while generating.
+    const pulse =
+      !this._reduceMotion && PULSE_AMOUNT > 0 && this._state.generating
+        ? 1 + PULSE_AMOUNT * Math.sin(this._now() * 0.001 * PULSE_SPEED * Math.PI * 2)
+        : 1;
+    // Rounded dots (0 = square … 1 = circle), when the platform has roundRect.
+    const canRound = ROUNDNESS > 0 && paths !== null && typeof (paths[0] as Partial<Path2D>).roundRect === 'function';
+    // Digital row-tear glitch: a time-quantised seed re-rolls which rows tear.
+    let glitchOn = GLITCH_AMOUNT > 0 && !this._reduceMotion && (this._state.generating || mask || this._shimMix > 0);
+    if (glitchOn && GLITCH_SPACING > 0) {
+      // Fire only a brief burst every ~GLITCH_SPACING seconds; GLITCH_RANDOM
+      // jitters each burst's start within its slot so the gaps are irregular.
+      const t = this._now() * 0.001;
+      const slot = Math.floor(t / GLITCH_SPACING);
+      const within = t - slot * GLITCH_SPACING;
+      const burst = Math.min(GLITCH_SPACING, 0.35);
+      const start = GLITCH_RANDOM > 0 ? this._hash(slot, 7) * GLITCH_RANDOM * (GLITCH_SPACING - burst) : 0;
+      glitchOn = within >= start && within < start + burst;
+    }
+    const glitchSeed = glitchOn ? Math.floor(this._now() * 0.001 * GLITCH_SPEED) : 0;
     let i = 0;
     for (let row = 0; row < this._rows; row++) {
       const y = this._offsetY + row * CELL_SIZE;
+      // Per-row glitch: a torn row jumps horizontally and (optionally) spikes size.
+      let rowShift = 0;
+      let rowSize = 1;
+      if (glitchOn && this._hash(row, glitchSeed) < GLITCH_AMOUNT) {
+        rowShift = (this._hash(row + 31, glitchSeed) - 0.5) * 2 * GLITCH_SHIFT * CELL_SIZE;
+        if (GLITCH_SIZE > 0) rowSize = 1 + GLITCH_SIZE * this._hash(row + 67, glitchSeed);
+      }
       for (let col = 0; col < this._cols; col++, i++) {
         const c = this._clip[i]!;
         if (c <= 0) continue;
         const x = this._offsetX + col * CELL_SIZE;
         let half: number;
         if (mask) {
-          const animated = this._reduceMotion ? 1 : this._shimmerScale(col, row, x, y);
+          // Alpha shimmer keeps a constant halftone dot (the wave rides the alpha
+          // gradient below); the legacy size wave grows dots per epicentre. Either
+          // way a switch/reveal (not generating) grows uniformly so the image
+          // materialises without ring banding.
+          const animated = this._reduceMotion
+            ? 1
+            : ALPHA_SHIMMER
+              ? PEAK_SCALE
+              : this._state.generating
+                ? this._shimmerScale(col, row, x, y)
+                : MIN_SCALE;
           const smallHalf = this._baseRadius * animated;
           half = (fullHalf + this._env * (smallHalf - fullHalf)) * c;
         } else {
           let scale = this._staticScale();
-          if (!this._reduceMotion && this._shimMix > 0) {
+          // Legacy size wave only; alpha shimmer leaves dot size flat (idle) and
+          // carries the wave in the alpha gradient instead.
+          if (!ALPHA_SHIMMER && !this._reduceMotion && this._shimMix > 0) {
             const shim = this._shimmerScale(col, row, x, y);
             scale += (shim - scale) * this._shimMix;
           }
           half = this._baseRadius * scale * c;
         }
+        if (pulse !== 1) half *= pulse;
+        if (rowSize !== 1) half *= rowSize;
         if (half <= 0) continue;
+        // Jitter the position (scaled by shimmer intensity) to break the grid
+        // coherence that turns the falloff into concentric rings. Idle dots
+        // (intensity 0) stay perfectly on-grid.
+        let dx = x + rowShift;
+        let dy = y;
+        if (POS_JITTER > 0 && !this._reduceMotion) {
+          const amt = POS_JITTER * CELL_SIZE * this._epiIntensity(x, y) * (mask ? 1 : this._shimMix);
+          if (amt > 0) {
+            dx += (this._hash(col + this._noiseSeed, row) - 0.5) * amt;
+            dy += (this._hash(col + 101, row + 53 + this._noiseSeed) - 0.5) * amt;
+          }
+        }
         const side = half * 2;
-        if (path) path.rect(x - half, y - half, side, side);
-        else ctx.fillRect(x - half, y - half, side, side);
+        const tp = paths
+          ? paths[ditherOn ? Math.min(buckets - 1, (this._hash(col + 7, row + this._noiseSeed) * buckets) | 0) : 0]!
+          : null;
+        if (tp) {
+          if (canRound) tp.roundRect(dx - half, dy - half, side, side, half * ROUNDNESS);
+          else tp.rect(dx - half, dy - half, side, side);
+        } else {
+          ctx.fillRect(dx - half, dy - half, side, side);
+        }
       }
     }
-    if (path) ctx.fill(path);
+    if (paths) {
+      for (let b = 0; b < paths.length; b++) {
+        // Bucket b → globalAlpha in [1 − ALPHA_DITHER, 1] (dim-only value noise).
+        ctx.globalAlpha = ditherOn ? 1 - ALPHA_DITHER + (ALPHA_DITHER * (b + 0.5)) / buckets : 1;
+        ctx.fill(paths[b]!);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Carry the epicentre brightness in the dots' alpha via a smooth (browser-
+    // dithered) radial gradient — the ring-free way to grade centre → outside.
+    if (!this._reduceMotion && this._epis.length > 0) {
+      if (ALPHA_SHIMMER) {
+        // Brightness wave: floor (outer) → 1 (epicentre). Present only while
+        // actually shimmering — a reveal/idle stays uniform (no spotlight).
+        const presence = mask ? (this._state.generating ? 1 : 0) : this._shimMix;
+        const amount = presence * (1 - SHIM_FLOOR);
+        if (amount > 0) this._applyAlphaFalloff(amount);
+      } else if (ALPHA_FALLOFF > 0 && (this._state.generating || this._shimMix > 0)) {
+        this._applyAlphaFalloff();
+      }
+    }
 
     if (mask) {
       ctx.globalCompositeOperation = 'source-in';
-      this._drawCover(this._frameRect());
+      this._drawCover(fr);
       ctx.globalCompositeOperation = 'source-over';
     }
   }
@@ -602,6 +955,8 @@ export class DotGridController implements ReactiveController {
   private _tick = (time: number): void => {
     const dt = this._lastTime ? Math.min(64, time - this._lastTime) : 16;
     this._lastTime = time;
+    // One forced layout per frame: every reader below shares this rect.
+    this._rectCache = this._frameRect();
 
     if (this._envAnimating) {
       const p = Math.min(1, (time - this._envStart) / this._envDur);
@@ -620,12 +975,13 @@ export class DotGridController implements ReactiveController {
       }
     }
 
-    if (this._state.shimmering && !this._reduceMotion) {
+    if (this._state.generating && !this._reduceMotion) {
       this._moveEpicenters(dt);
     }
 
     const settling = this._followFrame(dt);
     this._draw();
+    this._rectCache = null; // invalidate; next tick re-reads the live layout
 
     if (this._state.shimmering || this._envAnimating || this._shimAnimating || settling) {
       this._rafId = requestAnimationFrame(this._tick);
@@ -647,6 +1003,8 @@ export class DotGridController implements ReactiveController {
     if (!this._exitPending) return;
     if (this._hasImage()) {
       this._exitPending = false;
+      // Full cover first, so the just-loaded image materialises out of the dots.
+      this._env = 1;
       this._startEnv(0, EXIT_MS);
     }
   }

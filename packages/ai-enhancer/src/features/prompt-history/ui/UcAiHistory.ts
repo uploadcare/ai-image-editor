@@ -48,8 +48,25 @@ export class UcAiHistory extends LitElement {
 
   private readonly _secure = new SecureUrlController(this);
 
+  /** Entry ids whose thumbnail has finished (pre)loading — drives the fade-in.
+   *  Keyed by the stable id (not the resolved URL), so a re-signing secure
+   *  resolver that rotates URLs doesn't flash the skeleton again. */
+  private readonly _loaded = new Set<string>();
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (changed.has('secureResolver')) this._secure.setResolver(this.secureResolver);
+    // Drop loaded flags for entries that aged out of history (bounds the Set).
+    if (changed.has('entries')) {
+      const ids = new Set(this.entries.map((e) => e.id));
+      for (const id of this._loaded) if (!ids.has(id)) this._loaded.delete(id);
+    }
+  }
+
+  /** Mark an entry's thumbnail decoded (or failed) so it fades in over the skeleton. */
+  private _onThumbSettled(id: string): void {
+    if (this._loaded.has(id)) return;
+    this._loaded.add(id);
+    this.requestUpdate();
   }
 
   private _select(entry: HistoryEntry): void {
@@ -89,6 +106,7 @@ export class UcAiHistory extends LitElement {
           (entry) => {
             const thumb = this._secure.resolve(cdnSquareThumbUrl(entry.url, THUMB_SIZE));
             const selected = this.selectedUuid != null && entry.file.uuid === this.selectedUuid;
+            const loaded = this._loaded.has(entry.id);
             return html`
               <button
                 type="button"
@@ -99,11 +117,23 @@ export class UcAiHistory extends LitElement {
                 @click=${() => this._select(entry)}
                 ${animate({ keyframeOptions: { duration: 300, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' } })}
               >
-                ${
-                  thumb
-                    ? html`<span class="thumb" style="background-image:url('${thumb}')"></span>`
-                    : html`<span class="thumb"></span>`
-                }
+                <span class=${classMap({ thumb: true, 'thumb--loaded': loaded })}>
+                  ${
+                    // Rendering the <img> preloads it; the skeleton shows until it
+                    // decodes, then it fades in (see history.css).
+                    thumb
+                      ? html`<img
+                          class="thumb__img"
+                          src="${thumb}"
+                          alt=""
+                          aria-hidden="true"
+                          decoding="async"
+                          @load=${() => this._onThumbSettled(entry.id)}
+                          @error=${() => this._onThumbSettled(entry.id)}
+                        />`
+                      : nothing
+                  }
+                </span>
               </button>
             `;
           },

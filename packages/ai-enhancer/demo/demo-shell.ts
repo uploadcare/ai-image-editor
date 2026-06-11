@@ -150,6 +150,7 @@ export class DemoShell extends LitElement {
       <nav>
         <a href="./standalone.html" aria-current=${page === 'standalone.html' ? 'page' : nothing}>Standalone</a>
         <a href="./plugin.html" aria-current=${page === 'plugin.html' ? 'page' : nothing}>Plugin</a>
+        <a href="./shimmer-lab.html" aria-current=${page === 'shimmer-lab.html' ? 'page' : nothing}>Shimmer Lab</a>
       </nav>
       <h1>${this.heading}</h1>
       ${this.description ? html`<p class="description">${this.description}</p>` : nothing}

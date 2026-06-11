@@ -54,12 +54,26 @@
 }
 
 .canvas__image {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   display: block;
   /* Crop the image to the chosen aspect ratio. Square corners (no rounding). */
   object-fit: cover;
   transition: opacity 300ms var(--uc-ai-ease-out, ease);
+}
+
+/* Outgoing image during an instant swap: sits beneath the incoming one so the
+   frame never blanks while the new <img> paints. Dropped on the new one's load. */
+.canvas__under {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 /*

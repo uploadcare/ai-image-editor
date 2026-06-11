@@ -185,6 +185,8 @@
 .send__spinner::after {
   border-top-color: transparent;
   animation: send-spin 0.7s linear infinite;
+  /* Promote to its own layer so the continuous rotation doesn't repaint siblings. */
+  will-change: transform;
 }
 
 @keyframes send-spin {

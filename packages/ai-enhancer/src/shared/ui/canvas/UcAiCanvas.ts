@@ -10,6 +10,10 @@ import { DotGridController } from './DotGridController';
 /** Frame aspect ratio used until an image's natural ratio is known. */
 const DEFAULT_RATIO = 3 / 2;
 
+/** A switch that loads within this window is treated as instant — no dot
+ *  transition — so cached/quick history swaps swap directly instead of flashing. */
+const COVER_DELAY_MS = 70;
+
 @customElement('uc-ai-canvas')
 export class UcAiCanvas extends LitElement {
   public static override styles = unsafeCSS(styles);
@@ -56,6 +60,10 @@ export class UcAiCanvas extends LitElement {
   @state()
   private _displayedUrl: string | null = null;
 
+  /** Previous image kept painted under the new one during an instant swap. */
+  @state()
+  private _fadingUrl: string | null = null;
+
   @state()
   private _failed = false;
 
@@ -86,9 +94,18 @@ export class UcAiCanvas extends LitElement {
   private readonly _dotGrid = new DotGridController(this);
   private _resizeObserver?: ResizeObserver;
 
+  /** A plain image switch is covering the frame with dots (vs. an instant swap). */
+  private _switchCovering = false;
+  private _coverTimer?: number;
+  /** URLs already displayed once — switching back to one is an instant swap. */
+  private readonly _seenUrls = new Set<string>();
+  /** The pending swap is instant (no dot transition), so double-buffer it. */
+  private _instantSwap = false;
+
   public override disconnectedCallback(): void {
     super.disconnectedCallback();
     this._resizeObserver?.disconnect();
+    this._clearCoverTimer();
     document.removeEventListener('keydown', this._onFullscreenKeydown, true);
   }
 
@@ -127,8 +144,70 @@ export class UcAiCanvas extends LitElement {
     // `keyof this` omits private @state, so reach the key through an untyped view.
     const displayedChanged = (changed as Map<string, unknown>).has('_displayedUrl');
     if (changed.has('ratio') || displayedChanged) this._updateFrame();
-    if (changed.has('busy') || displayedChanged) {
-      this._dotGrid.sync({ shimmering: this.busy, empty: this._displayedUrl == null });
+    if (changed.has('busy') || changed.has('url') || displayedChanged) {
+      this._updateSwitchCover(changed.has('busy'));
+      this._syncGrid();
+    }
+  }
+
+  private _syncGrid(): void {
+    this._dotGrid.sync({
+      // The grid covers during a generation (`busy`) and during a slow image
+      // switch (`_switchCovering`), then materialises the result out of the dots.
+      shimmering: this.busy || this._switchCovering,
+      empty: this._displayedUrl == null,
+      // Only a real generation wanders the epicenters; switches/reveals are a
+      // uniform, ring-free growth.
+      generating: this.busy,
+    });
+  }
+
+  /**
+   * Gate the dot transition for a plain history/source switch: only cover with
+   * dots if the new image is still loading after a short delay. A cached/instant
+   * switch skips the transition and swaps directly (no glitchy dot flash).
+   * Generations drive their own cover via `busy`, so they're left untouched.
+   */
+  private _updateSwitchCover(busyChanged: boolean): void {
+    const transitioning = this.url != null && this.url !== this._displayedUrl && !this._failed;
+    if (!transitioning) {
+      // Settled (loaded) or cleared — stop covering.
+      this._clearCoverTimer();
+      this._switchCovering = false;
+      return;
+    }
+    // A generation (busy, or busy just toggled) owns the cover; don't gate it.
+    if (this.busy || busyChanged) {
+      this._clearCoverTimer();
+      this._instantSwap = false;
+      return;
+    }
+    // Switching back to an already-displayed (cached) image: swap directly, no
+    // dot transition — only genuinely new images materialise out of the grid. The
+    // double-buffer (see _onLoaded) keeps the frame from blanking for a frame.
+    if (this.url != null && this._seenUrls.has(this.url)) {
+      this._clearCoverTimer();
+      this._switchCovering = false;
+      this._instantSwap = true;
+      return;
+    }
+    this._instantSwap = false;
+    // A plain switch started while idle — arm the instant-load gate once.
+    if (this._switchCovering || this._coverTimer != null) return;
+    this._coverTimer = window.setTimeout(() => {
+      this._coverTimer = undefined;
+      const stillLoading = this.url != null && this.url !== this._displayedUrl && !this._failed;
+      if (stillLoading && !this.busy && !this._switchCovering) {
+        this._switchCovering = true;
+        this._syncGrid();
+      }
+    }, COVER_DELAY_MS);
+  }
+
+  private _clearCoverTimer(): void {
+    if (this._coverTimer != null) {
+      clearTimeout(this._coverTimer);
+      this._coverTimer = undefined;
     }
   }
 
@@ -170,8 +249,15 @@ export class UcAiCanvas extends LitElement {
     const loaded = (e.currentTarget as HTMLImageElement).getAttribute('src');
     // Ignore a stale preload that resolved after `url` moved on.
     if (!loaded || loaded !== this.url) return;
+    // For an instant swap, hold the outgoing image underneath until the new one
+    // paints (its `@load`), so the single <img>'s src-swap can't blank a frame.
+    const prev = this._displayedUrl;
+    if (this._instantSwap && prev && prev !== loaded) this._fadingUrl = prev;
     this._displayedUrl = loaded;
     this._failed = false;
+    // Remember it: switching back to an already-shown image swaps directly,
+    // with no dot transition (see _updateSwitchCover).
+    this._seenUrls.add(loaded);
   }
 
   /**
@@ -180,6 +266,8 @@ export class UcAiCanvas extends LitElement {
    * makes the dot-grid reveal fire reliably, even on a cold cache.
    */
   private _onDisplayedLoad(): void {
+    // The new image has painted — drop the under-layer it was covering.
+    this._fadingUrl = null;
     this._dotGrid.onImageLoad();
   }
 
@@ -246,11 +334,20 @@ export class UcAiCanvas extends LitElement {
         <div class="canvas__viewport">
           <div class="canvas__frame">
             ${
+              // Previous image held underneath during an instant (cached) swap so
+              // the frame never blanks for the frame it takes the new <img> to
+              // paint; dropped on the new image's load.
+              this._fadingUrl
+                ? html`<img class="canvas__under" src="${this._fadingUrl}" alt="" aria-hidden="true" />`
+                : nothing
+            }
+            ${
               this._displayedUrl
                 ? html`<img
                     class="canvas__image"
                     src="${this._displayedUrl}"
                     alt="${this.alt || 'AI image'}"
+                    decoding="async"
                     @load=${this._onDisplayedLoad}
                   />`
                 : nothing
@@ -262,7 +359,7 @@ export class UcAiCanvas extends LitElement {
         ${
           // Full-quality rendition overlays the preview while fullscreen.
           this._fullscreen && this.fullsizeUrl
-            ? html`<img class="layer full" src="${this.fullsizeUrl}" alt="${this.alt || 'AI image'}" />`
+            ? html`<img class="layer full" src="${this.fullsizeUrl}" alt="${this.alt || 'AI image'}" decoding="async" />`
             : nothing
         }
         ${
@@ -272,6 +369,7 @@ export class UcAiCanvas extends LitElement {
                 src="${this.url}"
                 alt=""
                 aria-hidden="true"
+                decoding="async"
                 @load=${this._onLoaded}
                 @error=${this._onError}
               />`
