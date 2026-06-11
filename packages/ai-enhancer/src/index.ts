@@ -6,6 +6,7 @@ export {
   aspectRatioKey,
   type AspectRatioValue,
   aspectRatioValueEquals,
+  DEFAULT_GENERATE_RATIO,
   isConcreteRatio,
   isValidAspectRatio,
   labelKeyForRatio,

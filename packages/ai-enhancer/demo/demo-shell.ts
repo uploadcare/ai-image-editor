@@ -14,7 +14,7 @@ export class DemoShell extends LitElement {
   static override styles = css`
     :host {
       display: block;
-      max-width: 640px;
+      max-width: 1240px;
       margin: 0 auto;
     }
     nav {

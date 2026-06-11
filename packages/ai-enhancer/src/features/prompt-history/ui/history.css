@@ -1,18 +1,15 @@
 :host {
-  display: block;
+  display: flex;
+  justify-content: center;
 }
 
+/* Shrink-wraps the chips (centred by the host) so the absolutely-positioned
+   "Start over" sits just to the left of the thumbnails, not the full strip. */
 .strip {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   min-height: 44px;
-}
-
-/* No results yet (edit-from-source): only the start-over control shows. */
-.strip--empty {
-  justify-content: center;
 }
 
 .chip {

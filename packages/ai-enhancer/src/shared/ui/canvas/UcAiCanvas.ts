@@ -59,6 +59,11 @@ export class UcAiCanvas extends LitElement {
   @state()
   private _failed = false;
 
+  /** True after the first layout — gates the frame's resize transition so the
+   *  initial size snaps in (no intro animation on the idle grid). */
+  @state()
+  private _frameReady = false;
+
   /** Mirrors whether the canvas is the current fullscreen element. */
   @state()
   private _fullscreen = false;
@@ -99,6 +104,13 @@ export class UcAiCanvas extends LitElement {
       this._resizeObserver.observe(viewport);
     }
     this._updateFrame();
+    // Enable the frame's resize transition only after the initial size is
+    // painted, so it snaps in instead of animating from zero on load.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        this._frameReady = true;
+      });
+    });
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -220,7 +232,12 @@ export class UcAiCanvas extends LitElement {
     const isEmpty = this._displayedUrl == null;
     const showFullscreenBtn = !isEmpty && !this._failed && this._fullscreenSupported;
 
-    const canvasClasses = { canvas: true, 'is-empty': isEmpty, 'is-loading': this.busy };
+    const canvasClasses = {
+      canvas: true,
+      'is-empty': isEmpty,
+      'is-loading': this.busy,
+      'is-ready': this._frameReady,
+    };
 
     return html`
       <div class=${classMap(canvasClasses)} @fullscreenchange=${this._onFullscreenChange}>

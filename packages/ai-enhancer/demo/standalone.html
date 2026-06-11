@@ -20,7 +20,8 @@
     }
     uc-ai-editor {
       display: block;
-      max-width: 583px;
+      max-width: 1200px;
+      height: min(82vh, 820px);
       margin: 0 auto;
     }
     uc-ai-editor.brand-overrides {
@@ -76,12 +77,16 @@
       },
     };
 
+    // Persist the env choice across reloads (and shared with the plugin demo).
+    const ENV_STORAGE_KEY = 'uc-ai-demo-env';
+    const savedEnv = localStorage.getItem(ENV_STORAGE_KEY);
+
     const shell = document.querySelector('demo-shell');
     const editor = document.querySelector('uc-ai-editor');
     const pubkeyInput = document.getElementById('pubkey');
     const envSelect = document.getElementById('env');
 
-    let currentEnv = 'production';
+    let currentEnv = ENVIRONMENTS[savedEnv] ? savedEnv : 'production';
 
     function applyEnv(name) {
       const env = ENVIRONMENTS[name];
@@ -92,9 +97,11 @@
       pubkeyInput.value = env.pubkey;
     }
 
+    envSelect.value = currentEnv;
     applyEnv(currentEnv);
 
     envSelect.addEventListener('change', (e) => {
+      localStorage.setItem(ENV_STORAGE_KEY, e.target.value);
       applyEnv(e.target.value);
       shell.log(`env → ${currentEnv}`);
     });
