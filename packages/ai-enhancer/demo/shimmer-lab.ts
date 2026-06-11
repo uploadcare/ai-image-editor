@@ -111,6 +111,10 @@ export class ShimmerLab extends LitElement {
       overflow: hidden;
       min-width: 0;
     }
+    /* Light-mode preview, so dot visibility can be calibrated on a light bg. */
+    .stage.light {
+      background: #ffffff;
+    }
     .viewport {
       position: absolute;
       inset: 24px;
@@ -232,6 +236,7 @@ export class ShimmerLab extends LitElement {
   @state() private _dotAlpha = 0.15;
   @state() private _exported = '';
   @state() private _fps = 0;
+  @state() private _lightStage = false;
 
   @query('.dot-grid') private _surface?: HTMLCanvasElement;
   @query('.viewport') private _viewport?: HTMLElement;
@@ -313,6 +318,15 @@ export class ShimmerLab extends LitElement {
   private _setMode(mode: Mode): void {
     this._mode = mode;
     this._applyMode();
+  }
+
+  /** Preview against a light vs dark stage. Flips the dot colour to the opposite
+   *  theme's default (only if it's still on a default) so dots stay visible. */
+  private _toggleStageTheme(): void {
+    this._lightStage = !this._lightStage;
+    if (this._lightStage && this._dotColorHex.toLowerCase() === '#e1e1e1') this._dotColorHex = '#181818';
+    else if (!this._lightStage && this._dotColorHex.toLowerCase() === '#181818') this._dotColorHex = '#e1e1e1';
+    this._applyDotColor();
   }
 
   private _applyMode(): void {
@@ -399,7 +413,7 @@ export class ShimmerLab extends LitElement {
 
   public override render() {
     return html`
-      <div class="stage">
+      <div class=${this._lightStage ? 'stage light' : 'stage'}>
         <div class="fps" title="render FPS">${this._fps} fps</div>
         <div class="viewport">
           <div class="frame">
@@ -415,6 +429,7 @@ export class ShimmerLab extends LitElement {
             (m) => html`<button class=${m === this._mode ? 'active' : ''} @click=${() => this._setMode(m)}>${m}</button>`,
           )}
           <button @click=${this._replayReveal}>↺ replay reveal</button>
+          <button @click=${this._toggleStageTheme}>${this._lightStage ? '🌙 dark stage' : '☀ light stage'}</button>
         </div>
 
         <div class="group">

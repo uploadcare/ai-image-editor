@@ -327,6 +327,9 @@ export class DotGridController implements ReactiveController {
 
   private _resizeObserver?: ResizeObserver;
   private _frameObserver?: ResizeObserver;
+  /** Watches for theme changes so the foreground-tinted dot colour re-resolves. */
+  private _themeObserver?: MutationObserver;
+  private _schemeMql?: MediaQueryList;
 
   public constructor(host: ReactiveControllerHost) {
     host.addController(this);
@@ -357,6 +360,21 @@ export class DotGridController implements ReactiveController {
       this._frameObserver.observe(refs.frame);
     }
 
+    // The overlay dots tint with the foreground, which flips with the theme. Re-
+    // read the resolved colour on a system-scheme change (auto theme) and on
+    // class/style mutations of the document root (where light/dark is usually
+    // toggled) — otherwise the colour stays frozen at its mount-time value.
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      this._schemeMql = window.matchMedia('(prefers-color-scheme: dark)');
+      this._schemeMql.addEventListener('change', this._onThemeChange);
+    }
+    if (typeof MutationObserver === 'function' && typeof document !== 'undefined') {
+      this._themeObserver = new MutationObserver(this._onThemeChange);
+      for (const node of [document.documentElement, document.body]) {
+        if (node) this._themeObserver.observe(node, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
+      }
+    }
+
     this._resize();
     this.sync(this._state);
   }
@@ -364,9 +382,15 @@ export class DotGridController implements ReactiveController {
   public hostDisconnected(): void {
     this._resizeObserver?.disconnect();
     this._frameObserver?.disconnect();
+    this._themeObserver?.disconnect();
+    this._schemeMql?.removeEventListener('change', this._onThemeChange);
     if (this._rafId !== null) cancelAnimationFrame(this._rafId);
     this._rafId = null;
   }
+
+  private _onThemeChange = (): void => {
+    this.refreshColor();
+  };
 
   /** Notify the painter that the result image finished loading. */
   public onImageLoad(): void {
