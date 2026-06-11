@@ -57,11 +57,22 @@ export type UploadcareJobErrorStatus = {
  * `FileInfo` that `UploadcareFile` consumes. Fields beyond `uuid` are treated as
  * best-effort (the frame may omit them), but `uuid` is always present.
  */
-export type UploadcareJobSuccessStatus = Partial<SnakeCasedPropertiesDeep<FileInfo>> & {
+type RawSuccess = Partial<SnakeCasedPropertiesDeep<FileInfo>>;
+type RawImageInfo = NonNullable<RawSuccess['image_info']>;
+/** upload-client types `dpi` as a `{0,1}` object, but the live API sends a `[x, y]` tuple. */
+type CorrectedImageInfo = Omit<RawImageInfo, 'dpi'> & { dpi: number[] | null };
+type RawContentInfo = NonNullable<RawSuccess['content_info']>;
+type CorrectedContentInfo = Omit<RawContentInfo, 'image'> & { image?: CorrectedImageInfo };
+
+export type UploadcareJobSuccessStatus = Omit<RawSuccess, 'is_ready' | 'image_info' | 'content_info'> & {
   type?: 'job';
   status: 'success';
   /** Always present on success — the uploaded file's UUID (see platform PR #1497). */
   uuid: string;
+  /** Live API sends a boolean; upload-client mistypes it as a string. */
+  is_ready?: boolean;
+  image_info?: CorrectedImageInfo | null;
+  content_info?: CorrectedContentInfo | null;
 };
 
 /**
