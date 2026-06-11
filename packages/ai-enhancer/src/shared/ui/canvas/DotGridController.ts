@@ -1,4 +1,10 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { DotGridGLRenderer, type GLFrame } from './DotGridGLRenderer';
+
+// Render the grid on WebGL2 when available (one instanced draw, float-precise
+// per-dot brightness → no rings), falling back to the 2D canvas path otherwise.
+// Set `window.__ucDotGl = false` before mount to force the 2D path (A/B).
+let USE_WEBGL = true;
 
 /**
  * Elements the painter draws into/over. All live inside {@link UcAiCanvas}'s
@@ -270,6 +276,15 @@ type Rect = { left: number; top: number; right: number; bottom: number };
 export class DotGridController implements ReactiveController {
   private _refs: DotGridRefs | null = null;
   private _ctx: CanvasRenderingContext2D | null = null;
+  /** WebGL backend; when set it owns rendering and `_ctx` stays null. */
+  private _gl: DotGridGLRenderer | null = null;
+  /** The image element currently uploaded to the GL texture, + its ready state. */
+  private _glImageEl: HTMLImageElement | null = null;
+  private _glImageReady = false;
+  /** True when either backend can paint. */
+  private get _canDraw(): boolean {
+    return !!this._ctx || !!this._gl;
+  }
 
   private readonly _reduceMotion: boolean;
   /** Dot half-size in px. A getter so live CELL_SIZE/DOT_RATIO tweaks apply. */
@@ -278,6 +293,9 @@ export class DotGridController implements ReactiveController {
   }
 
   private _dotColor = 'rgba(0, 0, 0, 0.16)';
+  /** Dot colour parsed to 0..1 RGBA for the GL backend. */
+  private _dotColorRGBA: [number, number, number, number] = [0, 0, 0, 0.16];
+  private _scratch2d?: CanvasRenderingContext2D | null;
 
   // Viewport pixel size + grid layout (depends only on the viewport size).
   private _w = 0;
@@ -344,9 +362,15 @@ export class DotGridController implements ReactiveController {
   /** Wire the painter to the canvas's rendered elements. */
   public attach(refs: DotGridRefs): void {
     this._refs = refs;
-    this._ctx = refs.surface.getContext('2d');
-    // No 2D context (happy-dom) → stay inert.
-    if (!this._ctx) return;
+
+    // Prefer the WebGL2 backend; once a canvas hands out a webgl2 context it
+    // can't also give a 2d one, so only fall back to 2d when GL is unavailable.
+    const wantGL =
+      USE_WEBGL && (typeof window === 'undefined' || (window as { __ucDotGl?: boolean }).__ucDotGl !== false);
+    if (wantGL) this._gl = DotGridGLRenderer.create(refs.surface);
+    if (!this._gl) this._ctx = refs.surface.getContext('2d');
+    // No usable backend (e.g. happy-dom) → stay inert.
+    if (!this._canDraw) return;
 
     this._readDotColor();
 
@@ -388,6 +412,8 @@ export class DotGridController implements ReactiveController {
     this._schemeMql?.removeEventListener('change', this._onThemeChange);
     if (this._rafId !== null) cancelAnimationFrame(this._rafId);
     this._rafId = null;
+    this._gl?.dispose();
+    this._gl = null;
   }
 
   private _onThemeChange = (): void => {
@@ -412,7 +438,7 @@ export class DotGridController implements ReactiveController {
    */
   public sync(state: DotGridState): void {
     this._state = state;
-    if (!this._ctx) return;
+    if (!this._canDraw) return;
 
     const shim = state.shimmering;
     if (shim && !this._prevShim) {
@@ -455,7 +481,7 @@ export class DotGridController implements ReactiveController {
    *  count) after a live {@link applyShimmerParams} change. Calibration demo only;
    *  purely dynamic params are picked up by the running animation frame. */
   public recalibrate(): void {
-    if (!this._ctx) return;
+    if (!this._canDraw) return;
     this._resize();
     if (this._epis.length !== EPI_COUNT) this._initEpicenters();
     if (this._rafId === null) this._draw();
@@ -472,7 +498,7 @@ export class DotGridController implements ReactiveController {
     this._epis.length = 0;
     this._state = { shimmering: false, empty: true, generating: false };
     this._restoreOpacity();
-    if (!this._ctx) return;
+    if (!this._canDraw) return;
     this._snapClip();
     this._draw();
   }
@@ -484,7 +510,27 @@ export class DotGridController implements ReactiveController {
   private _readDotColor(): void {
     if (!this._refs) return;
     const c = getComputedStyle(this._refs.surface).color;
-    if (c) this._dotColor = c;
+    if (c) {
+      this._dotColor = c;
+      this._dotColorRGBA = this._parseColor(c);
+    }
+  }
+
+  /** Resolve any CSS colour string to 0..1 RGBA via a 1×1 scratch context. */
+  private _parseColor(c: string): [number, number, number, number] {
+    if (this._scratch2d === undefined) {
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 1;
+      this._scratch2d = cv.getContext('2d', { willReadFrequently: true });
+    }
+    const ctx = this._scratch2d;
+    if (!ctx) return this._dotColorRGBA;
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = '#000';
+    ctx.fillStyle = c; // an unparseable value leaves the previous (#000)
+    ctx.fillRect(0, 0, 1, 1);
+    const d = ctx.getImageData(0, 0, 1, 1).data;
+    return [d[0]! / 255, d[1]! / 255, d[2]! / 255, d[3]! / 255];
   }
 
   private _hasImage(): boolean {
@@ -632,12 +678,15 @@ export class DotGridController implements ReactiveController {
 
   private _resize(): void {
     const refs = this._refs;
-    if (!refs || !this._ctx) return;
+    if (!refs || !this._canDraw) return;
     this._w = refs.viewport.clientWidth;
     this._h = refs.viewport.clientHeight;
     if (this._w <= 0 || this._h <= 0) return; // no layout yet (e.g. detached)
     this._allocate();
-    this._applyBacking(this._scaleFor(this._wantsBell()));
+    // 2D sizes the backing here; the GL backend sizes itself each render() from
+    // the frame's scale, so just track the scale the next frame should use.
+    if (this._ctx) this._applyBacking(this._scaleFor(this._wantsBell()));
+    else this._appliedScale = this._scaleFor(this._wantsBell());
   }
 
   // ----- Epicentre shimmer -----
@@ -830,6 +879,10 @@ export class DotGridController implements ReactiveController {
   }
 
   private _draw(): void {
+    if (this._gl) {
+      this._drawGL();
+      return;
+    }
     const ctx = this._ctx;
     if (!ctx || this._w <= 0 || this._h <= 0) return;
 
@@ -981,6 +1034,78 @@ export class DotGridController implements ReactiveController {
     }
   }
 
+  /** Flat epicentre uniform buffer (x,y pairs) reused across GL frames. */
+  private readonly _glEpis = new Float32Array(16);
+
+  /** WebGL render path — mirrors {@link _draw}'s orchestration, but the per-dot
+   *  size/brightness and the image mask are computed on the GPU. */
+  private _drawGL(): void {
+    const gl = this._gl;
+    const refs = this._refs;
+    if (!gl || !refs || this._w <= 0 || this._h <= 0) return;
+
+    const mask = this._maskingImage();
+    this._setOpacity(mask);
+
+    // Nothing to draw: leave the last frame in place (the context preserves its
+    // buffer) so CSS can fade the grid out.
+    if (!(this._state.shimmering || this._state.empty || mask)) return;
+
+    const fr = this._liveRect();
+    this._epiRadius = (fr.right - fr.left) * EPI_RADIUS_RATIO || 1;
+
+    // Upload the mask image lazily — only when the element or its readiness flips.
+    if (mask) {
+      const img = refs.getImage();
+      if (img !== this._glImageEl || (img !== null && img.complete && !this._glImageReady)) {
+        gl.setImage(img && img.complete && img.naturalWidth > 0 ? img : null);
+        this._glImageEl = img;
+        this._glImageReady = gl.hasImage;
+      }
+    }
+
+    const n = Math.min(this._epis.length, 8);
+    for (let i = 0; i < n; i++) {
+      this._glEpis[i * 2] = this._epis[i]!.x;
+      this._glEpis[i * 2 + 1] = this._epis[i]!.y;
+    }
+
+    const frame: GLFrame = {
+      cssW: this._w,
+      cssH: this._h,
+      scale: this._appliedScale || this._scaleFor(true),
+      cols: this._cols,
+      rows: this._rows,
+      offsetX: this._offsetX,
+      offsetY: this._offsetY,
+      cell: CELL_SIZE,
+      baseRadius: this._baseRadius,
+      fullHalf: CELL_SIZE / 2,
+      env: this._env,
+      shimMix: this._shimMix,
+      mask,
+      // Reduced motion → uniform brightness (no roaming spotlight); the
+      // epicentres are already frozen by _tick in that case.
+      generating: this._state.generating && !this._reduceMotion,
+      alphaShimmer: !!ALPHA_SHIMMER,
+      minScale: MIN_SCALE,
+      peakScale: PEAK_SCALE,
+      idleScale: IDLE_SCALE,
+      epis: this._glEpis,
+      epiCount: n,
+      epiRadius: this._epiRadius,
+      epiFalloff: EPI_FALLOFF,
+      shimFloor: SHIM_FLOOR,
+      color: this._dotColorRGBA,
+      clip: this._clip,
+      frameLeft: fr.left,
+      frameTop: fr.top,
+      frameRight: fr.right,
+      frameBottom: fr.bottom,
+    };
+    gl.render(frame);
+  }
+
   private _tick = (time: number): void => {
     const dt = this._lastTime ? Math.min(64, time - this._lastTime) : 16;
     this._lastTime = time;
@@ -1021,7 +1146,7 @@ export class DotGridController implements ReactiveController {
   };
 
   private _ensureLoop(): void {
-    if (!this._ctx) return;
+    if (!this._canDraw) return;
     if (this._rafId === null) {
       this._lastTime = 0;
       this._rafId = requestAnimationFrame(this._tick);

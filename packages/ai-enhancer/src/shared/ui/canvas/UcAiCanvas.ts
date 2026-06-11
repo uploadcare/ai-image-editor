@@ -338,7 +338,7 @@ export class UcAiCanvas extends LitElement {
               // the frame never blanks for the frame it takes the new <img> to
               // paint; dropped on the new image's load.
               this._fadingUrl
-                ? html`<img class="canvas__under" src="${this._fadingUrl}" alt="" aria-hidden="true" />`
+                ? html`<img class="canvas__under" src="${this._fadingUrl}" alt="" aria-hidden="true" crossorigin="anonymous" />`
                 : nothing
             }
             ${
@@ -348,6 +348,7 @@ export class UcAiCanvas extends LitElement {
                     src="${this._displayedUrl}"
                     alt="${this.alt || 'AI image'}"
                     decoding="async"
+                    crossorigin="anonymous"
                     @load=${this._onDisplayedLoad}
                   />`
                 : nothing
@@ -370,6 +371,7 @@ export class UcAiCanvas extends LitElement {
                 alt=""
                 aria-hidden="true"
                 decoding="async"
+                crossorigin="anonymous"
                 @load=${this._onLoaded}
                 @error=${this._onError}
               />`
