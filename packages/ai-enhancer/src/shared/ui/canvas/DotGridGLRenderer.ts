@@ -48,6 +48,20 @@ export type GLFrame = {
   epiRadius: number;
   epiFalloff: number;
   shimFloor: number;
+  // Effects.
+  falloffWarp: number;
+  dither: number;
+  alphaDither: number;
+  posJitter: number;
+  roundness: number;
+  alphaFalloff: number;
+  pulse: number; // precomputed global size multiplier
+  noiseSeed: number;
+  glitchOn: boolean;
+  glitchSeed: number;
+  glitchAmount: number;
+  glitchShift: number;
+  glitchSize: number;
   // Dot colour (0..1 each) for the non-mask grid.
   color: [number, number, number, number];
   /** Per-dot frame-clip factor (0 = outside frame, 1 = fully in), length cols*rows. */
@@ -86,13 +100,32 @@ uniform float uEpiRadius;
 uniform float uEpiFalloff;
 uniform float uShimFloor;
 uniform float uColorA;
+// ----- effects -----
+uniform float uFalloffWarp;   // bends the distance field (de-ring)
+uniform float uDither;        // per-dot size dither (size-wave mode)
+uniform float uAlphaDither;   // per-dot opacity noise
+uniform float uPosJitter;     // per-dot position jitter (× cell)
+uniform float uPulse;         // global size multiplier (breathing)
+uniform float uNoiseSeed;     // animates the per-dot noise (temporal jitter)
+uniform int uGlitchOn;
+uniform float uGlitchSeed;
+uniform float uGlitchAmount;
+uniform float uGlitchShift;
+uniform float uGlitchSize;
+uniform float uAlphaFalloff;  // legacy radial dimming (size-wave mode)
 out float vAlpha;
+out vec2 vCorner;
+
+float hash(float a, float b) { return fract(sin(a * 12.9898 + b * 78.233) * 43758.5453); }
 
 float epiIntensity(vec2 p) {
   float best = 0.0;
+  // Low-frequency warp of the distance field — dissolves ring banding.
+  float k = uFalloffWarp > 0.0 ? (6.2831853 / (uEpiRadius * 0.7)) : 0.0;
+  float warp = k > 0.0 ? uFalloffWarp * uEpiRadius * sin(p.x * k + 1.3) * cos(p.y * k * 0.9) : 0.0;
   for (int i = 0; i < ${MAX_EPIS}; i++) {
     if (i >= uEpiCount) break;
-    float d = distance(p, uEpis[i]);
+    float d = max(0.0, distance(p, uEpis[i]) + warp);
     if (d >= uEpiRadius) continue;
     float t = 1.0 - d / uEpiRadius;
     float f = t * t * (3.0 - 2.0 * t);      // smoothstep
@@ -108,45 +141,95 @@ void main() {
   vec2 center = uOffset + vec2(col, row) * uCell;
   float intensity = epiIntensity(center);
 
+  // Per-row digital glitch (a torn row jumps sideways and may spike in size).
+  float rowShift = 0.0;
+  float rowSize = 1.0;
+  if (uGlitchOn == 1 && hash(row, uGlitchSeed) < uGlitchAmount) {
+    rowShift = (hash(row + 31.0, uGlitchSeed) - 0.5) * 2.0 * uGlitchShift * uCell;
+    if (uGlitchSize > 0.0) rowSize = 1.0 + uGlitchSize * hash(row + 67.0, uGlitchSeed);
+  }
+
+  float sizeDither = (hash(col, row + uNoiseSeed) - 0.5) * uDither * intensity;
+
   float halfSize;
   float brightness;
   if (uMask == 1) {
-    float animated = (uAlphaShimmer == 1)
-      ? uPeakScale
-      : (uGenerating == 1 ? uMinScale + (uPeakScale - uMinScale) * intensity : uMinScale);
+    float animated;
+    if (uAlphaShimmer == 1) {
+      animated = uPeakScale;
+      float amount = ((uGenerating == 1) ? 1.0 : 0.0) * (1.0 - uShimFloor);
+      brightness = (1.0 - amount) + amount * intensity;
+    } else {
+      float wave = uMinScale + (uPeakScale - uMinScale) * intensity + sizeDither;
+      animated = (uGenerating == 1) ? wave : uMinScale;
+      brightness = (uAlphaFalloff > 0.0 && uGenerating == 1) ? ((1.0 - uAlphaFalloff) + uAlphaFalloff * intensity) : 1.0;
+    }
     float smallHalf = uBaseRadius * animated;
     halfSize = (uFullHalf + uEnv * (smallHalf - uFullHalf)) * aClip;
-    float presence = (uGenerating == 1) ? 1.0 : 0.0;
-    float amount = presence * (1.0 - uShimFloor);
-    brightness = (1.0 - amount) + amount * intensity;
   } else {
-    halfSize = uBaseRadius * uIdleScale * aClip;
-    float amount = uShimMix * (1.0 - uShimFloor);
-    brightness = (1.0 - amount) + amount * intensity;
+    if (uAlphaShimmer == 1) {
+      halfSize = uBaseRadius * uIdleScale * aClip;
+      float amount = uShimMix * (1.0 - uShimFloor);
+      brightness = (1.0 - amount) + amount * intensity;
+    } else {
+      float scale = uIdleScale;
+      if (uShimMix > 0.0) {
+        float wave = uMinScale + (uPeakScale - uMinScale) * intensity + sizeDither;
+        scale += (wave - scale) * uShimMix;
+      }
+      halfSize = uBaseRadius * scale * aClip;
+      brightness = (uAlphaFalloff > 0.0 && uShimMix > 0.0) ? ((1.0 - uAlphaFalloff) + uAlphaFalloff * intensity) : 1.0;
+    }
   }
 
+  halfSize *= uPulse * rowSize;
   if (halfSize <= 0.0) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // offscreen → culled
     vAlpha = 0.0;
+    vCorner = aCorner;
     return;
   }
 
-  vec2 pos = center + aCorner * (2.0 * halfSize);
+  vec2 pos = center + vec2(rowShift, 0.0);
+  if (uPosJitter > 0.0) {
+    float amt = uPosJitter * uCell * intensity * (uMask == 1 ? 1.0 : uShimMix);
+    pos.x += (hash(col + uNoiseSeed, row) - 0.5) * amt;
+    pos.y += (hash(col + 101.0, row + 53.0 + uNoiseSeed) - 0.5) * amt;
+  }
+  pos += aCorner * (2.0 * halfSize);
   vec2 ndc = (pos / uResolution) * 2.0 - 1.0;
   gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
-  vAlpha = (uMask == 1 ? 1.0 : uColorA) * brightness;
+
+  float a = (uMask == 1 ? 1.0 : uColorA) * brightness;
+  if (uAlphaDither > 0.0) {
+    float bucket = floor(hash(col + 7.0, row + uNoiseSeed) * 8.0);
+    a *= (1.0 - uAlphaDither) + uAlphaDither * (bucket + 0.5) / 8.0;
+  }
+  vAlpha = a;
+  vCorner = aCorner;
 }`;
 
 const DOT_FRAG = `#version 300 es
 precision highp float;
 precision highp int;
 in float vAlpha;
+in vec2 vCorner;        // -0.5..0.5
 uniform vec3 uColorRGB;
 uniform int uMask;
+uniform float uRoundness; // 0 = crisp square, 1 = circle
 out vec4 frag;
 void main() {
+  float cov = 1.0;
+  if (uRoundness > 0.0) {
+    // Rounded-box coverage with ~1px analytic AA (square stays hard at 0).
+    float rr = uRoundness * 0.5;
+    vec2 d = abs(vCorner) - (vec2(0.5) - rr);
+    float sd = min(max(d.x, d.y), 0.0) + length(max(d, vec2(0.0))) - rr;
+    float w = max(fwidth(sd), 1e-5);
+    cov = 1.0 - smoothstep(-w, w, sd);
+  }
   vec3 rgb = (uMask == 1) ? vec3(1.0) : uColorRGB;
-  frag = vec4(rgb * vAlpha, vAlpha); // premultiplied
+  frag = vec4(rgb * vAlpha * cov, vAlpha * cov); // premultiplied
 }`;
 
 const IMG_VERT = `#version 300 es
@@ -231,7 +314,7 @@ export class DotGridGLRenderer {
     gl.vertexAttribPointer(aQuad, 2, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
 
-    for (const name of ['uResolution','uCols','uOffset','uCell','uBaseRadius','uFullHalf','uEnv','uShimMix','uMask','uGenerating','uAlphaShimmer','uMinScale','uPeakScale','uIdleScale','uEpiCount','uEpis','uEpiRadius','uEpiFalloff','uShimFloor','uColorA','uColorRGB']) {
+    for (const name of ['uResolution','uCols','uOffset','uCell','uBaseRadius','uFullHalf','uEnv','uShimMix','uMask','uGenerating','uAlphaShimmer','uMinScale','uPeakScale','uIdleScale','uEpiCount','uEpis','uEpiRadius','uEpiFalloff','uShimFloor','uColorA','uColorRGB','uFalloffWarp','uDither','uAlphaDither','uPosJitter','uPulse','uNoiseSeed','uGlitchOn','uGlitchSeed','uGlitchAmount','uGlitchShift','uGlitchSize','uAlphaFalloff','uRoundness']) {
       this._dotUniforms[name] = gl.getUniformLocation(this._dotProgram, name);
     }
     for (const name of ['uResolution','uFrame','uImage','uFrameSize','uImageSize']) {
@@ -338,6 +421,19 @@ export class DotGridGLRenderer {
     gl.uniform1f(u.uShimFloor, f.shimFloor);
     gl.uniform1f(u.uColorA, f.color[3]);
     gl.uniform3f(u.uColorRGB, f.color[0], f.color[1], f.color[2]);
+    gl.uniform1f(u.uFalloffWarp, f.falloffWarp);
+    gl.uniform1f(u.uDither, f.dither);
+    gl.uniform1f(u.uAlphaDither, f.alphaDither);
+    gl.uniform1f(u.uPosJitter, f.posJitter);
+    gl.uniform1f(u.uPulse, f.pulse);
+    gl.uniform1f(u.uNoiseSeed, f.noiseSeed);
+    gl.uniform1i(u.uGlitchOn, f.glitchOn ? 1 : 0);
+    gl.uniform1f(u.uGlitchSeed, f.glitchSeed);
+    gl.uniform1f(u.uGlitchAmount, f.glitchAmount);
+    gl.uniform1f(u.uGlitchShift, f.glitchShift);
+    gl.uniform1f(u.uGlitchSize, f.glitchSize);
+    gl.uniform1f(u.uAlphaFalloff, f.alphaFalloff);
+    gl.uniform1f(u.uRoundness, f.roundness);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
 
     // ----- Pass 2: image keeps only the dot-shaped, brightness-graded part -----

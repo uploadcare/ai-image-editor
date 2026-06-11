@@ -1070,6 +1070,25 @@ export class DotGridController implements ReactiveController {
       this._glEpis[i * 2 + 1] = this._epis[i]!.y;
     }
 
+    // Time-driven scalars (same maths as the 2D path) — the GPU does the rest.
+    const now = this._now();
+    const noiseSeed =
+      TEMPORAL_JITTER > 0 && !this._reduceMotion ? Math.floor(now * 0.001 * TEMPORAL_JITTER) : 0;
+    const pulse =
+      !this._reduceMotion && PULSE_AMOUNT > 0 && this._state.generating
+        ? 1 + PULSE_AMOUNT * Math.sin(now * 0.001 * PULSE_SPEED * Math.PI * 2)
+        : 1;
+    let glitchOn = GLITCH_AMOUNT > 0 && !this._reduceMotion && (this._state.generating || mask || this._shimMix > 0);
+    if (glitchOn && GLITCH_SPACING > 0) {
+      const t = now * 0.001;
+      const slot = Math.floor(t / GLITCH_SPACING);
+      const within = t - slot * GLITCH_SPACING;
+      const burst = Math.min(GLITCH_SPACING, 0.35);
+      const start = GLITCH_RANDOM > 0 ? this._hash(slot, 7) * GLITCH_RANDOM * (GLITCH_SPACING - burst) : 0;
+      glitchOn = within >= start && within < start + burst;
+    }
+    const glitchSeed = glitchOn ? Math.floor(now * 0.001 * GLITCH_SPEED) : 0;
+
     const frame: GLFrame = {
       cssW: this._w,
       cssH: this._h,
@@ -1096,6 +1115,19 @@ export class DotGridController implements ReactiveController {
       epiRadius: this._epiRadius,
       epiFalloff: EPI_FALLOFF,
       shimFloor: SHIM_FLOOR,
+      falloffWarp: FALLOFF_WARP,
+      dither: SHIM_DITHER,
+      alphaDither: ALPHA_DITHER,
+      posJitter: POS_JITTER,
+      roundness: ROUNDNESS,
+      alphaFalloff: ALPHA_FALLOFF,
+      pulse,
+      noiseSeed,
+      glitchOn,
+      glitchSeed,
+      glitchAmount: GLITCH_AMOUNT,
+      glitchShift: GLITCH_SHIFT,
+      glitchSize: GLITCH_SIZE,
       color: this._dotColorRGBA,
       clip: this._clip,
       frameLeft: fr.left,
