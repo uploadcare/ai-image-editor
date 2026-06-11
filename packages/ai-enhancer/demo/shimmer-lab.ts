@@ -417,7 +417,7 @@ export class ShimmerLab extends LitElement {
         <div class="fps" title="render FPS">${this._fps} fps</div>
         <div class="viewport">
           <div class="frame">
-            ${this._mode === 'over-image' ? html`<img class="image" src="${this._sampleSrc}" alt="" />` : nothing}
+            ${this._mode === 'over-image' ? html`<img class="image" src="${this._sampleSrc}" alt="" crossorigin="anonymous" />` : nothing}
           </div>
           <canvas class="dot-grid" aria-hidden="true"></canvas>
         </div>
