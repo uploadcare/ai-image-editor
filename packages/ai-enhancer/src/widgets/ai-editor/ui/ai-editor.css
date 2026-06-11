@@ -19,7 +19,9 @@
   --uc-ai-secondary-foreground: light-dark(#181818, #e1e1e1);
   --uc-ai-border: light-dark(#e4e4e8, #3d3d3d);
   --uc-ai-shadow-color: light-dark(rgba(24, 24, 24, 0.18), rgba(0, 0, 0, 0.5));
-  --uc-ai-dialog-shadow: light-dark(0 6px 20px rgba(0, 0, 0, 0.1), 0 6px 20px rgba(0, 0, 0, 0.25));
+  /* light-dark() is only valid inside a <color>, so wrap just the shadow colour
+     (wrapping the whole box-shadow shorthand makes it invalid → no shadow). */
+  --uc-ai-dialog-shadow: 0 6px 20px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.25));
   --uc-ai-destructive: #d8473e;
   /* High-contrast error text: dark red on light, light red on dark. */
   --uc-ai-destructive-foreground: light-dark(#b3261e, #ff9d96);
