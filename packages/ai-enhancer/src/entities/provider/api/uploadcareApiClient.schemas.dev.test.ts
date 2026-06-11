@@ -78,7 +78,7 @@ describe('uploadcare derivative API dev schema validation', () => {
       mime_type: 'image/png',
       is_image: true,
       is_stored: true,
-      is_ready: 'true',
+      is_ready: true,
       image_info: {
         height: 512,
         width: 512,
@@ -86,7 +86,7 @@ describe('uploadcare derivative API dev schema validation', () => {
         datetime_original: null,
         format: 'PNG',
         color_mode: 'RGB',
-        dpi: null,
+        dpi: [72, 72],
         orientation: null,
         sequence: null,
       },

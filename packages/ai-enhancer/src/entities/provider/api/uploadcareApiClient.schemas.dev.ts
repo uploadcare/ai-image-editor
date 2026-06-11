@@ -48,7 +48,8 @@ const ImageInfoSchema = z.object({
   datetime_original: z.string().nullable(),
   format: z.string(),
   color_mode: z.string(),
-  dpi: z.object({ '0': z.number(), '1': z.number() }).nullable(),
+  // The live API sends a `[x, y]` tuple, not the `{0,1}` object upload-client types.
+  dpi: z.array(z.number()).nullable(),
   orientation: z.number().nullable(),
   sequence: z.boolean().nullable(),
 });
@@ -113,7 +114,8 @@ const StatusResponseSchema: z.ZodType<UploadcareJobStatus> = z.discriminatedUnio
     mime_type: z.string().optional(),
     is_image: z.boolean().optional(),
     is_stored: z.boolean().optional(),
-    is_ready: z.string().optional(),
+    // The live API sends a boolean, not the string upload-client types.
+    is_ready: z.boolean().optional(),
     image_info: ImageInfoSchema.nullable().optional(),
     video_info: VideoInfoSchema.nullable().optional(),
     content_info: ContentInfoSchema.nullable().optional(),

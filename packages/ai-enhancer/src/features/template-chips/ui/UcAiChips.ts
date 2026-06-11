@@ -1,6 +1,5 @@
 import { html, LitElement, type TemplateResult, unsafeCSS } from 'lit';
-import { customElement, property, query, state } from 'lit/decorators.js';
-import { classMap } from 'lit/directives/class-map.js';
+import { customElement, property, query } from 'lit/decorators.js';
 
 import { type AiEditorMode, type AiTemplate, MODES } from '../../../entities/mode';
 import styles from './chips.css?inline';
@@ -28,13 +27,6 @@ export class UcAiChips extends LitElement {
   @property({ attribute: 'aria-label-text' })
   public labelText = 'Quick prompts';
 
-  /** Whether the scroller is clipped on the left / right (drives edge fades). */
-  @state()
-  private _fadeLeft = false;
-
-  @state()
-  private _fadeRight = false;
-
   @query('.row')
   private _rowEl?: HTMLElement;
 
@@ -58,16 +50,19 @@ export class UcAiChips extends LitElement {
     this._resizeObserver?.disconnect();
   }
 
-  /** Show an edge fade only when there's more content to scroll toward. */
+  /**
+   * Show an edge fade only when there's more content to scroll toward. The fades
+   * are toggled imperatively (not via reactive state): they're derived from
+   * post-layout measurements and re-checked from `updated()`, so routing them
+   * through `@state` would re-schedule an update from within the update cycle.
+   */
   private _updateFades(): void {
     const el = this._rowEl;
     if (!el) return;
     const max = el.scrollWidth - el.clientWidth;
     const x = el.scrollLeft;
-    const left = x > 1;
-    const right = x < max - 1;
-    if (left !== this._fadeLeft) this._fadeLeft = left;
-    if (right !== this._fadeRight) this._fadeRight = right;
+    el.classList.toggle('fade-left', x > 1);
+    el.classList.toggle('fade-right', x < max - 1);
   }
 
   /** Let a vertical wheel scroll the chips horizontally when they overflow. */
@@ -87,11 +82,12 @@ export class UcAiChips extends LitElement {
 
   public override render(): TemplateResult {
     const templates: AiTemplate[] = MODES[this.mode].templates;
-    const rowClasses = { row: true, 'fade-left': this._fadeLeft, 'fade-right': this._fadeRight };
 
+    // The fade-left/right classes are managed imperatively in `_updateFades`; a
+    // static `class` (not a binding) leaves them untouched across re-renders.
     return html`
       <div
-        class=${classMap(rowClasses)}
+        class="row"
         role="toolbar"
         aria-label="${this.labelText}"
         @scroll=${this._updateFades}
