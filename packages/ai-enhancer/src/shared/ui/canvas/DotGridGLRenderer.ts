@@ -141,6 +141,12 @@ void main() {
   float row = floor(float(gl_InstanceID) / uCols);
   vec2 center = uOffset + vec2(col, row) * uCell;
   float intensity = epiIntensity(center);
+  // When masking, ignore the per-dot frame clip and let the scissor define the
+  // frame edge instead: dots straddling the edge then poke in and cover it, so
+  // the revealed image fills the frame exactly (no uncovered strip that pops in
+  // when the grid hands off to the real <img>). The idle/shimmer grid keeps the
+  // soft per-dot clip so stray dots never show outside the frame.
+  float clipv = (uMask == 1) ? 1.0 : aClip;
 
   // Per-row digital glitch (a torn row jumps sideways and may spike in size).
   float rowShift = 0.0;
@@ -166,10 +172,10 @@ void main() {
       brightness = (uAlphaFalloff > 0.0 && uGenerating == 1) ? ((1.0 - uAlphaFalloff) + uAlphaFalloff * intensity) : 1.0;
     }
     float smallHalf = uBaseRadius * animated;
-    halfSize = (uFullHalf + uEnv * (smallHalf - uFullHalf)) * aClip;
+    halfSize = (uFullHalf + uEnv * (smallHalf - uFullHalf)) * clipv;
   } else {
     if (uAlphaShimmer == 1) {
-      halfSize = uBaseRadius * uIdleScale * aClip;
+      halfSize = uBaseRadius * uIdleScale * clipv;
       float amount = uShimMix * (1.0 - uShimFloor);
       brightness = (1.0 - amount) + amount * intensity;
     } else {
@@ -178,7 +184,7 @@ void main() {
         float wave = uMinScale + (uPeakScale - uMinScale) * intensity + sizeDither;
         scale += (wave - scale) * uShimMix;
       }
-      halfSize = uBaseRadius * scale * aClip;
+      halfSize = uBaseRadius * scale * clipv;
       brightness = (uAlphaFalloff > 0.0 && uShimMix > 0.0) ? ((1.0 - uAlphaFalloff) + uAlphaFalloff * intensity) : 1.0;
     }
   }
@@ -390,11 +396,27 @@ export class DotGridGLRenderer {
     const gl = this._gl;
     this._resize(f.cssW, f.cssH, f.scale);
 
+    // Clear the whole buffer (no scissor), then — while masking — scissor every
+    // draw to the frame rect. The dot stencil ignores the per-dot clip in that
+    // mode (see the shader), so dots straddling the edge fill it; the scissor
+    // trims the overflow to a pixel-crisp frame boundary that matches the real
+    // <img>, eliminating the uncovered top/bottom strip that popped at hand-off.
+    gl.disable(gl.SCISSOR_TEST);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     const count = f.cols * f.rows;
     if (count <= 0) return;
+
+    if (f.mask) {
+      const s = f.scale;
+      const sx = Math.round(f.frameLeft * s);
+      const sy = Math.round((f.cssH - f.frameBottom) * s); // GL y origin is bottom-left
+      const sw = Math.round((f.frameRight - f.frameLeft) * s);
+      const sh = Math.round((f.frameBottom - f.frameTop) * s);
+      gl.enable(gl.SCISSOR_TEST);
+      gl.scissor(sx, sy, Math.max(0, sw), Math.max(0, sh));
+    }
 
     // Per-dot clip (changes every frame as the frame mask eases).
     gl.bindBuffer(gl.ARRAY_BUFFER, this._clipBuf);
@@ -459,6 +481,7 @@ export class DotGridGLRenderer {
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
+    gl.disable(gl.SCISSOR_TEST);
     gl.bindVertexArray(null);
   }
 
