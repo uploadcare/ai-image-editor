@@ -5,6 +5,13 @@ import { cleanup } from './test-renderer';
 
 let UcAiEditorCtor: CustomElementConstructor;
 
+// These tests exercise editor *logic* (modes, generation flow, events), which is
+// backend-agnostic. Force the dot-grid's 2D canvas path: headless Chromium uses
+// a software WebGL renderer (swiftshader), and the shimmer's per-frame GL work
+// starves the main thread enough to flake the async `waitFor`s. Real GPUs are
+// fine; WebGL rendering itself is covered manually / in the Shimmer Lab.
+(globalThis as { __ucDotGl?: boolean }).__ucDotGl = false;
+
 beforeAll(async () => {
   // Importing the module registers <uc-ai-editor> and all sub-elements.
   const mod = await import('../src/index');

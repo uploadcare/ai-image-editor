@@ -114,7 +114,8 @@ uniform float uGlitchShift;
 uniform float uGlitchSize;
 uniform float uAlphaFalloff;  // legacy radial dimming (size-wave mode)
 out float vAlpha;
-out vec2 vCorner;
+out vec2 vLocalPx;            // fragment offset from the dot centre, CSS px
+out float vHalf;             // dot half-size, CSS px
 
 float hash(float a, float b) { return fract(sin(a * 12.9898 + b * 78.233) * 43758.5453); }
 
@@ -186,7 +187,8 @@ void main() {
   if (halfSize <= 0.0) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // offscreen → culled
     vAlpha = 0.0;
-    vCorner = aCorner;
+    vLocalPx = vec2(0.0);
+    vHalf = 0.0;
     return;
   }
 
@@ -196,7 +198,13 @@ void main() {
     pos.x += (hash(col + uNoiseSeed, row) - 0.5) * amt;
     pos.y += (hash(col + 101.0, row + 53.0 + uNoiseSeed) - 0.5) * amt;
   }
-  pos += aCorner * (2.0 * halfSize);
+  // Expand the quad ~1px beyond the dot so the fragment can anti-alias the edge
+  // sub-pixel — without this, hard quad edges snap to whole pixels and the
+  // grow/shrink reveal looks stepped.
+  float ext = halfSize + 1.0;
+  vLocalPx = aCorner * (2.0 * ext);
+  vHalf = halfSize;
+  pos += aCorner * (2.0 * ext);
   vec2 ndc = (pos / uResolution) * 2.0 - 1.0;
   gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
 
@@ -206,28 +214,27 @@ void main() {
     a *= (1.0 - uAlphaDither) + uAlphaDither * (bucket + 0.5) / 8.0;
   }
   vAlpha = a;
-  vCorner = aCorner;
 }`;
 
 const DOT_FRAG = `#version 300 es
 precision highp float;
 precision highp int;
 in float vAlpha;
-in vec2 vCorner;        // -0.5..0.5
+in vec2 vLocalPx;       // CSS px from the dot centre
+in float vHalf;         // dot half-size, CSS px
 uniform vec3 uColorRGB;
 uniform int uMask;
-uniform float uRoundness; // 0 = crisp square, 1 = circle
+uniform float uRoundness; // 0 = square, 1 = circle
 out vec4 frag;
 void main() {
-  float cov = 1.0;
-  if (uRoundness > 0.0) {
-    // Rounded-box coverage with ~1px analytic AA (square stays hard at 0).
-    float rr = uRoundness * 0.5;
-    vec2 d = abs(vCorner) - (vec2(0.5) - rr);
-    float sd = min(max(d.x, d.y), 0.0) + length(max(d, vec2(0.0))) - rr;
-    float w = max(fwidth(sd), 1e-5);
-    cov = 1.0 - smoothstep(-w, w, sd);
-  }
+  // (Rounded-)box signed distance, evaluated in CSS px, anti-aliased over ~1px
+  // of screen space via fwidth. Always on, so size changes are sub-pixel-smooth
+  // (no stepping) while a square at idle still reads crisp.
+  float rr = uRoundness * vHalf;
+  vec2 d = abs(vLocalPx) - (vec2(vHalf) - rr);
+  float sd = min(max(d.x, d.y), 0.0) + length(max(d, vec2(0.0))) - rr;
+  float aaw = max(fwidth(sd), 1e-4);
+  float cov = clamp(0.5 - sd / aaw, 0.0, 1.0);
   vec3 rgb = (uMask == 1) ? vec3(1.0) : uColorRGB;
   frag = vec4(rgb * vAlpha * cov, vAlpha * cov); // premultiplied
 }`;
@@ -465,6 +472,10 @@ export class DotGridGLRenderer {
     gl.deleteVertexArray(this._dotVao);
     gl.deleteVertexArray(this._imgVao);
     gl.deleteTexture(this._texture);
+    // Release the context immediately rather than waiting for GC — browsers cap
+    // live WebGL contexts (~16) and force-lose the oldest, so mount/unmount
+    // churn (or a test suite) would otherwise exhaust them.
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
   }
 
   private _resize(cssW: number, cssH: number, scale: number): void {
