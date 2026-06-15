@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { AiProviderError } from '../model/types';
 import { UploadcareApiClient } from './uploadcareApiClient';
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
@@ -69,6 +70,26 @@ describe('UploadcareApiClient', () => {
       const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
       const controller = new AbortController();
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png', signal: controller.signal });
+    });
+
+    it('sends Accept: application/json', async () => {
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'j' }));
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
+      const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
+      expect((init.headers as Record<string, string>).Accept).toBe('application/json');
+    });
+
+    it('surfaces a platform error envelope as an AiProviderError with its code', async () => {
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+        jsonResponse({ error: { status_code: 400, error_code: 'canvas_too_large', content: 'Canvas size exceeds the 4MP limit.' } }),
+      );
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      await expect(client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' })).rejects.toMatchObject({
+        name: 'AiProviderError',
+        errorCode: 'canvas_too_large',
+        message: 'Canvas size exceeds the 4MP limit.',
+      });
     });
   });
 
@@ -141,6 +162,16 @@ describe('UploadcareApiClient', () => {
         .mockResolvedValue(new Response('nope', { status: 404, statusText: 'Not Found' }));
       const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
       await expect(client.getJobStatus('job-1')).rejects.toThrow(/404/);
+    });
+
+    it('surfaces a platform error envelope (e.g. job_not_found) as an AiProviderError', async () => {
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+        jsonResponse({ error: { status_code: 404, error_code: 'job_not_found', content: 'Derivative job is not found.' } }),
+      );
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      const err = await client.getJobStatus('job-1').catch((e) => e);
+      expect(err).toBeInstanceOf(AiProviderError);
+      expect(err.errorCode).toBe('job_not_found');
     });
 
     it('forwards the abort signal', async () => {

@@ -1,5 +1,20 @@
 import type { FileInfo } from '@uploadcare/upload-client';
 import type { SnakeCasedPropertiesDeep } from '../../../shared/lib/camelizeKeys';
+import { AiProviderError } from '../model/types';
+
+/**
+ * Platform error envelope. With `Accept: application/json` the API returns the
+ * validation error in the body (status code mirrored in `status_code`) rather
+ * than as an HTTP error, so we detect it from the body on any response.
+ */
+type PlatformErrorEnvelope = {
+  error: { status_code?: number; error_code: string; content?: string };
+};
+
+function isPlatformError(data: unknown): data is PlatformErrorEnvelope {
+  const e = (data as PlatformErrorEnvelope | null)?.error;
+  return !!e && typeof e === 'object' && typeof e.error_code === 'string';
+}
 
 export type UploadcareApiClientOptions = {
   publicKey: string;
@@ -98,9 +113,29 @@ async function devValidate(kind: 'generate' | 'edit' | 'job' | 'status', data: u
   validate(kind, data);
 }
 
-async function throwHttpError(response: Response, action: string): Promise<never> {
+/**
+ * Read a JSON response: surface a platform error envelope as an
+ * {@link AiProviderError} (carrying its `error_code`), and fall back to a
+ * generic transport error for non-JSON / non-2xx responses.
+ */
+async function readJson(response: Response, action: string): Promise<unknown> {
   const text = await response.text().catch(() => '');
-  throw new Error(`Uploadcare ${action} failed (${response.status} ${response.statusText})${text ? `: ${text}` : ''}`);
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      /* non-JSON body — handled below */
+    }
+  }
+  if (isPlatformError(data)) {
+    const { error_code, content } = data.error;
+    throw new AiProviderError(error_code, content ?? error_code);
+  }
+  if (!response.ok) {
+    throw new Error(`Uploadcare ${action} failed (${response.status} ${response.statusText})${text ? `: ${text}` : ''}`);
+  }
+  return data;
 }
 
 /** HTTP transport for Uploadcare's `derivative/*` generation + edit endpoints. */
@@ -153,10 +188,9 @@ export class UploadcareApiClient {
     url.searchParams.set('pub_key', this.publicKey);
     url.searchParams.set('job_id', jobId);
 
-    const response = await this.doFetch(url.href, { method: 'GET', signal });
-    if (!response.ok) await throwHttpError(response, 'generate status');
+    const response = await this.doFetch(url.href, { method: 'GET', headers: { Accept: 'application/json' }, signal });
 
-    const data = (await response.json()) as UploadcareJobStatus;
+    const data = (await readJson(response, 'generate status')) as UploadcareJobStatus;
     await devValidate('status', data);
     return data;
   }
@@ -169,13 +203,12 @@ export class UploadcareApiClient {
   ): Promise<UploadcareJobResponse> {
     const response = await this.doFetch(endpoint.href, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(body),
       signal,
     });
-    if (!response.ok) await throwHttpError(response, action);
 
-    const data = (await response.json()) as UploadcareJobResponse;
+    const data = (await readJson(response, action)) as UploadcareJobResponse;
     await devValidate('job', data);
     return data;
   }

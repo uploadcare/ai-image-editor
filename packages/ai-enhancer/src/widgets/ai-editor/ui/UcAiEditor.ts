@@ -18,7 +18,7 @@ import {
 import { type AiEditorMode, MODES } from '../../../entities/mode';
 import { UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
-import { type enLocale, translate } from '../../../shared/i18n';
+import { type AiEnhancerLocaleKey, enLocale, translate } from '../../../shared/i18n';
 import { cdnPreviewUrl } from '../../../shared/lib/cdn';
 import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
 import type { SecureDeliveryProxyUrlResolver } from '../../../shared/lib/secureDelivery';
@@ -214,6 +214,19 @@ export class UcAiEditor extends LitElement {
 
   private _l(key: keyof typeof enLocale): string {
     return translate(key, this.l10nOverrides);
+  }
+
+  /** Friendly message for the current failure: the per-`error_code` string
+   *  (`ai-enhancer-error-<code>`, overridable via `l10n`) when one is defined,
+   *  otherwise the generic error message. */
+  private _errorMessage(): string {
+    const code = this._gen.errorCode;
+    if (code) {
+      const key = `ai-enhancer-error-${code}` as AiEnhancerLocaleKey;
+      const specific = this.l10nOverrides[key] ?? (enLocale as Record<string, string>)[key];
+      if (specific) return specific;
+    }
+    return this._l('ai-enhancer-error');
   }
 
   /** UUID of the image the editor is currently operating on, if any. */
@@ -493,7 +506,7 @@ export class UcAiEditor extends LitElement {
           ${
             this._gen.error
               ? html`<div class="error-box" role="alert">
-                  <div class="error-box__card">${this._gen.error}</div>
+                  <div class="error-box__card">${this._errorMessage()}</div>
                 </div>`
               : nothing
           }

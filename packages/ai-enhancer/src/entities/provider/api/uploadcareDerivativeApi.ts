@@ -3,7 +3,7 @@ import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-pr
 import { type FileInfo, UploadcareFile } from '@uploadcare/upload-client';
 import { camelizeKeys } from '../../../shared/lib/camelizeKeys';
 import { isValidAspectRatio } from '../../aspect-ratio';
-import type { AiProvider, AiProviderRequest, AiProviderResult } from '../model/types';
+import { AiProviderError, type AiProvider, type AiProviderRequest, type AiProviderResult } from '../model/types';
 import { UploadcareApiClient, type UploadcareJobResponse } from './uploadcareApiClient';
 
 const DEFAULT_RATIO: [number, number] = [1, 1];
@@ -165,9 +165,9 @@ export class UploadcareDerivativeApi implements AiProvider {
       }
 
       if (status.status === 'error') {
-        const detail = status.error_code ?? status.error ?? 'unknown error';
-        const source = status.error_source ? ` [${status.error_source}]` : '';
-        throw new Error(`Uploadcare derivative job failed${source}: ${detail}`);
+        const code = status.error_code ?? 'unknown';
+        const message = status.error ?? code;
+        throw new AiProviderError(code, message, status.error_source);
       }
 
       if (performanceNow() >= deadline) {

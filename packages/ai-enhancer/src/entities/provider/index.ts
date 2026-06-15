@@ -11,4 +11,5 @@ export {
   type UploadcareJobUploadingStatus,
 } from './api/uploadcareApiClient';
 export { UploadcareDerivativeApi, type UploadcareDerivativeApiOptions } from './api/uploadcareDerivativeApi';
+export { AiProviderError } from './model/types';
 export type { AiProvider, AiProviderRequest, AiProviderResult } from './model/types';

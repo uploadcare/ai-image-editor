@@ -29,3 +29,20 @@ export type AiProvider = {
   id: string;
   generate(request: AiProviderRequest): Promise<AiProviderResult>;
 };
+
+/**
+ * A failure that carries the platform/job `error_code` (and, for job failures,
+ * the `error_source`). The UI maps the code to a localized, overridable message;
+ * `message` keeps the server's raw text as a fallback / for logging.
+ */
+export class AiProviderError extends Error {
+  public readonly errorCode: string;
+  public readonly errorSource?: string;
+
+  public constructor(errorCode: string, message: string, errorSource?: string) {
+    super(message);
+    this.name = 'AiProviderError';
+    this.errorCode = errorCode;
+    this.errorSource = errorSource;
+  }
+}
