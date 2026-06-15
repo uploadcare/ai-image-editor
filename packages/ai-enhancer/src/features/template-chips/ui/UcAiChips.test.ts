@@ -26,11 +26,9 @@ describe('UcAiChips', () => {
     expect(chips(el)).toHaveLength(MODES.edit.templates.length);
   });
 
-  it('marks the chip whose prompt matches the current prompt as pressed', async () => {
-    const tpl = MODES.generate.templates[0]!;
-    const el = await mount({ mode: 'generate', prompt: tpl.prompt });
-    const pressed = chips(el).filter((c) => c.getAttribute('aria-pressed') === 'true');
-    expect(pressed.length).toBeGreaterThanOrEqual(1);
+  it('renders chips as plain buttons (no sticky pressed state)', async () => {
+    const el = await mount({ mode: 'generate' });
+    expect(chips(el).some((c) => c.hasAttribute('aria-pressed'))).toBe(false);
   });
 
   it('emits uc:select with the template when a chip is clicked', async () => {

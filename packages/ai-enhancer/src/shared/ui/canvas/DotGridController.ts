@@ -39,23 +39,33 @@ export type DotGridState = {
 
 // ----- Grid spacing -----
 let CELL_SIZE = 6; // distance between dot centres, in px
-let DOT_RATIO = 0.4; // dot diameter relative to the cell size
+let DOT_RATIO = 0.46; // dot diameter relative to the cell size
+
+// Scale the epicentre roam *speed* with the canvas size, so the motion reads
+// consistently across sizes (slower on small/mobile, faster on large). The
+// multiplier is ratio^SIZE_SCALE where ratio = √(area / reference): exactly 1 at
+// the reference size; SIZE_SCALE is the strength — 0 = constant speed, 1 =
+// proportional, >1 exaggerates, <0 inverts. Always positive (never breaks). The
+// falloff radius is NOT scaled here — it's always a fixed fraction of the frame.
+let SIZE_SCALE = 1;
+const SIZE_REF_W = 1200;
+const SIZE_REF_H = 800;
 
 // ----- Shimmer (size only) -----
-let MIN_SCALE = 0.5; // smallest dot, as a fraction of its base size
+let MIN_SCALE = 0.68; // smallest dot, as a fraction of its base size
 
 // Shimmer roams two "epicenters" around the frame, bouncing off its edges; dots
 // grow within a falloff radius around them and shrink back outside it.
 let EPI_COUNT = 2;
-let EPI_RADIUS_RATIO = 0.4; // falloff radius as a fraction of frame width
-let EPI_SPEED = 0.5; // travel speed, px per ms
-let EPI_WANDER = 0.05; // max heading jitter per frame, in radians
-let EPI_FALLOFF = 1; // falloff curve exponent: >1 tightens the hotspot, <1 broadens it
-let PEAK_SCALE = 1; // dot size at an epicentre's centre, as a fraction of base
+let EPI_RADIUS_RATIO = 0.4; // falloff radius as a fraction of the frame width (always proportional)
+let EPI_SPEED = 0.54; // travel speed, px per ms
+let EPI_WANDER = 0.115; // max heading jitter per frame, in radians
+let EPI_FALLOFF = 1.5; // falloff curve exponent: >1 tightens the hotspot, <1 broadens it
+let PEAK_SCALE = 1.6; // dot size at an epicentre's centre, as a fraction of base
 // Low-frequency warp of the falloff distance field: bends the iso-distance
 // contours off perfect circles so the gradient's banding dissolves into a smooth
 // organic falloff (a noise-free alternative/complement to dither). 0 = off.
-let FALLOFF_WARP = 0;
+let FALLOFF_WARP = 0.12;
 
 // ----- Static (no-image) state -----
 let IDLE_SCALE = 0.9; // uniform dot size — the idle grid is one flat colour
@@ -63,7 +73,7 @@ let IDLE_SCALE = 0.9; // uniform dot size — the idle grid is one flat colour
 // Per-dot size dither (in scale units) applied to the shimmer, scaled by the
 // brightness wave. An alternative ring-breaker; left off in favour of position
 // jitter, which avoids size scatter (see POS_JITTER).
-let SHIM_DITHER = 0;
+let SHIM_DITHER = 0.1;
 
 // Per-dot opacity (value) dither: varies each dot's alpha so neighbours cross the
 // 8-bit brightness step at different points. This attacks the *banding itself*
@@ -82,10 +92,10 @@ let ALPHA_FALLOFF = 0; // 0 = off; 1 = outer dots fully fade out toward the edge
 // smoothly with no rings. This is the default: size-scaling sub-2px dots can
 // only render a few discrete sizes, which quantises the wave into concentric
 // rings (most visible over an image). 0 = legacy size-wave (the proto look).
-let ALPHA_SHIMMER = 1;
+let ALPHA_SHIMMER = 0;
 // Brightness of dots far from any epicentre, as a fraction of the peak (the
 // epicentre centre is 1). The travelling wave grades floor → 1 → floor.
-let SHIM_FLOOR = 0.3;
+let SHIM_FLOOR = 0.32;
 
 // Per-dot position jitter (as a fraction of the cell), scaled by the shimmer
 // intensity. De-aligns the equidistant dots so the epicenter falloff doesn't
@@ -109,6 +119,11 @@ let GLITCH_SHIFT = 2; // max horizontal jump of a torn row, in cells
 let GLITCH_SIZE = 0; // extra size spike on torn rows (× base); 0 = none
 let GLITCH_SPACING = 0; // seconds between brief glitch bursts; 0 = continuous
 let GLITCH_RANDOM = 0; // 0..1 — jitter each burst's timing so gaps are irregular
+// Glitch that plays *while the dots animate in or out* (the enter/exit envelope),
+// scaled by env so it ramps up as the shimmer enters and fades out as the image
+// resolves to clean. Uses GLITCH_SHIFT/SIZE/SPEED for its look. 0 = off.
+// Independent of GLITCH_AMOUNT (the steady, generation-time glitch).
+let REVEAL_GLITCH = 0; // 0..1 — peak share of rows torn at full shimmer (env = 1)
 
 // Cap the backing store density. Rendering 1:1 with the device keeps the crisp
 // flat-alpha squares sharp; the cap only bounds the buffer size on extreme
@@ -165,6 +180,8 @@ export type ShimmerParams = {
   glitchSize: number;
   glitchSpacing: number;
   glitchRandom: number;
+  revealGlitch: number;
+  sizeScale: number;
   maxDpr: number;
   revealSsMin: number;
   revealSsMax: number;
@@ -205,6 +222,8 @@ export function getShimmerParams(): ShimmerParams {
     glitchSize: GLITCH_SIZE,
     glitchSpacing: GLITCH_SPACING,
     glitchRandom: GLITCH_RANDOM,
+    revealGlitch: REVEAL_GLITCH,
+    sizeScale: SIZE_SCALE,
     maxDpr: MAX_DPR,
     revealSsMin: REVEAL_SS_MIN,
     revealSsMax: REVEAL_SS_MAX,
@@ -245,6 +264,8 @@ export function applyShimmerParams(p: Partial<ShimmerParams>): void {
   if (p.glitchSize != null) GLITCH_SIZE = p.glitchSize;
   if (p.glitchSpacing != null) GLITCH_SPACING = p.glitchSpacing;
   if (p.glitchRandom != null) GLITCH_RANDOM = p.glitchRandom;
+  if (p.revealGlitch != null) REVEAL_GLITCH = p.revealGlitch;
+  if (p.sizeScale != null) SIZE_SCALE = p.sizeScale;
   if (p.maxDpr != null) MAX_DPR = p.maxDpr;
   if (p.revealSsMin != null) REVEAL_SS_MIN = p.revealSsMin;
   if (p.revealSsMax != null) REVEAL_SS_MAX = p.revealSsMax;
@@ -287,9 +308,23 @@ export class DotGridController implements ReactiveController {
   }
 
   private readonly _reduceMotion: boolean;
+  /** Canvas-size multiplier (1 at the reference size), applied to the epicentre
+   *  size + speed. Recomputed in {@link _resize}. */
+  private _sizeMul = 1;
+
   /** Dot half-size in px. A getter so live CELL_SIZE/DOT_RATIO tweaks apply. */
   private get _baseRadius(): number {
     return (CELL_SIZE * DOT_RATIO) / 2;
+  }
+
+  /** Canvas-size multiplier: ratio^SIZE_SCALE, where ratio = √(area / reference).
+   *  Exactly 1 at the reference size; SIZE_SCALE is the strength (0 = off, 1 =
+   *  proportional, >1 exaggerates, <0 inverts). Always positive, so it never
+   *  produces a negative radius/speed however far it's pushed. */
+  private _computeSizeMul(): number {
+    if (this._w <= 0 || this._h <= 0) return 1;
+    const ratio = Math.sqrt((this._w * this._h) / (SIZE_REF_W * SIZE_REF_H));
+    return ratio ** SIZE_SCALE;
   }
 
   private _dotColor = 'rgba(0, 0, 0, 0.16)';
@@ -682,6 +717,7 @@ export class DotGridController implements ReactiveController {
     this._w = refs.viewport.clientWidth;
     this._h = refs.viewport.clientHeight;
     if (this._w <= 0 || this._h <= 0) return; // no layout yet (e.g. detached)
+    this._sizeMul = this._computeSizeMul();
     this._allocate();
     // 2D sizes the backing here; the GL backend sizes itself each render() from
     // the frame's scale, so just track the scale the next frame should use.
@@ -693,13 +729,14 @@ export class DotGridController implements ReactiveController {
   private _initEpicenters(): void {
     const r = this._frameRect();
     this._epis.length = 0;
+    const spd = EPI_SPEED * this._sizeMul; // roam proportionally faster on a bigger canvas
     for (let n = 0; n < EPI_COUNT; n++) {
       const a = Math.random() * Math.PI * 2;
       this._epis.push({
         x: r.left + Math.random() * (r.right - r.left),
         y: r.top + Math.random() * (r.bottom - r.top),
-        vx: Math.cos(a) * EPI_SPEED,
-        vy: Math.sin(a) * EPI_SPEED,
+        vx: Math.cos(a) * spd,
+        vy: Math.sin(a) * spd,
       });
     }
   }
@@ -707,10 +744,11 @@ export class DotGridController implements ReactiveController {
   private _moveEpicenters(dt: number): void {
     if (this._epis.length === 0) this._initEpicenters();
     const r = this._liveRect();
+    const spd = EPI_SPEED * this._sizeMul;
     for (const e of this._epis) {
       const a = Math.atan2(e.vy, e.vx) + (Math.random() - 0.5) * EPI_WANDER;
-      e.vx = Math.cos(a) * EPI_SPEED;
-      e.vy = Math.sin(a) * EPI_SPEED;
+      e.vx = Math.cos(a) * spd;
+      e.vy = Math.sin(a) * spd;
       e.x += e.vx * dt;
       e.y += e.vy * dt;
       if (e.x < r.left) {
@@ -900,6 +938,9 @@ export class DotGridController implements ReactiveController {
 
     // Falloff radius tracks the live frame width (rides the AR transition).
     const fr = this._liveRect();
+    // Radius is a constant fraction of the live frame, so the epicentre keeps the
+    // same *relative* size on every canvas (proportional). SIZE_SCALE only scales
+    // the roam speed, not the size.
     this._epiRadius = (fr.right - fr.left) * EPI_RADIUS_RATIO || 1;
     // Animate the dither/jitter pattern when TEMPORAL_JITTER > 0 (time-averaged smoothing).
     this._noiseSeed =
@@ -937,6 +978,13 @@ export class DotGridController implements ReactiveController {
       const start = GLITCH_RANDOM > 0 ? this._hash(slot, 7) * GLITCH_RANDOM * (GLITCH_SPACING - burst) : 0;
       glitchOn = within >= start && within < start + burst;
     }
+    let effGlitchAmount = glitchOn ? GLITCH_AMOUNT : 0;
+    // Reveal/transition glitch: tear rows while the envelope animates (enter or
+    // exit), scaled by env so it ramps in with the shimmer and settles clean.
+    if (REVEAL_GLITCH > 0 && !this._reduceMotion && this._envAnimating) {
+      glitchOn = true;
+      effGlitchAmount = Math.max(effGlitchAmount, REVEAL_GLITCH * this._env);
+    }
     const glitchSeed = glitchOn ? Math.floor(this._now() * 0.001 * GLITCH_SPEED) : 0;
     let i = 0;
     for (let row = 0; row < this._rows; row++) {
@@ -944,7 +992,7 @@ export class DotGridController implements ReactiveController {
       // Per-row glitch: a torn row jumps horizontally and (optionally) spikes size.
       let rowShift = 0;
       let rowSize = 1;
-      if (glitchOn && this._hash(row, glitchSeed) < GLITCH_AMOUNT) {
+      if (glitchOn && this._hash(row, glitchSeed) < effGlitchAmount) {
         rowShift = (this._hash(row + 31, glitchSeed) - 0.5) * 2 * GLITCH_SHIFT * CELL_SIZE;
         if (GLITCH_SIZE > 0) rowSize = 1 + GLITCH_SIZE * this._hash(row + 67, glitchSeed);
       }
@@ -1052,6 +1100,9 @@ export class DotGridController implements ReactiveController {
     if (!(this._state.shimmering || this._state.empty || mask)) return;
 
     const fr = this._liveRect();
+    // Radius is a constant fraction of the live frame, so the epicentre keeps the
+    // same *relative* size on every canvas (proportional). SIZE_SCALE only scales
+    // the roam speed, not the size.
     this._epiRadius = (fr.right - fr.left) * EPI_RADIUS_RATIO || 1;
 
     // Upload the mask image lazily — only when the element or its readiness flips.
@@ -1086,6 +1137,14 @@ export class DotGridController implements ReactiveController {
       const burst = Math.min(GLITCH_SPACING, 0.35);
       const start = GLITCH_RANDOM > 0 ? this._hash(slot, 7) * GLITCH_RANDOM * (GLITCH_SPACING - burst) : 0;
       glitchOn = within >= start && within < start + burst;
+    }
+    let effGlitchAmount = glitchOn ? GLITCH_AMOUNT : 0;
+    // Reveal/transition glitch: while the envelope animates (enter or exit), tear
+    // rows proportional to the "shimmer-ness" (env) — ramps up as the shimmer
+    // enters, fades out as the image resolves clean.
+    if (REVEAL_GLITCH > 0 && !this._reduceMotion && this._envAnimating) {
+      glitchOn = true;
+      effGlitchAmount = Math.max(effGlitchAmount, REVEAL_GLITCH * this._env);
     }
     const glitchSeed = glitchOn ? Math.floor(now * 0.001 * GLITCH_SPEED) : 0;
 
@@ -1125,7 +1184,7 @@ export class DotGridController implements ReactiveController {
       noiseSeed,
       glitchOn,
       glitchSeed,
-      glitchAmount: GLITCH_AMOUNT,
+      glitchAmount: effGlitchAmount,
       glitchShift: GLITCH_SHIFT,
       glitchSize: GLITCH_SIZE,
       color: this._dotColorRGBA,

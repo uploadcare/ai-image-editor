@@ -10,10 +10,16 @@
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   border: 1px solid var(--uc-ai-floating-border, transparent);
-  border-radius: var(--uc-ai-radius-frame, 18px);
+  /* Same rounding formula as the file-uploader modal: radius × 1.75. */
+  border-radius: calc(var(--uc-ai-radius) * 1.75);
   box-shadow: var(--uc-ai-dialog-shadow);
   /* Overflow visible so the aspect-ratio menu can open above the card. */
   overflow: visible;
+  /* The inner controls (chips, ratio, send) sit one body-padding in from the
+     rounded corner, so give them a concentric radius (outer − inset) — otherwise
+     their corners don't parallel the composer's and look mismatched. Scoped to
+     the card, so buttons elsewhere keep the base radius. */
+  --uc-ai-radius-button: max(6px, calc(var(--uc-ai-radius) * 1.75 - 10px));
 }
 
 .body {

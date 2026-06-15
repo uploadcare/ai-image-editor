@@ -38,8 +38,9 @@
   /* Strong custom easings — the built-in CSS easings lack punch. */
   --uc-ai-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --uc-ai-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  /* Empty/loading dot-grid overlay; tints with the foreground so it adapts. */
-  --uc-ai-dot-grid-color: color-mix(in srgb, var(--uc-ai-foreground) 15%, transparent);
+  /* Empty/loading dot-grid overlay — calibrated per theme (white on dark, black
+     on light) at the tuned alphas. */
+  --uc-ai-dot-grid-color: light-dark(rgba(0, 0, 0, 0.21), rgba(255, 255, 255, 0.1));
   /* Prompt textarea growth cap: N lines of text plus its vertical padding. */
   --uc-ai-prompt-max-lines: 6;
   --uc-ai-prompt-max-height: calc(var(--uc-ai-prompt-max-lines) * 1.5em + 10px);
@@ -117,21 +118,27 @@ uc-ai-prompt-row {
   width: 100%;
 }
 
-.error-banner {
+/* Error message: a floating card centred in the canvas area (matches the proto). */
+.error-box {
   position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  inset: 0;
   z-index: 6;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: calc(100% - 24px);
-  padding: 8px 12px;
-  background: color-mix(in oklch, var(--uc-ai-destructive) 16%, var(--uc-ai-background));
-  color: var(--uc-ai-destructive-foreground);
-  border: 1px solid color-mix(in oklch, var(--uc-ai-destructive) 45%, transparent);
-  border-radius: var(--uc-ai-radius-button);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  pointer-events: none;
+}
+
+.error-box__card {
+  pointer-events: auto;
+  max-width: 75%;
+  padding: 10px 15px;
+  background: var(--uc-ai-floating, var(--uc-ai-background));
+  border: 1px solid var(--uc-ai-floating-border, transparent);
+  border-radius: calc(var(--uc-ai-radius) * 1.5);
   box-shadow: var(--uc-ai-dialog-shadow);
-  font-size: 13px;
+  color: var(--uc-ai-destructive-foreground);
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
 }
