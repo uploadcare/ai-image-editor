@@ -2,7 +2,7 @@ import type { UploadcareFile } from '@uploadcare/upload-client';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { AspectRatio } from '../../../entities/aspect-ratio';
 import type { AiEditorMode } from '../../../entities/mode';
-import type { AiProvider, AiProviderResult } from '../../../entities/provider';
+import { AiProviderError, type AiProvider, type AiProviderResult } from '../../../entities/provider';
 
 export type HistoryEntry = {
   id: string;
@@ -29,6 +29,9 @@ export class GenerationController implements ReactiveController {
   /** The last successful generation result, including its raw response. */
   public result: AiProviderResult | null = null;
   public error: string | null = null;
+  /** Platform/job `error_code` for the last failure, if known — the editor maps
+   *  it to a localized, overridable message. Null for unknown/generic errors. */
+  public errorCode: string | null = null;
   public history: HistoryEntry[] = [];
 
   private readonly _host: ReactiveControllerHost;
@@ -58,6 +61,7 @@ export class GenerationController implements ReactiveController {
     this.resultUrl = null;
     this.result = null;
     this.error = null;
+    this.errorCode = null;
     this._host.requestUpdate();
   }
 
@@ -65,6 +69,7 @@ export class GenerationController implements ReactiveController {
     this.resultUrl = result.url;
     this.result = result;
     this.error = null;
+    this.errorCode = null;
     this._host.requestUpdate();
   }
 
@@ -75,6 +80,7 @@ export class GenerationController implements ReactiveController {
     this._abortController = controller;
     this.busy = true;
     this.error = null;
+    this.errorCode = null;
     this._host.requestUpdate();
 
     try {
@@ -102,6 +108,7 @@ export class GenerationController implements ReactiveController {
     } catch (err) {
       if ((err as DOMException)?.name === 'AbortError') return null;
       this.error = (err as Error).message || 'Generation failed';
+      this.errorCode = err instanceof AiProviderError ? err.errorCode : null;
       throw err;
     } finally {
       if (this._abortController === controller) {
