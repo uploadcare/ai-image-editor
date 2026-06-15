@@ -91,6 +91,14 @@ export class UcAiEditor extends LitElement {
   @property({ attribute: 'l10n', type: Object })
   public l10nOverrides: Partial<typeof enLocale> = {};
 
+  /**
+   * Presets-only mode: hides the free-text prompt so only the preset chips
+   * remain, and selecting a preset starts the generation immediately (there's
+   * nothing to type, so no separate send step). Off by default.
+   */
+  @property({ type: Boolean, attribute: 'presets-only' })
+  public presetsOnly = false;
+
   @state()
   private _prompt = '';
 
@@ -363,8 +371,13 @@ export class UcAiEditor extends LitElement {
   }
 
   private _onSelectTemplate(e: CustomEvent<TemplateSelectDetail>): void {
-    // A preset only fills the prompt — the user still presses send to generate.
     this._prompt = e.detail.template.prompt;
+    // With no free-text prompt, the preset is the whole action — generate now.
+    if (this.presetsOnly) {
+      void this._generate();
+      return;
+    }
+    // Otherwise a preset only fills the prompt — the user still presses send.
     queueMicrotask(() => this._promptRow?.focusInput());
   }
 
@@ -448,6 +461,7 @@ export class UcAiEditor extends LitElement {
               .value=${this._prompt}
               .placeholder=${this._l(placeholderKey)}
               .busy=${this._gen.busy}
+              .allowCustom=${!this.presetsOnly}
               send-aria-label="${this._l('ai-enhancer-generate-btn')}"
               @uc:input=${this._onPromptInput}
               @uc:send=${this._onSend}
@@ -455,7 +469,6 @@ export class UcAiEditor extends LitElement {
               <uc-ai-chips
                 slot="chips"
                 .mode=${mode}
-                .prompt=${this._prompt}
                 .busy=${this._gen.busy}
                 @uc:select=${this._onSelectTemplate}
               ></uc-ai-chips>
@@ -477,7 +490,13 @@ export class UcAiEditor extends LitElement {
             </uc-ai-prompt-row>
           </div>
 
-          ${this._gen.error ? html`<div class="error-banner" role="alert">${this._gen.error}</div>` : nothing}
+          ${
+            this._gen.error
+              ? html`<div class="error-box" role="alert">
+                  <div class="error-box__card">${this._gen.error}</div>
+                </div>`
+              : nothing
+          }
         </div>
 
         <uc-ai-footer

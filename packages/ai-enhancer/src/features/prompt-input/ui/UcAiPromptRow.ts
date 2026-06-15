@@ -1,4 +1,4 @@
-import { html, LitElement, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
+import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
@@ -31,6 +31,10 @@ export class UcAiPromptRow extends LitElement {
 
   @property({ type: Boolean })
   public busy = false;
+
+  /** When false the free-text prompt is hidden; only the slotted chips remain. */
+  @property({ type: Boolean })
+  public allowCustom = true;
 
   @property({ attribute: 'send-aria-label' })
   public sendAriaLabel = '';
@@ -88,24 +92,28 @@ export class UcAiPromptRow extends LitElement {
     return html`
       <div class="card">
         <div class="body">
-          <textarea
-            class="input"
-            rows="1"
-            .value=${this.value}
-            placeholder="${this.placeholder}"
-            aria-label="${this.placeholder}"
-            autocomplete="off"
-            autocorrect="off"
-            autocapitalize="off"
-            spellcheck="false"
-            name="uc-ai-prompt"
-            data-1p-ignore
-            data-lpignore="true"
-            data-form-type="other"
-            @input=${this._onInput}
-            @keydown=${this._onKeydown}
-            ?disabled=${this.busy}
-          ></textarea>
+          ${
+            this.allowCustom
+              ? html`<textarea
+                  class="input"
+                  rows="1"
+                  .value=${this.value}
+                  placeholder="${this.placeholder}"
+                  aria-label="${this.placeholder}"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  name="uc-ai-prompt"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                  @input=${this._onInput}
+                  @keydown=${this._onKeydown}
+                  ?disabled=${this.busy}
+                ></textarea>`
+              : nothing
+          }
 
           <div class="row">
             <div class="actions">

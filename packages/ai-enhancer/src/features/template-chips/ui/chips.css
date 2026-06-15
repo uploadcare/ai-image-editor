@@ -64,11 +64,6 @@
   transform: scale(0.97);
 }
 
-.chip[aria-pressed="true"] {
-  background: var(--uc-ai-primary);
-  color: var(--uc-ai-primary-foreground);
-}
-
 .chip:disabled {
   opacity: 0.5;
   cursor: not-allowed;

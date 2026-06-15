@@ -13,9 +13,6 @@ export class UcAiChips extends LitElement {
   @property()
   public mode: AiEditorMode = 'generate';
 
-  @property()
-  public prompt = '';
-
   @property({ type: Boolean })
   public busy = false;
 
@@ -95,13 +92,7 @@ export class UcAiChips extends LitElement {
       >
         ${templates.map(
           (tpl) => html`
-            <button
-              type="button"
-              class="chip"
-              aria-pressed="${this.prompt !== '' && this.prompt === tpl.prompt}"
-              @click=${() => this._select(tpl)}
-              ?disabled=${this.busy}
-            >
+            <button type="button" class="chip" @click=${() => this._select(tpl)} ?disabled=${this.busy}>
               ${tpl.label}
             </button>
           `,
