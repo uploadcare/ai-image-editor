@@ -550,11 +550,11 @@ export class UcAiEditor extends LitElement {
       : 'composer-above';
     const historyRelative = historyPlacement === 'composer-above' || historyPlacement === 'composer-below';
 
-    // The history strip rides inside the composer only for an OVERLAY composer
-    // with a relative placement. Otherwise it pins to a canvas edge and floats
-    // over the canvas — including the docked case, where the composer (prompt)
-    // sits outside the canvas but its chips still overlay it.
-    const historyInComposer = composerOverlay && historyRelative;
+    // The history strip rides inside the composer (so it moves with it) for an
+    // OVERLAY composer, and for a DOCKED composer that auto-hides — otherwise the
+    // pinned strip would stay at the canvas edge while the composer slides down to
+    // its peek. A static docked composer keeps the strip pinned over the canvas.
+    const historyInComposer = (composerOverlay || (composerDocked && this.composerAutoHide)) && historyRelative;
     const historyPinnedEdge =
       historyPlacement === 'canvas-top' ? 'top' : historyPlacement === 'canvas-bottom' ? 'bottom' : edge;
 
@@ -630,9 +630,11 @@ export class UcAiEditor extends LitElement {
           [`composer--${layoutToken}`]: true,
         })}
       >
-        ${historyInComposer && historyPlacement === 'composer-above' ? historyTpl : nothing}
-        ${promptRowTpl}
-        ${historyInComposer && historyPlacement === 'composer-below' ? historyTpl : nothing}
+        <div class="composer__content">
+          ${historyInComposer && historyPlacement === 'composer-above' ? historyTpl : nothing}
+          ${promptRowTpl}
+          ${historyInComposer && historyPlacement === 'composer-below' ? historyTpl : nothing}
+        </div>
       </div>
     `;
 

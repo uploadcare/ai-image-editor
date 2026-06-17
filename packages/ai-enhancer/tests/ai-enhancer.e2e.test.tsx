@@ -285,16 +285,17 @@ describe('<uc-ai-editor>', () => {
     const composer = () => shell.querySelector('.composer')!;
     const stage = () => shell.querySelector('.stage')!;
     const promptRow = () => composer().querySelector('uc-ai-prompt-row')!;
+    const content = () => composer().querySelector('.composer__content')!;
 
     // composer-above (default): inside the composer, before the prompt row.
     expect(composer().contains(history())).toBe(true);
-    let kids = [...composer().children];
+    let kids = [...content().children];
     expect(kids.indexOf(history())).toBeLessThan(kids.indexOf(promptRow()));
 
     // composer-below: inside the composer, after the prompt row.
     el.historyPlacement = 'composer-below';
     await el.updateComplete;
-    kids = [...composer().children];
+    kids = [...content().children];
     expect(kids.indexOf(history())).toBeGreaterThan(kids.indexOf(promptRow()));
 
     // canvas-top: pinned in the stage, not inside the composer.
