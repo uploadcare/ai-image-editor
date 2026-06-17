@@ -20,21 +20,18 @@
 }
 
 /*
- * Available area for the image: padding inside the canvas, with extra room
- * reserved at the bottom for the floating composer (`--uc-ai-composer-space`,
- * set by the editor from the composer's measured height). The frame inside is
- * centred and sized (by JS) to the chosen aspect ratio.
+ * Available area for the image: even padding inside the canvas. The canvas fills
+ * its stage — an overlay composer floats on top of it (and, when auto-hidden,
+ * docks down and dissolves into the bottom gradient fade); a docked composer
+ * sits outside the canvas. The frame inside is centred and sized (by JS) to the
+ * chosen aspect ratio.
  */
 .canvas__viewport {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  right: 20px;
-  bottom: var(--uc-ai-composer-space, 20px);
+  inset: 20px;
   display: grid;
   place-items: center;
   pointer-events: none;
-  transition: bottom 280ms var(--uc-ai-ease-out, ease);
 }
 
 /* Aspect-ratio bounding box; width/height are set inline in JS. No background —

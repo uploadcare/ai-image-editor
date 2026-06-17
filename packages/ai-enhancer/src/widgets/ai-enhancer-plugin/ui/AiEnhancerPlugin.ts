@@ -19,8 +19,10 @@ const AI_ENHANCER_ID = 'ai-enhancer';
 const UPLOADER_TOKEN_MAP: ReadonlyArray<readonly [aiToken: string, ucToken: string]> = [
   ['--uc-ai-foreground', '--uc-foreground'],
   ['--uc-ai-background', '--uc-background'],
-  ['--uc-ai-floating', '--uc-floating'],
-  ['--uc-ai-floating-border', '--uc-floating-border'],
+  // `--uc-ai-floating` / `--uc-ai-floating-border` are intentionally NOT mapped:
+  // the uploader doesn't define those tokens, so mapping them to `var(--uc-floating)`
+  // would resolve to an invalid value and blank out every floating panel. Their
+  // CSS defaults already prefer `--uc-floating(-border)` when a host provides them.
   ['--uc-ai-muted', '--uc-muted'],
   ['--uc-ai-muted-foreground', '--uc-muted-foreground'],
   ['--uc-ai-primary', '--uc-primary'],
@@ -76,8 +78,12 @@ function ensureActivityModalSize(): void {
 }
 
 export type AiEditorActivityParams = {
-  /** UUID of an image to edit. Absent → the editor opens in generate mode. */
-  source?: string;
+  /**
+   * `internalId` of the collection entry being edited. Absent → the editor opens
+   * in generate mode. When present, the source image's UUID is read from this
+   * entry, and `uc:done` replaces it in place instead of adding a new one.
+   */
+  sourceInternalId?: string;
 };
 
 /**
@@ -160,24 +166,6 @@ export const AiEnhancerPlugin: UploaderPlugin = {
       void syncLocaleToUploader(value);
     });
 
-    /**
-     * Build the editor's locale map: the active language's strings with the
-     * uploader's `localeDefinitionOverride` (for that locale) layered on top.
-     * Missing keys fall back to the editor's built-in English via `translate`.
-     */
-    const resolveEditorL10n = async (): Promise<Partial<AiEnhancerLocale>> => {
-      const localeName = config.get('localeName') || 'en';
-      const base = (await loadLocale(localeName)) ?? enLocale;
-      const result: Partial<Record<keyof AiEnhancerLocale, string>> = { ...base };
-      const override = config.get('localeDefinitionOverride')?.[localeName] as Record<string, string> | undefined;
-      if (override) {
-        for (const key of Object.keys(enLocale) as (keyof AiEnhancerLocale)[]) {
-          if (typeof override[key] === 'string') result[key] = override[key];
-        }
-      }
-      return result;
-    };
-
     registry.registerSource({
       id: AI_ENHANCER_ID,
       label: 'ai-enhancer-source-label',
@@ -197,7 +185,7 @@ export const AiEnhancerPlugin: UploaderPlugin = {
       label: 'ai-enhancer-file-action-label',
       shouldRender: (fileEntry) => Boolean(fileEntry.isImage && fileEntry.uuid),
       onClick: (fileEntry) => {
-        uploaderApi.setCurrentActivity(AI_ENHANCER_ID, { source: fileEntry.uuid ?? undefined });
+        uploaderApi.setCurrentActivity(AI_ENHANCER_ID, { sourceInternalId: fileEntry.internalId });
         uploaderApi.setModalState(true);
       },
     });
@@ -212,7 +200,18 @@ export const AiEnhancerPlugin: UploaderPlugin = {
 
         const params = (activityParams ?? {}) as AiEditorActivityParams;
         const editor = document.createElement('uc-ai-editor') as UcAiEditor;
-        if (params.source) editor.source = params.source;
+        // Edit mode: resolve the source image's UUID + name from its collection
+        // entry, so the edit opens on that image and its result keeps the name.
+        // (Falls back to generate mode if the entry is gone.)
+        if (params.sourceInternalId) {
+          try {
+            const sourceItem = uploaderApi.getOutputItem(params.sourceInternalId);
+            editor.source = sourceItem.uuid;
+            editor.sourceFilename = sourceItem.name;
+          } catch {
+            // Entry no longer exists — leave `editor.source` unset (generate mode).
+          }
+        }
         applyUploaderTheme(editor);
 
         const refreshProviderConfig = () => {
@@ -225,25 +224,27 @@ export const AiEnhancerPlugin: UploaderPlugin = {
           editor.secureDeliveryProxyUrlResolver = config.get('secureDeliveryProxyUrlResolver') ?? undefined;
         };
         refreshProviderConfig();
-        void resolveEditorL10n().then((l10n) => {
-          editor.l10nOverrides = l10n;
-        });
+
+        // The editor owns locale loading + overrides; pass the uploader's
+        // `localeName` and (locale-keyed) `localeDefinitionOverride` straight through.
+        const refreshLocale = () => {
+          editor.localeName = config.get('localeName') || 'en';
+          editor.localeDefinitionOverride =
+            (config.get('localeDefinitionOverride') as Record<string, Partial<AiEnhancerLocale>>) ?? {};
+        };
+        refreshLocale();
+
         const ratios = aspectRatiosFromCropPreset(config.get('cropPreset') ?? '');
         if (ratios) editor.aspectRatios = ratios;
 
-        const refreshL10n = () => {
-          void resolveEditorL10n().then((l10n) => {
-            editor.l10nOverrides = l10n;
-          });
-        };
         const unsubscribers = [
           config.subscribe('pubkey', refreshProviderConfig),
           config.subscribe('baseUrl', refreshProviderConfig),
           config.subscribe('cdnCname', refreshProviderConfig),
           config.subscribe('cdnCnamePrefixed', refreshProviderConfig),
           config.subscribe('secureDeliveryProxyUrlResolver', refreshProviderConfig),
-          config.subscribe('localeName', refreshL10n),
-          config.subscribe('localeDefinitionOverride', refreshL10n),
+          config.subscribe('localeName', refreshLocale),
+          config.subscribe('localeDefinitionOverride', refreshLocale),
           config.subscribe('cropPreset', (value) => {
             editor.aspectRatios = aspectRatiosFromCropPreset(value ?? '');
           }),
@@ -252,9 +253,23 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         const onDone = (e: Event) => {
           const { file } = (e as CustomEvent<DoneDetail>).detail;
           // The result is already stored on Uploadcare — hand the full file
-          // object over so the uploader adds it in `success` state without
-          // re-fetching file info (needs file-uploader >= 1.31.0).
-          uploaderApi.addFileFromUploadcareFile(file, { source: AI_ENHANCER_ID });
+          // object over so the uploader takes it in `success` state without
+          // re-fetching file info (needs file-uploader >= 1.32.0-alpha.0).
+          // Edit mode replaces the source entry in place (keeping its list
+          // position); generate mode adds a new entry. Either way the file is
+          // sourced to the AI enhancer.
+          if (params.sourceInternalId) {
+            try {
+              // The edited result already carries the source file's name (set via
+              // the editor's `sourceFilename`), so a plain replace preserves it.
+              uploaderApi.replaceFileFromUploadcareFile(params.sourceInternalId, file, { source: AI_ENHANCER_ID });
+            } catch {
+              // The source entry is gone (e.g. removed while editing) — fall back to adding.
+              uploaderApi.addFileFromUploadcareFile(file, { source: AI_ENHANCER_ID });
+            }
+          } else {
+            uploaderApi.addFileFromUploadcareFile(file, { source: AI_ENHANCER_ID });
+          }
           uploaderApi.setCurrentActivity('upload-list');
           uploaderApi.setModalState(true);
         };

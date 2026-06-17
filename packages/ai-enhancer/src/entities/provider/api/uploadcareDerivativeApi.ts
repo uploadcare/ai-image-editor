@@ -119,13 +119,14 @@ export class UploadcareDerivativeApi implements AiProvider {
         ? [request.aspectRatio[0], request.aspectRatio[1]]
         : undefined;
 
+    const filename = request.filename ?? this.filename;
     const job: UploadcareJobResponse =
       request.mode === 'edit'
-        ? await this.startEditJob(request, ratio)
+        ? await this.startEditJob(request, ratio, filename)
         : await this.api.generate({
             prompt: request.prompt,
             aspectRatio: ratio ?? DEFAULT_RATIO,
-            filename: this.filename,
+            filename,
             store: this.store,
             signal: request.signal,
           });
@@ -136,7 +137,11 @@ export class UploadcareDerivativeApi implements AiProvider {
     return job.job_id;
   }
 
-  private startEditJob(request: AiProviderRequest, ratio: [number, number] | undefined): Promise<UploadcareJobResponse> {
+  private startEditJob(
+    request: AiProviderRequest,
+    ratio: [number, number] | undefined,
+    filename: string,
+  ): Promise<UploadcareJobResponse> {
     if (!request.source) {
       throw new Error('Uploadcare edit: a source image uuid is required');
     }
@@ -144,7 +149,7 @@ export class UploadcareDerivativeApi implements AiProvider {
       prompt: request.prompt,
       source: request.source,
       aspectRatio: ratio,
-      filename: this.filename,
+      filename,
       store: this.store,
       signal: request.signal,
     });

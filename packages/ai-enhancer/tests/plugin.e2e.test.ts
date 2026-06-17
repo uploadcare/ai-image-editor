@@ -5,12 +5,14 @@ import { cleanup, delay, getCtxName } from './test-renderer';
 const TEST_IMAGE_URL =
   'https://images.unsplash.com/photo-1699102241946-45c5e1937d69?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=640';
 
+type OutputEntry = { uuid: string | null; internalId: string; source?: string | null; name?: string | null };
 type Config = HTMLElement & { plugins: unknown[]; sourceList: string };
 type UploadCtxProvider = HTMLElement & {
   api: {
     addFileFromUrl: (url: string) => void;
     initFlow: () => void;
     removeAllFiles: () => void;
+    getOutputCollectionState: () => { allEntries: OutputEntry[] };
   };
 };
 
@@ -77,6 +79,16 @@ describe('AiEnhancerPlugin', () => {
     cleanup();
   });
 
+  // The editor renders the active locale's generate-button label as the prompt
+  // row's `send-aria-label`, and the cancel label as the footer's `cancel-label`.
+  const generateLabel = () =>
+    document
+      .querySelector('uc-ai-editor')
+      ?.shadowRoot?.querySelector('uc-ai-prompt-row')
+      ?.getAttribute('send-aria-label');
+  const cancelLabel = () =>
+    document.querySelector('uc-ai-editor')?.shadowRoot?.querySelector('uc-ai-footer')?.getAttribute('cancel-label');
+
   it('feeds editor locale overrides from the uploader config (localeDefinitionOverride)', async () => {
     const { AiEnhancerPlugin } = await import('../src/plugin');
     const { config } = await renderUploader([AiEnhancerPlugin]);
@@ -88,20 +100,13 @@ describe('AiEnhancerPlugin', () => {
     await openModal();
     await page.getByText('Generate image').click();
 
-    type Editor = Element & { l10nOverrides?: Record<string, string> };
-    await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-editor') as Editor | null;
-      expect(editor?.l10nOverrides?.['ai-enhancer-generate-btn']).toBe('Make it!');
-    });
+    await vi.waitFor(() => expect(generateLabel()).toBe('Make it!'));
 
     // Reactive: changing the override after the editor is open updates it.
     (config as unknown as L10nConfig).localeDefinitionOverride = {
       en: { 'ai-enhancer-generate-btn': 'Generate now' },
     };
-    await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-editor') as Editor | null;
-      expect(editor?.l10nOverrides?.['ai-enhancer-generate-btn']).toBe('Generate now');
-    });
+    await vi.waitFor(() => expect(generateLabel()).toBe('Generate now'));
     cleanup();
   });
 
@@ -112,20 +117,12 @@ describe('AiEnhancerPlugin', () => {
     await openModal();
     await page.getByText('Generate image').click();
 
-    type Editor = Element & { l10nOverrides?: Record<string, string> };
     // Defaults to English.
-    await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-editor') as Editor | null;
-      expect(editor?.l10nOverrides?.['ai-enhancer-cancel']).toBe('Cancel');
-    });
+    await vi.waitFor(() => expect(cancelLabel()).toBe('Cancel'));
 
     // Switching localeName lazy-loads and applies the German strings.
     (config as unknown as { localeName: string }).localeName = 'de';
-    await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-editor') as Editor | null;
-      expect(editor?.l10nOverrides?.['ai-enhancer-cancel']).toBe('Abbrechen');
-      expect(editor?.l10nOverrides?.['ai-enhancer-generate-btn']).toBe('Generieren');
-    });
+    await vi.waitFor(() => expect(cancelLabel()).toBe('Abbrechen'));
     cleanup();
   });
 
@@ -146,6 +143,100 @@ describe('AiEnhancerPlugin', () => {
       const promptRow = editor?.shadowRoot?.querySelector('uc-ai-prompt-row') as (Element & { mode?: string }) | null;
       expect(promptRow?.mode).toBe('edit');
     });
+    cleanup();
+  });
+
+  it('replaces the source entry in place (not a second entry) when an edit completes, sourced to ai-enhancer', async () => {
+    const { AiEnhancerPlugin } = await import('../src/plugin');
+    await renderUploader([AiEnhancerPlugin]);
+    const api = getApi();
+    api.addFileFromUrl(TEST_IMAGE_URL);
+    (api as unknown as { initFlow?: () => void }).initFlow?.();
+
+    // Wait until the source file finished uploading (the AI Edit action only
+    // renders once the entry has a uuid).
+    await expect.element(page.getByRole('button', { name: 'AI Edit' })).toBeVisible();
+    const before = api.getOutputCollectionState().allEntries;
+    expect(before).toHaveLength(1);
+    const originalUuid = before[0]!.uuid;
+    const originalInternalId = before[0]!.internalId;
+    const originalName = before[0]!.name;
+    expect(originalName).toBeTruthy();
+
+    await page.getByRole('button', { name: 'AI Edit' }).click();
+    const editor = (await vi.waitFor(() => {
+      const el = document.querySelector('uc-ai-editor');
+      expect(el).toBeTruthy();
+      return el!;
+    })) as Element & { sourceFilename?: string | null };
+
+    // The plugin hands the source file's name to the editor so the edit result
+    // keeps it (the editor sends it as the result filename).
+    expect(editor.sourceFilename).toBe(originalName);
+
+    // The edit produced this already-uploaded result. Drive uc:done directly so
+    // the test doesn't depend on the generation backend.
+    const resultFile = {
+      uuid: 'edited-result',
+      cdnUrl: 'https://cdn.example.com/edited-result/',
+      originalFilename: originalName,
+      size: 4242,
+      isImage: true,
+      mimeType: 'image/png',
+      contentInfo: { mime: { mime: 'image/png' } },
+    };
+    editor.dispatchEvent(
+      new CustomEvent('uc:done', {
+        detail: { url: resultFile.cdnUrl, file: resultFile },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    await vi.waitFor(() => {
+      const after = api.getOutputCollectionState().allEntries;
+      // Replaced in place: still a single entry, now carrying the edited result.
+      expect(after).toHaveLength(1);
+      expect(after[0]!.uuid).toBe('edited-result');
+      expect(after[0]!.uuid).not.toBe(originalUuid);
+      // It's a fresh entry (remove + add), so the internalId changed...
+      expect(after[0]!.internalId).not.toBe(originalInternalId);
+      // ...the replacement is attributed to the AI enhancer...
+      expect(after[0]!.source).toBe('ai-enhancer');
+      // ...and it keeps the original file's name.
+      expect(after[0]!.name).toBe(originalName);
+    });
+    cleanup();
+  });
+
+  it('paints floating panels even though the uploader defines no --uc-floating token', async () => {
+    const { AiEnhancerPlugin } = await import('../src/plugin');
+    const { config } = await renderUploader([AiEnhancerPlugin]);
+    addSource(config, 'ai-enhancer');
+    await openModal();
+    await page.getByText('Generate image').click();
+
+    const editor = (await vi.waitFor(() => {
+      const el = document.querySelector('uc-ai-editor');
+      expect(el).toBeTruthy();
+      return el as HTMLElement;
+    })) as HTMLElement;
+
+    // The plugin must NOT map `--uc-ai-floating` to the (undefined) `--uc-floating`
+    // token — doing so resolves to an invalid value and blanks every panel.
+    expect(editor.style.getPropertyValue('--uc-ai-floating')).toBe('');
+
+    // The prompt row's card mixes `--uc-ai-floating`; with a real default it paints.
+    const card = await vi.waitFor(() => {
+      const c = editor.shadowRoot
+        ?.querySelector('uc-ai-prompt-row')
+        ?.shadowRoot?.querySelector('.card') as HTMLElement | null;
+      expect(c).toBeTruthy();
+      return c!;
+    });
+    const bg = getComputedStyle(card).backgroundColor;
+    expect(bg).not.toBe('rgba(0, 0, 0, 0)');
+    expect(bg).not.toBe('transparent');
     cleanup();
   });
 });

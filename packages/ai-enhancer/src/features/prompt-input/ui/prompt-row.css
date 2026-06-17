@@ -5,14 +5,22 @@
 .card {
   width: 100%;
   box-sizing: border-box;
-  /* Slightly translucent + blur for the prototype's frosted composer. */
-  background: color-mix(in srgb, var(--uc-ai-floating, var(--uc-ai-background)) 97%, transparent);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  /* Frosted composer (proto look): translucent enough that the image shows
+     faintly through, over a backdrop blur. */
+  background: color-mix(in srgb, var(--uc-ai-floating, var(--uc-ai-background)) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--uc-ai-floating-border, transparent);
-  /* Same rounding formula as the file-uploader modal: radius × 1.75. */
-  border-radius: calc(var(--uc-ai-radius) * 1.75);
-  box-shadow: var(--uc-ai-dialog-shadow);
+  /* Same rounding formula as the file-uploader modal: radius × 1.75. Driven by
+     top/bottom tokens so auto-hide can flatten just the tucked-away edge. */
+  border-radius: var(--uc-ai-composer-radius-top) var(--uc-ai-composer-radius-top)
+    var(--uc-ai-composer-radius-bottom) var(--uc-ai-composer-radius-bottom);
+  transition:
+    border-radius 0.4s var(--uc-ai-ease-out),
+    box-shadow 0.4s var(--uc-ai-ease-out);
+  /* Lifts the floating composer off the canvas (zero-offset ambient layer makes
+     it read on all edges — see the token definition). */
+  box-shadow: var(--uc-ai-composer-shadow);
   /* Overflow visible so the aspect-ratio menu can open above the card. */
   overflow: visible;
   /* The inner controls (chips, ratio, send) sit one body-padding in from the

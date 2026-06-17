@@ -39,4 +39,11 @@ export {
 } from './shared/lib/secureDelivery';
 export { UcAiCanvas } from './shared/ui/canvas';
 export { UcAiFooter } from './shared/ui/footer';
-export { type DoneDetail, UcAiEditor } from './widgets/ai-editor';
+export {
+  type CanvasFit,
+  type ComposerPlacement,
+  type DoneDetail,
+  type HistoryPlacement,
+  type ToolbarPlacement,
+  UcAiEditor,
+} from './widgets/ai-editor';

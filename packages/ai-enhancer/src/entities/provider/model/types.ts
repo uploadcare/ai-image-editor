@@ -12,6 +12,8 @@ export type AiProviderRequest = {
   aspectRatio?: AspectRatio;
   /** UUID of the source image to edit. Required when `mode` is `edit`. */
   source?: string;
+  /** Desired output filename. Falls back to the provider's configured default. */
+  filename?: string;
   signal?: AbortSignal;
 };
 
