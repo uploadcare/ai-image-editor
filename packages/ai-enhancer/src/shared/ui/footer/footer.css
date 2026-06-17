@@ -9,7 +9,10 @@
   align-items: center;
   gap: 8px;
   padding: var(--uc-ai-padding);
-  background: var(--uc-ai-background);
+  /* Transparent: the toolbar reads as floating buttons, no distinct bar. A
+     docked composer dissolves toward it via the editor's fade mask (see the
+     auto-hide rules in ai-editor.css) rather than hard-clipping. */
+  background: transparent;
 }
 
 .btn {

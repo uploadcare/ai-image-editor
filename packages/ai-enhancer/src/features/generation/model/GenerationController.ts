@@ -19,6 +19,8 @@ export type RunArgs = {
   aspectRatio?: AspectRatio;
   /** UUID of the source image to edit (when `mode` is `edit`). */
   source?: string;
+  /** Desired output filename (e.g. preserve the edited file's original name). */
+  filename?: string;
 };
 
 const MAX_HISTORY = 20;
@@ -65,6 +67,12 @@ export class GenerationController implements ReactiveController {
     this._host.requestUpdate();
   }
 
+  /** Drop the prompt-history strip (e.g. on "Start over"). */
+  public clearHistory(): void {
+    this.history = [];
+    this._host.requestUpdate();
+  }
+
   public setResult(result: AiProviderResult): void {
     this.resultUrl = result.url;
     this.result = result;
@@ -89,6 +97,7 @@ export class GenerationController implements ReactiveController {
         mode: args.mode,
         aspectRatio: args.aspectRatio,
         source: args.source,
+        filename: args.filename,
         signal: controller.signal,
       });
       if (controller.signal.aborted) return null;

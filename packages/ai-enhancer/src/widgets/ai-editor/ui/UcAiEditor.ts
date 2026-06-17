@@ -18,7 +18,7 @@ import {
 import { type AiEditorMode, MODES } from '../../../entities/mode';
 import { UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
-import { type AiEnhancerLocaleKey, enLocale, translate } from '../../../shared/i18n';
+import { type AiEnhancerLocale, type AiEnhancerLocaleKey, enLocale, LOCALE_LOADERS, translate } from '../../../shared/i18n';
 import { cdnPreviewUrl } from '../../../shared/lib/cdn';
 import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
 import type { SecureDeliveryProxyUrlResolver } from '../../../shared/lib/secureDelivery';
@@ -48,6 +48,36 @@ export type DoneDetail = {
   file: UploadcareFile;
 };
 
+/** Which edge the composer (prompt + chips + aspect ratio) sits on. */
+export type ComposerPlacement = 'top' | 'bottom';
+
+/**
+ * How the canvas sizes relative to the composer.
+ * - `available`: the canvas uses only the space left by the composer, which is
+ *   docked outside the image (history chips still overlay the canvas).
+ * - `full`: the canvas fills the whole area and the composer floats over it.
+ */
+export type CanvasFit = 'full' | 'available';
+
+/**
+ * Where the history strip sits.
+ * - `composer-above` / `composer-below`: relative to the composer (moves with it).
+ * - `canvas-top` / `canvas-bottom`: pinned to that canvas edge, independent of the composer.
+ */
+export type HistoryPlacement = 'composer-above' | 'composer-below' | 'canvas-top' | 'canvas-bottom';
+
+/** Where the toolbar (Cancel / Done) sits within the editor. */
+export type ToolbarPlacement = 'bottom' | 'top';
+
+const COMPOSER_PLACEMENTS: readonly ComposerPlacement[] = ['top', 'bottom'];
+const CANVAS_FITS: readonly CanvasFit[] = ['full', 'available'];
+const HISTORY_PLACEMENTS: readonly HistoryPlacement[] = [
+  'composer-above',
+  'composer-below',
+  'canvas-top',
+  'canvas-bottom',
+];
+
 @customElement('uc-ai-editor')
 export class UcAiEditor extends LitElement {
   public static override styles = unsafeCSS(styles);
@@ -59,6 +89,14 @@ export class UcAiEditor extends LitElement {
    */
   @property()
   public source: string | null = null;
+
+  /**
+   * Filename to give the edited result. Lets an edit preserve the source file's
+   * original name instead of the provider's generic default. Only used in edit
+   * mode (when {@link source} is set).
+   */
+  @property({ attribute: 'source-filename' })
+  public sourceFilename: string | null = null;
 
   /** Uploadcare public key. Required to enable generate/edit. */
   @property()
@@ -88,8 +126,19 @@ export class UcAiEditor extends LitElement {
   @property({ type: Array, attribute: 'aspect-ratios', converter: (v) => (v ? parseAspectRatioList(v) : null) })
   public aspectRatios: AspectRatio[] | null = null;
 
-  @property({ attribute: 'l10n', type: Object })
-  public l10nOverrides: Partial<typeof enLocale> = {};
+  /** Active locale. The editor lazy-loads its built-in strings for this locale
+   *  (falling back to English) and layers `localeDefinitionOverride` on top. */
+  @property({ attribute: 'locale-name' })
+  public localeName = 'en';
+
+  /**
+   * Locale string overrides, keyed by locale name — the same shape as the file
+   * uploader's `localeDefinitionOverride`. The section matching {@link localeName}
+   * is layered on top of that locale's built-in strings, e.g.
+   * `{ en: { 'ai-enhancer-generate-btn': 'Make it!' } }`.
+   */
+  @property({ attribute: false })
+  public localeDefinitionOverride: Record<string, Partial<AiEnhancerLocale>> = {};
 
   /**
    * Presets-only mode: hides the free-text prompt so only the preset chips
@@ -98,6 +147,41 @@ export class UcAiEditor extends LitElement {
    */
   @property({ type: Boolean, attribute: 'presets-only' })
   public presetsOnly = false;
+
+  /** Which edge the composer sits on: `bottom` (default) or `top`. */
+  @property({ attribute: 'composer-placement' })
+  public composerPlacement: ComposerPlacement = 'bottom';
+
+  /**
+   * How the canvas sizes relative to the composer. `available` (default) shrinks
+   * the canvas to the space left by the composer, which is docked outside the
+   * image (history chips still overlay the canvas). `full` lets the canvas fill
+   * the whole area with the composer floating over it. Auto-hide always floats,
+   * so {@link composerAutoHide} implies `full`.
+   */
+  @property({ attribute: 'canvas-fit' })
+  public canvasFit: CanvasFit = 'available';
+
+  /**
+   * Where the history strip sits. `composer-above` (default) / `composer-below`
+   * are relative to the composer; `canvas-top` / `canvas-bottom` pin it to the
+   * canvas edge.
+   */
+  @property({ attribute: 'history-placement' })
+  public historyPlacement: HistoryPlacement = 'composer-above';
+
+  /**
+   * Auto-hide ("dock") the floating composer once an image exists: it drops to a
+   * small peek at the edge and raises when the pointer approaches its edge or it
+   * gains focus. Always floats the composer (implies {@link canvasFit} `full`);
+   * off by default.
+   */
+  @property({ type: Boolean, attribute: 'composer-auto-hide', reflect: true })
+  public composerAutoHide = false;
+
+  /** Where the toolbar (Cancel / Done) sits: `bottom` (default) or `top`. */
+  @property({ attribute: 'toolbar-placement' })
+  public toolbarPlacement: ToolbarPlacement = 'bottom';
 
   @state()
   private _prompt = '';
@@ -115,21 +199,17 @@ export class UcAiEditor extends LitElement {
   @query('uc-ai-prompt-row')
   private _promptRow?: UcAiPromptRow;
 
-  @query('.stage')
-  private _stageEl?: HTMLElement;
-
-  @query('.composer')
-  private _composerEl?: HTMLElement;
-
   @query('uc-ai-canvas')
   private _canvasEl?: UcAiCanvas;
-
-  /** Keeps the canvas viewport's reserved bottom space synced to the composer. */
-  private _composerObserver?: ResizeObserver;
 
   private readonly _gen = new GenerationController(this);
   private readonly _secure = new SecureUrlController(this);
   private _provider?: UploadcareDerivativeApi;
+
+  /** Effective strings for the active locale (built-ins + overrides). */
+  @state()
+  private _localeStrings: Partial<typeof enLocale> = enLocale;
+  private _localeToken = 0;
 
   public override willUpdate(changed: PropertyValues<this>): void {
     const providerConfigChanged =
@@ -172,58 +252,44 @@ export class UcAiEditor extends LitElement {
     // The ratio option set only depends on `aspectRatios`; drop the memo when it
     // changes so the picker child isn't handed a fresh array every render.
     if (changed.has('aspectRatios')) this._ratioOptionsCache.clear();
-  }
-
-  protected override firstUpdated(): void {
-    // Reserve room in the canvas viewport for the floating composer, so the
-    // image frame sits above it. Tracks the composer's live height (which grows
-    // with the history strip / multi-line prompt).
-    if (typeof ResizeObserver === 'function' && this._composerEl) {
-      this._composerObserver = new ResizeObserver(() => this._scheduleComposerSpace());
-      this._composerObserver.observe(this._composerEl);
+    // Resolve the active locale's strings (lazy-loads non-English built-ins, then
+    // layers `localeDefinitionOverride[localeName]` on top).
+    if (changed.has('localeName') || changed.has('localeDefinitionOverride')) {
+      void this._resolveLocale();
     }
-    this._syncComposerSpace();
   }
 
-  public override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._composerObserver?.disconnect();
-    if (this._composerSpaceRaf) cancelAnimationFrame(this._composerSpaceRaf);
-    this._composerSpaceRaf = 0;
-  }
-
-  private _composerSpaceRaf = 0;
-
-  /** Coalesce composer-resize notifications (typing grows the textarea) into one
-   *  rAF write, so we don't read+write layout synchronously on every keystroke. */
-  private _scheduleComposerSpace(): void {
-    if (this._composerSpaceRaf) return;
-    this._composerSpaceRaf = requestAnimationFrame(() => {
-      this._composerSpaceRaf = 0;
-      this._syncComposerSpace();
-    });
-  }
-
-  /** Bottom anchor (20px) + composer height + a 16px breathing gap. */
-  private _syncComposerSpace(): void {
-    const composer = this._composerEl;
-    const stage = this._stageEl;
-    if (!composer || !stage) return;
-    stage.style.setProperty('--uc-ai-composer-space', `${20 + composer.offsetHeight + 16}px`);
+  /** Load the active locale's built-in strings and layer its overrides on top. */
+  private async _resolveLocale(): Promise<void> {
+    const name = this.localeName || 'en';
+    const token = ++this._localeToken;
+    let base: Partial<typeof enLocale> = enLocale;
+    if (name !== 'en') {
+      try {
+        base = (await LOCALE_LOADERS[name]?.()) ?? enLocale;
+      } catch {
+        base = enLocale;
+      }
+    }
+    // A newer locale change superseded this async load — drop the stale result.
+    if (token !== this._localeToken) return;
+    const override = this.localeDefinitionOverride?.[name];
+    this._localeStrings = override ? { ...base, ...override } : base;
   }
 
   private _l(key: keyof typeof enLocale): string {
-    return translate(key, this.l10nOverrides);
+    return translate(key, this._localeStrings);
   }
 
   /** Friendly message for the current failure: the per-`error_code` string
-   *  (`ai-enhancer-error-<code>`, overridable via `l10n`) when one is defined,
-   *  otherwise the generic error message. */
+   *  (`ai-enhancer-error-<code>`, overridable via the locale) when one is
+   *  defined, otherwise the generic error message. */
   private _errorMessage(): string {
     const code = this._gen.errorCode;
     if (code) {
       const key = `ai-enhancer-error-${code}` as AiEnhancerLocaleKey;
-      const specific = this.l10nOverrides[key] ?? (enLocale as Record<string, string>)[key];
+      const specific =
+        (this._localeStrings as Record<string, string>)[key] ?? (enLocale as Record<string, string>)[key];
       if (specific) return specific;
     }
     return this._l('ai-enhancer-error');
@@ -340,6 +406,8 @@ export class UcAiEditor extends LitElement {
         // is sent — in edit that reshapes, otherwise the source AR is preserved.
         aspectRatio: isConcreteRatio(this._selectedRatio) ? this._selectedRatio : undefined,
         source: mode === 'edit' ? (this._currentSourceUuid ?? undefined) : undefined,
+        // In edit mode, keep the source file's name on the result (if provided).
+        filename: mode === 'edit' ? (this.sourceFilename ?? undefined) : undefined,
       });
       // Clear the prompt only on a produced result — a failed/aborted run keeps
       // the text so the user can retry or tweak it.
@@ -349,12 +417,14 @@ export class UcAiEditor extends LitElement {
     }
   }
 
-  /** Discard the current image (input or result) and return to generate mode. */
+  /** Discard the current image (input or result) and prompt history, returning
+   *  to a blank generate session. */
   private _onStartOver(): void {
     this.source = null;
     this._inputUrl = null;
     this._prompt = '';
     this._gen.reset();
+    this._gen.clearHistory();
     // Return the dot grid to its empty state regardless of mid-reveal state.
     this._canvasEl?.resetGrid();
   }
@@ -417,6 +487,12 @@ export class UcAiEditor extends LitElement {
 
   public override render(): TemplateResult {
     const mode = this._mode;
+    // "Start over" discards the current image and returns to a blank generate
+    // canvas, so it only makes sense for a generate session (edit mode reached
+    // via a generation). When the editor was opened to edit an existing image
+    // (`source` set — e.g. the uploader's AI-edit action), there's nothing to
+    // start over to, so it's hidden.
+    const showStartOver = mode === 'edit' && !this.source;
     const placeholderKey = MODES[mode].placeholderKey as keyof typeof enLocale;
     // The primary commits a generation result, so it's enabled only once one exists.
     const primaryDisabled = this._gen.busy || !this._gen.result;
@@ -428,14 +504,159 @@ export class UcAiEditor extends LitElement {
     const frameRatio = isConcreteRatio(this._selectedRatio)
       ? this._selectedRatio[0] / this._selectedRatio[1]
       : null;
-    const stageClasses = { stage: true, 'is-empty': !hasImage };
+    const stageClasses = {
+      stage: true,
+      'is-empty': !hasImage,
+    };
+
+    // Two orthogonal public axes: which edge the composer sits on, and whether
+    // the canvas fills the full area (composer overlays) or only the space left
+    // by the composer (composer docked outside the image).
+    const edge: 'top' | 'bottom' = COMPOSER_PLACEMENTS.includes(this.composerPlacement)
+      ? this.composerPlacement
+      : 'bottom';
+    const canvasFit = CANVAS_FITS.includes(this.canvasFit) ? this.canvasFit : 'available';
+    // `canvas-fit` alone decides overlay vs docked; auto-hide is orthogonal (an
+    // overlay composer slides out to a peek, a docked one collapses its height to
+    // a peek — see the stylesheet).
+    const composerOverlay = canvasFit === 'full';
+    const composerDocked = !composerOverlay;
+    // Internal layout token, e.g. `overlay-bottom` / `docked-top` — keeps the
+    // existing CSS class vocabulary.
+    const layoutToken = `${composerOverlay ? 'overlay' : 'docked'}-${edge}`;
+
+    const historyPlacement = HISTORY_PLACEMENTS.includes(this.historyPlacement)
+      ? this.historyPlacement
+      : 'composer-above';
+    const historyRelative = historyPlacement === 'composer-above' || historyPlacement === 'composer-below';
+
+    // The history strip rides inside the composer only for an OVERLAY composer
+    // with a relative placement. Otherwise it pins to a canvas edge and floats
+    // over the canvas — including the docked case, where the composer (prompt)
+    // sits outside the canvas but its chips still overlay it.
+    const historyInComposer = composerOverlay && historyRelative;
+    const historyPinnedEdge =
+      historyPlacement === 'canvas-top' ? 'top' : historyPlacement === 'canvas-bottom' ? 'bottom' : edge;
+
+    // Only mount the strip when it has something to show (results, or the
+    // "Start over" affordance); avoids a dead gap otherwise.
+    const showHistory = this._gen.history.length > 0 || showStartOver;
+    const historyTpl = showHistory
+      ? html`
+          <uc-ai-history
+            .entries=${this._gen.history}
+            .selectedUuid=${this._gen.result?.uuid ?? null}
+            ?show-start-over=${showStartOver}
+            start-over-label="${this._l('ai-enhancer-start-over')}"
+            list-label="${this._l('ai-enhancer-history-title')}"
+            .secureResolver=${this.secureDeliveryProxyUrlResolver}
+            @uc:select=${this._onSelectHistoryEntry}
+            @uc:start-over=${this._onStartOver}
+          ></uc-ai-history>
+        `
+      : nothing;
+
+    const promptRowTpl = html`
+      <uc-ai-prompt-row
+        .mode=${mode}
+        .value=${this._prompt}
+        .placeholder=${this._l(placeholderKey)}
+        .busy=${this._gen.busy}
+        .allowCustom=${!this.presetsOnly}
+        send-aria-label="${this._l('ai-enhancer-generate-btn')}"
+        @uc:input=${this._onPromptInput}
+        @uc:send=${this._onSend}
+      >
+        <uc-ai-chips
+          slot="chips"
+          .mode=${mode}
+          .busy=${this._gen.busy}
+          @uc:select=${this._onSelectTemplate}
+        ></uc-ai-chips>
+        ${
+          ratioOptions.length > 0
+            ? html`
+              <uc-ai-aspect-ratio
+                slot="aspect-ratio"
+                .options=${ratioOptions}
+                .selected=${this._selectedRatio}
+                .busy=${this._gen.busy}
+                .labelFor=${this._labelForOption}
+                aria-label-text="${this._l('ai-enhancer-aspect-ratio-aria')}"
+                @uc:select=${this._onSelectAspectRatio}
+              ></uc-ai-aspect-ratio>
+            `
+            : nothing
+        }
+      </uc-ai-prompt-row>
+    `;
+
+    // The composer wrapper. An overlay composer floats over the full canvas and
+    // (for a relative history) carries the strip; a docked composer holds only
+    // the prompt and sits outside the canvas (the canvas shrinks to fit it).
+    const composerTpl = html`
+      <div
+        class=${classMap({
+          composer: true,
+          'composer--overlay': composerOverlay,
+          'composer--docked': composerDocked,
+          [`composer--${layoutToken}`]: true,
+        })}
+      >
+        ${historyInComposer && historyPlacement === 'composer-above' ? historyTpl : nothing}
+        ${promptRowTpl}
+        ${historyInComposer && historyPlacement === 'composer-below' ? historyTpl : nothing}
+      </div>
+    `;
+
+    // Pinned to a canvas edge — an absolute strip floating over the canvas,
+    // independent of the composer (canvas placements, or a docked composer).
+    const pinnedHistoryTpl =
+      showHistory && !historyInComposer
+        ? html`<div
+            class=${classMap({
+              'history-pinned': true,
+              'history-pinned--docked': composerDocked,
+              [`history-pinned--canvas-${historyPinnedEdge}`]: true,
+            })}
+          >
+            ${historyTpl}
+          </div>`
+        : nothing;
+
+    // Auto-hide ("dock") chrome for an OVERLAY composer: a pointer catch-strip
+    // along its edge that raises it once it has slid out, plus a gradient overlay
+    // that dissolves its trailing edge into the transparent toolbar. Both are
+    // CSS-driven (via :has() — see the stylesheet). The fade is a separate overlay
+    // (not a mask on the composer) so it doesn't clip the chips' shadows. A docked
+    // composer auto-hides by collapsing in place, so it needs no chrome.
+    const dockChrome =
+      this.composerAutoHide && composerOverlay
+        ? html`
+            <div class=${classMap({ 'dock-hotzone': true, [`dock-hotzone--${edge}`]: true })}></div>
+            <div class=${classMap({ 'composer-fade': true, [`composer-fade--${edge}`]: true })}></div>
+          `
+        : nothing;
+
+    const toolbarTop = this.toolbarPlacement === 'top';
+    const footerTpl = html`
+      <uc-ai-footer
+        cancel-label="${this._l('ai-enhancer-cancel')}"
+        primary-label="${this._l('ai-enhancer-done-btn')}"
+        ?primary-disabled=${primaryDisabled}
+        @uc:cancel=${this._onCancel}
+        @uc:primary=${this._onPrimary}
+      ></uc-ai-footer>
+    `;
 
     return html`
       <div
-        class="shell"
+        class=${classMap({ shell: true, 'shell--has-image': hasImage })}
         role="region"
         aria-label="${this._l(mode === 'edit' ? 'ai-enhancer-edit-title' : 'ai-enhancer-generate-title')}"
       >
+        ${toolbarTop ? footerTpl : nothing}
+        ${composerDocked && edge === 'top' ? composerTpl : nothing}
         <div class=${classMap(stageClasses)}>
           <uc-ai-canvas
             .url=${this._previewUrl}
@@ -449,59 +670,9 @@ export class UcAiEditor extends LitElement {
             exit-fullscreen-label="${this._l('ai-enhancer-exit-fullscreen')}"
           ></uc-ai-canvas>
 
-          <div class="composer">
-            ${
-              // Only mount the strip when it has something to show (results, or
-              // the edit-mode "Start over"); avoids a dead gap in generate mode.
-              this._gen.history.length > 0 || mode === 'edit'
-                ? html`
-                  <uc-ai-history
-                    .entries=${this._gen.history}
-                    .selectedUuid=${this._gen.result?.uuid ?? null}
-                    ?show-start-over=${mode === 'edit'}
-                    start-over-label="${this._l('ai-enhancer-start-over')}"
-                    list-label="${this._l('ai-enhancer-history-title')}"
-                    .secureResolver=${this.secureDeliveryProxyUrlResolver}
-                    @uc:select=${this._onSelectHistoryEntry}
-                    @uc:start-over=${this._onStartOver}
-                  ></uc-ai-history>
-                `
-                : nothing
-            }
-
-            <uc-ai-prompt-row
-              .mode=${mode}
-              .value=${this._prompt}
-              .placeholder=${this._l(placeholderKey)}
-              .busy=${this._gen.busy}
-              .allowCustom=${!this.presetsOnly}
-              send-aria-label="${this._l('ai-enhancer-generate-btn')}"
-              @uc:input=${this._onPromptInput}
-              @uc:send=${this._onSend}
-            >
-              <uc-ai-chips
-                slot="chips"
-                .mode=${mode}
-                .busy=${this._gen.busy}
-                @uc:select=${this._onSelectTemplate}
-              ></uc-ai-chips>
-              ${
-                ratioOptions.length > 0
-                  ? html`
-                    <uc-ai-aspect-ratio
-                      slot="aspect-ratio"
-                      .options=${ratioOptions}
-                      .selected=${this._selectedRatio}
-                      .busy=${this._gen.busy}
-                      .labelFor=${this._labelForOption}
-                      aria-label-text="${this._l('ai-enhancer-aspect-ratio-aria')}"
-                      @uc:select=${this._onSelectAspectRatio}
-                    ></uc-ai-aspect-ratio>
-                  `
-                  : nothing
-              }
-            </uc-ai-prompt-row>
-          </div>
+          ${dockChrome}
+          ${pinnedHistoryTpl}
+          ${composerOverlay ? composerTpl : nothing}
 
           ${
             this._gen.error
@@ -511,14 +682,8 @@ export class UcAiEditor extends LitElement {
               : nothing
           }
         </div>
-
-        <uc-ai-footer
-          cancel-label="${this._l('ai-enhancer-cancel')}"
-          primary-label="${this._l('ai-enhancer-done-btn')}"
-          ?primary-disabled=${primaryDisabled}
-          @uc:cancel=${this._onCancel}
-          @uc:primary=${this._onPrimary}
-        ></uc-ai-footer>
+        ${composerDocked && edge === 'bottom' ? composerTpl : nothing}
+        ${toolbarTop ? nothing : footerTpl}
       </div>
     `;
   }

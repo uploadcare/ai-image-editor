@@ -166,6 +166,224 @@ describe('<uc-ai-editor>', () => {
     await el.updateComplete;
     expect(editorMode(el)).toBe('generate');
     expect(canvasUrl(el)).toBeNull();
+    // Start over also clears the prompt history (the strip unmounts).
+    await vi.waitFor(() => expect(historyEl(el)).toBeNull());
+  });
+
+  it('does not render Start over in edit mode opened with a source (uploader AI-edit)', async () => {
+    const el = mount(STAGING);
+    el.source = SAMPLE_UUID;
+    await el.updateComplete;
+    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
+    await el.updateComplete;
+
+    // Editing an existing image has nothing to "start over" to — the affordance
+    // is absent (and, with no generation history yet, the strip isn't mounted).
+    const history = historyEl(el);
+    const startOver = history?.shadowRoot?.querySelector('.startover__btn') ?? null;
+    expect(startOver).toBeNull();
+  });
+
+  it('places the composer per composer-placement + canvas-fit', async () => {
+    const el = mount(STAGING);
+    el.canvasFit = 'full';
+    el.composerPlacement = 'bottom';
+    await el.updateComplete;
+    const shell = el.shadowRoot!.querySelector('.shell')!;
+    const stage = () => shell.querySelector('.stage')!;
+    const composer = () => shell.querySelector('.composer')!;
+
+    // canvas-fit full → composer floats over the full canvas (inside the stage).
+    expect(composer().classList.contains('composer--overlay-bottom')).toBe(true);
+    expect(stage().contains(composer())).toBe(true);
+
+    el.composerPlacement = 'top';
+    await el.updateComplete;
+    expect(composer().classList.contains('composer--overlay-top')).toBe(true);
+    expect(stage().contains(composer())).toBe(true);
+
+    // canvas-fit available → composer docked outside the stage so the canvas
+    // shrinks. `top` sits before the stage…
+    el.canvasFit = 'available';
+    el.composerPlacement = 'top';
+    await el.updateComplete;
+    expect(composer().classList.contains('composer--docked')).toBe(true);
+    expect(stage().contains(composer())).toBe(false);
+    let kids = [...shell.children];
+    expect(kids.indexOf(composer())).toBeLessThan(kids.indexOf(stage()));
+
+    // …`bottom` after it.
+    el.composerPlacement = 'bottom';
+    await el.updateComplete;
+    kids = [...shell.children];
+    expect(kids.indexOf(composer())).toBeGreaterThan(kids.indexOf(stage()));
+  });
+
+  it('defaults to a docked composer at the bottom', async () => {
+    const el = mount(STAGING);
+    await el.updateComplete;
+    const composer = el.shadowRoot!.querySelector('.composer')!;
+    expect(el.composerPlacement).toBe('bottom');
+    expect(el.canvasFit).toBe('available');
+    expect(composer.classList.contains('composer--docked-bottom')).toBe(true);
+  });
+
+  it('places the history strip per history-placement (overlay composer)', async () => {
+    stubFetch({ uuid: 'r' });
+    const el = mount(STAGING);
+    el.canvasFit = 'full'; // relative history rides an overlay composer
+    await el.updateComplete;
+    typePrompt(el, 'a tiger');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(editorMode(el)).toBe('edit')); // a result mounts the strip
+    await el.updateComplete;
+
+    const shell = el.shadowRoot!.querySelector('.shell')!;
+    const history = () => shell.querySelector('uc-ai-history')!;
+    const composer = () => shell.querySelector('.composer')!;
+    const stage = () => shell.querySelector('.stage')!;
+    const promptRow = () => composer().querySelector('uc-ai-prompt-row')!;
+
+    // composer-above (default): inside the composer, before the prompt row.
+    expect(composer().contains(history())).toBe(true);
+    let kids = [...composer().children];
+    expect(kids.indexOf(history())).toBeLessThan(kids.indexOf(promptRow()));
+
+    // composer-below: inside the composer, after the prompt row.
+    el.historyPlacement = 'composer-below';
+    await el.updateComplete;
+    kids = [...composer().children];
+    expect(kids.indexOf(history())).toBeGreaterThan(kids.indexOf(promptRow()));
+
+    // canvas-top: pinned in the stage, not inside the composer.
+    el.historyPlacement = 'canvas-top';
+    await el.updateComplete;
+    expect(composer().contains(history())).toBe(false);
+    const pinned = stage().querySelector('.history-pinned')!;
+    expect(pinned.classList.contains('history-pinned--canvas-top')).toBe(true);
+    expect(pinned.contains(history())).toBe(true);
+  });
+
+  it('pins the history over the canvas when the composer is docked-out', async () => {
+    stubFetch({ uuid: 'r' });
+    const el = mount(STAGING); // docked at the bottom by default
+    await el.updateComplete;
+    typePrompt(el, 'a tiger');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
+    await el.updateComplete;
+
+    const shell = el.shadowRoot!.querySelector('.shell')!;
+    const stage = shell.querySelector('.stage')!;
+    const composer = shell.querySelector('.composer')!;
+    const history = shell.querySelector('uc-ai-history')!;
+
+    // The composer (prompt) is docked outside the canvas; the history chips
+    // float over the canvas (pinned), not inside the docked composer.
+    expect(stage.contains(composer)).toBe(false);
+    expect(composer.contains(history)).toBe(false);
+    const pinned = stage.querySelector('.history-pinned')!;
+    expect(pinned.contains(history)).toBe(true);
+    expect(pinned.classList.contains('history-pinned--canvas-bottom')).toBe(true);
+  });
+
+  it('places the toolbar per toolbar-placement', async () => {
+    const el = mount(STAGING);
+    await el.updateComplete;
+    const shell = el.shadowRoot!.querySelector('.shell')!;
+    const footer = () => shell.querySelector('uc-ai-footer')!;
+    const stage = () => shell.querySelector('.stage')!;
+
+    // Default: toolbar at the bottom (after the stage).
+    let kids = [...shell.children];
+    expect(kids.indexOf(footer())).toBeGreaterThan(kids.indexOf(stage()));
+
+    // Top: toolbar before the stage.
+    el.toolbarPlacement = 'top';
+    await el.updateComplete;
+    kids = [...shell.children];
+    expect(kids.indexOf(footer())).toBeLessThan(kids.indexOf(stage()));
+  });
+
+  it('docks the overlay composer (renders the dock-hotzone) when composer-auto-hide is on', async () => {
+    const el = mount(STAGING);
+    el.canvasFit = 'full'; // an overlay (floating) composer
+    el.composerAutoHide = true;
+    el.source = SAMPLE_UUID; // edit mode + an image to dock against
+    await el.updateComplete;
+    await vi.waitFor(() => expect(canvasUrl(el)).toBeTruthy());
+    await el.updateComplete;
+
+    // The CSS docking keys off this reflected host attribute.
+    expect(el.hasAttribute('composer-auto-hide')).toBe(true);
+
+    // A pointer catch-strip is rendered on the composer's edge (bottom by default).
+    const hotzone = el.shadowRoot!.querySelector('.dock-hotzone');
+    expect(hotzone).toBeTruthy();
+    expect(hotzone!.classList.contains('dock-hotzone--bottom')).toBe(true);
+  });
+
+  it('resolves locale strings from localeName + locale-keyed localeDefinitionOverride', async () => {
+    const el = mount(STAGING);
+    const cancelLabel = () => el.shadowRoot!.querySelector('uc-ai-footer')!.getAttribute('cancel-label');
+
+    // Override is keyed by locale name (same shape as the uploader's config).
+    el.localeDefinitionOverride = { en: { 'ai-enhancer-cancel': 'Dismiss' } };
+    await el.updateComplete;
+    await vi.waitFor(() => expect(cancelLabel()).toBe('Dismiss'));
+
+    // Switching the active locale lazy-loads that locale's built-in strings.
+    el.localeName = 'de';
+    await vi.waitFor(() => expect(cancelLabel()).toBe('Abbrechen'));
+  });
+
+  it('does not dock (no hotzone) when auto-hide is disabled', async () => {
+    const el = mount(STAGING);
+    el.source = SAMPLE_UUID;
+    await el.updateComplete;
+    await vi.waitFor(() => expect(canvasUrl(el)).toBeTruthy());
+
+    // Disabled (default): no dock-hotzone, no reserved space.
+    expect(el.shadowRoot!.querySelector('.dock-hotzone')).toBeNull();
+    expect(el.hasAttribute('composer-auto-hide')).toBe(false);
+  });
+
+  it('keeps a docked composer docked under auto-hide (no overlay, no hotzone), independent of canvas-fit', async () => {
+    const el = mount(STAGING);
+    el.source = SAMPLE_UUID;
+    el.composerAutoHide = true;
+    el.composerPlacement = 'bottom';
+    el.canvasFit = 'available';
+    await el.updateComplete;
+    await vi.waitFor(() => expect(canvasUrl(el)).toBeTruthy());
+    await el.updateComplete;
+
+    // Auto-hide is orthogonal to canvas-fit: it does NOT force `full`. A docked
+    // composer stays docked and hides by collapsing in place (so no overlay
+    // positioning and no dock-hotzone — that chrome is overlay-only).
+    expect(el.canvasFit).toBe('available');
+    const composer = el.shadowRoot!.querySelector('.composer')!;
+    expect(composer.classList.contains('composer--docked')).toBe(true);
+    expect(composer.classList.contains('composer--overlay')).toBe(false);
+    expect(el.shadowRoot!.querySelector('.dock-hotzone')).toBeNull();
+  });
+
+  it('docks an overlay composer with a hotzone when auto-hide is on', async () => {
+    const el = mount(STAGING);
+    el.source = SAMPLE_UUID;
+    el.composerAutoHide = true;
+    el.canvasFit = 'full'; // floating composer
+    await el.updateComplete;
+    await vi.waitFor(() => expect(canvasUrl(el)).toBeTruthy());
+    await el.updateComplete;
+
+    const composer = el.shadowRoot!.querySelector('.composer')!;
+    expect(composer.classList.contains('composer--overlay')).toBe(true);
+    const hotzone = el.shadowRoot!.querySelector('.dock-hotzone');
+    expect(hotzone).toBeTruthy();
+    expect(hotzone!.classList.contains('dock-hotzone--bottom')).toBe(true);
   });
 
   it('updates internal prompt state when the user types in the prompt input', async () => {
@@ -315,6 +533,22 @@ describe('<uc-ai-editor>', () => {
     // Original is the default → no aspect_ratio on the wire; backend preserves it.
     expect(stub.generateBodies[0]!.aspect_ratio).toBeUndefined();
     expect(stub.generateBodies[0]!.source).toBe(SAMPLE_UUID);
+  });
+
+  it('sends sourceFilename as the result filename in edit mode (preserves the original name)', async () => {
+    const stub = stubFetch({ uuid: 'edited' });
+    const el = mount(STAGING);
+    el.source = SAMPLE_UUID;
+    el.sourceFilename = 'holiday-photo.jpg';
+    await el.updateComplete;
+    expect(editorMode(el)).toBe('edit');
+
+    typePrompt(el, 'add a hat');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
+    // The edit result is named after the source, not the provider's default.
+    expect(stub.generateBodies[0]!.filename).toBe('holiday-photo.jpg');
   });
 
   it('sends an explicit ratio when the user reshapes in edit mode', async () => {

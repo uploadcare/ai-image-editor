@@ -1,1 +1,8 @@
-export { type DoneDetail, UcAiEditor } from './ui/UcAiEditor';
+export {
+  type CanvasFit,
+  type ComposerPlacement,
+  type DoneDetail,
+  type HistoryPlacement,
+  type ToolbarPlacement,
+  UcAiEditor,
+} from './ui/UcAiEditor';

@@ -50,8 +50,52 @@
       <input id="source" type="text" size="36" placeholder="uuid to edit (blank = generate)" />
     </label>
     <label slot="controls">
+      Source filename
+      <input id="source-filename" type="text" size="16" placeholder="result name (edit mode)" />
+    </label>
+    <label slot="controls">
+      Composer placement
+      <select id="composer-placement">
+        <option value="bottom" selected>bottom (default)</option>
+        <option value="top">top</option>
+      </select>
+    </label>
+    <label slot="controls">
+      Canvas fit
+      <select id="canvas-fit">
+        <option value="available" selected>available (default)</option>
+        <option value="full">full</option>
+      </select>
+    </label>
+    <label slot="controls">
+      History placement
+      <select id="history-placement">
+        <option value="composer-above">composer-above (default)</option>
+        <option value="composer-below">composer-below</option>
+        <option value="canvas-top">canvas-top</option>
+        <option value="canvas-bottom">canvas-bottom</option>
+      </select>
+    </label>
+    <label slot="controls">
+      Toolbar placement
+      <select id="toolbar-placement">
+        <option value="bottom">bottom (default)</option>
+        <option value="top">top</option>
+      </select>
+    </label>
+    <label slot="controls">
+      Aspect ratios
+      <input id="aspect-ratios" type="text" size="16" placeholder="e.g. 16:9 1:1 4:3" />
+    </label>
+    <label slot="controls">
       Locale
       <select id="locale"></select>
+    </label>
+    <label slot="controls">
+      <input id="presets-only" type="checkbox" /> Presets only
+    </label>
+    <label slot="controls">
+      <input id="composer-auto-hide" type="checkbox" /> Composer auto-hide
     </label>
     <label slot="controls">
       <input id="branded" type="checkbox" /> Brand-themed
@@ -63,7 +107,7 @@
   <script type="module">
     import './demo-shell.ts';
     import '../src/index.ts';
-    import { LOCALE_LOADERS, SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
+    import { SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
 
     const ENVIRONMENTS = {
       // Production is the SDK default — no need to set URLs explicitly.
@@ -121,6 +165,40 @@
       editor.source = uuid || null;
       shell.log(uuid ? `source → ${uuid} (edit mode)` : 'source cleared (generate mode)');
     });
+    document.getElementById('source-filename').addEventListener('change', (e) => {
+      const name = e.target.value.trim();
+      editor.sourceFilename = name || null;
+      shell.log(`source-filename → ${name || '(none)'}`);
+    });
+    document.getElementById('composer-placement').addEventListener('change', (e) => {
+      editor.composerPlacement = e.target.value;
+      shell.log(`composer-placement → ${e.target.value}`);
+    });
+    document.getElementById('canvas-fit').addEventListener('change', (e) => {
+      editor.canvasFit = e.target.value;
+      shell.log(`canvas-fit → ${e.target.value}`);
+    });
+    document.getElementById('history-placement').addEventListener('change', (e) => {
+      editor.historyPlacement = e.target.value;
+      shell.log(`history-placement → ${e.target.value}`);
+    });
+    document.getElementById('toolbar-placement').addEventListener('change', (e) => {
+      editor.toolbarPlacement = e.target.value;
+      shell.log(`toolbar-placement → ${e.target.value}`);
+    });
+    document.getElementById('aspect-ratios').addEventListener('change', (e) => {
+      const value = e.target.value.trim();
+      editor.setAttribute('aspect-ratios', value);
+      shell.log(`aspect-ratios → ${value || '(default)'}`);
+    });
+    document.getElementById('presets-only').addEventListener('change', (e) => {
+      editor.presetsOnly = e.target.checked;
+      shell.log(`presets-only: ${e.target.checked}`);
+    });
+    document.getElementById('composer-auto-hide').addEventListener('change', (e) => {
+      editor.composerAutoHide = e.target.checked;
+      shell.log(`composer-auto-hide: ${e.target.checked}`);
+    });
 
     const localeSelect = document.getElementById('locale');
     for (const name of SUPPORTED_LOCALES) {
@@ -130,9 +208,10 @@
       localeSelect.append(opt);
     }
     localeSelect.value = 'en';
-    localeSelect.addEventListener('change', async (e) => {
+    localeSelect.addEventListener('change', (e) => {
       const name = e.target.value;
-      editor.l10nOverrides = await LOCALE_LOADERS[name]();
+      // The editor lazy-loads the locale's built-in strings itself.
+      editor.localeName = name;
       shell.log(`locale → ${name}`);
     });
   </script>
