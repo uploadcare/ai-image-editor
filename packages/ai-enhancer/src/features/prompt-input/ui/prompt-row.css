@@ -11,8 +11,8 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--uc-ai-floating-border, transparent);
-  /* Same rounding formula as the file-uploader modal: radius × 1.75. Driven by
-     top/bottom tokens so auto-hide can flatten just the tucked-away edge. */
+  /* The base radius (via the composer-radius tokens). Split top/bottom so
+     auto-hide can flatten just the tucked-away edge. */
   border-radius: var(--uc-ai-composer-radius-top) var(--uc-ai-composer-radius-top)
     var(--uc-ai-composer-radius-bottom) var(--uc-ai-composer-radius-bottom);
   transition:
@@ -24,17 +24,17 @@
   /* Overflow visible so the aspect-ratio menu can open above the card. */
   overflow: visible;
   /* The inner controls (chips, ratio, send) sit one body-padding in from the
-     rounded corner, so give them a concentric radius (outer − inset) — otherwise
-     their corners don't parallel the composer's and look mismatched. Scoped to
-     the card, so buttons elsewhere keep the base radius. */
-  --uc-ai-radius-button: max(6px, calc(var(--uc-ai-radius) * 1.75 - 10px));
+     rounded corner, so give them a concentric radius — the card's radius minus
+     the inset they sit at — otherwise their corners don't parallel the card's.
+     Clamped to 0 so it never goes negative. Scoped to the card. */
+  --uc-ai-radius-button: max(0px, calc(var(--uc-ai-composer-radius) - var(--uc-ai-padding)));
 }
 
 .body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px;
+  gap: var(--uc-ai-padding);
+  padding: var(--uc-ai-padding);
 }
 
 .input {
