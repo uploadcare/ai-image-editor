@@ -57,7 +57,11 @@
   background: transparent;
   color: inherit;
   overflow: visible;
-  width: 180px;
+  /* Size to the widest option so localized labels don't wrap; clamp so it stays
+     reasonable (very long labels then ellipsize — see `.option-label`). */
+  width: max-content;
+  min-width: 180px;
+  max-width: 320px;
   position-anchor: --ai-aspect-anchor;
   inset: auto;
   bottom: anchor(top);
@@ -134,12 +138,18 @@
   flex: 0 0 36px;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
+  white-space: nowrap;
   color: var(--uc-ai-foreground);
 }
 
 .option-label {
   flex: 1;
+  min-width: 0;
   color: var(--uc-ai-muted-foreground);
+  /* Keep each option on one line; ellipsize if it exceeds the clamped width. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (prefers-reduced-motion: reduce) {
