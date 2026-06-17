@@ -95,6 +95,9 @@
       <input id="presets-only" type="checkbox" /> Presets only
     </label>
     <label slot="controls">
+      <input id="custom-presets" type="checkbox" /> Custom presets
+    </label>
+    <label slot="controls">
       <input id="composer-auto-hide" type="checkbox" /> Composer auto-hide
     </label>
     <label slot="controls">
@@ -194,6 +197,23 @@
     document.getElementById('presets-only').addEventListener('change', (e) => {
       editor.presetsOnly = e.target.checked;
       shell.log(`presets-only: ${e.target.checked}`);
+    });
+    document.getElementById('custom-presets').addEventListener('change', (e) => {
+      // One mode-keyed property; modes left out keep their built-in presets.
+      editor.presets = e.target.checked
+        ? {
+            generate: [
+              { label: 'Logo', prompt: 'A minimal vector logo of ' },
+              { label: 'Sticker', prompt: 'A die-cut glossy sticker of ' },
+              { label: '3D render', prompt: 'A studio-lit 3D render of ' },
+            ],
+            edit: [
+              { label: 'Enhance', prompt: 'Enhance sharpness and lighting' },
+              { label: 'B&W', prompt: 'Convert to black and white' },
+            ],
+          }
+        : {};
+      shell.log(`custom-presets: ${e.target.checked}`);
     });
     document.getElementById('composer-auto-hide').addEventListener('change', (e) => {
       editor.composerAutoHide = e.target.checked;

@@ -1,6 +1,6 @@
 import { page } from '@vitest/browser/context';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { UcAiEditor as UcAiEditorType } from '../src/index';
+import { MODES, type UcAiEditor as UcAiEditorType } from '../src/index';
 import { cleanup } from './test-renderer';
 
 let UcAiEditorCtor: CustomElementConstructor;
@@ -113,6 +113,47 @@ describe('<uc-ai-editor>', () => {
     // The history strip only mounts once there are results (or in edit mode).
     expect(root?.querySelector('uc-ai-history')).toBeNull();
     expect(editorMode(el)).toBe('generate');
+  });
+
+  it('renders configurable prompt presets per mode', async () => {
+    const el = mount();
+    el.presets = {
+      generate: [
+        { label: 'Logo', prompt: 'A logo of ' },
+        { label: 'Sticker', prompt: 'A sticker of ' },
+      ],
+      edit: [{ label: 'Enhance', prompt: 'Enhance it' }],
+    };
+    await el.updateComplete;
+
+    const chipLabels = async (): Promise<string[]> => {
+      const chips = el.shadowRoot!.querySelector('uc-ai-chips') as unknown as { updateComplete: Promise<unknown>; shadowRoot: ShadowRoot } | null;
+      await chips?.updateComplete;
+      return [...(chips?.shadowRoot.querySelectorAll('.chip') ?? [])].map((c) => c.textContent!.trim());
+    };
+
+    // generate mode uses presets.generate…
+    expect(await chipLabels()).toEqual(['Logo', 'Sticker']);
+
+    // …and edit mode uses presets.edit.
+    el.source = SAMPLE_UUID;
+    await el.updateComplete;
+    expect(await chipLabels()).toEqual(['Enhance']);
+  });
+
+  it('falls back to built-in presets for modes left out of the presets map', async () => {
+    const el = mount();
+    el.presets = { edit: [{ label: 'Enhance', prompt: 'Enhance it' }] }; // generate omitted
+    await el.updateComplete;
+    const chips = el.shadowRoot!.querySelector('uc-ai-chips') as unknown as { shadowRoot: ShadowRoot };
+    expect(chips.shadowRoot.querySelectorAll('.chip').length).toBe(MODES.generate.presets.length);
+  });
+
+  it('hides the chips toolbar when a mode preset set is empty', async () => {
+    const el = mount();
+    el.presets = { generate: [] };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('uc-ai-chips')).toBeNull();
   });
 
   it('derives edit mode from a source uuid, generate mode without one', async () => {

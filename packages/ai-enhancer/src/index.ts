@@ -15,7 +15,7 @@ export {
   parseAspectRatioList,
   toAspectRatioOption,
 } from './entities/aspect-ratio';
-export { type AiEditorMode, type AiTemplate, MODES, type ModeMeta } from './entities/mode';
+export { type AiEditorMode, type AiPreset, type AiPresets, MODES, type ModeMeta } from './entities/mode';
 export {
   type AiProvider,
   type AiProviderRequest,
@@ -29,7 +29,7 @@ export { type AspectRatioSelectDetail, UcAiAspectRatio } from './features/aspect
 export { GenerationController, type HistoryEntry } from './features/generation';
 export { type HistorySelectDetail, UcAiHistory } from './features/prompt-history';
 export { type PromptInputDetail, UcAiPromptRow } from './features/prompt-input';
-export { type TemplateSelectDetail, UcAiChips } from './features/template-chips';
+export { type PresetSelectDetail, UcAiChips } from './features/preset-chips';
 export { enLocale, translate } from './shared/i18n';
 export { SecureUrlController } from './shared/lib/SecureUrlController';
 export {

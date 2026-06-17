@@ -1,10 +1,10 @@
 import { html, LitElement, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 
-import { type AiEditorMode, type AiTemplate, MODES } from '../../../entities/mode';
+import { type AiEditorMode, type AiPreset, MODES } from '../../../entities/mode';
 import styles from './chips.css?inline';
 
-export type TemplateSelectDetail = { template: AiTemplate };
+export type PresetSelectDetail = { preset: AiPreset };
 
 @customElement('uc-ai-chips')
 export class UcAiChips extends LitElement {
@@ -12,6 +12,13 @@ export class UcAiChips extends LitElement {
 
   @property()
   public mode: AiEditorMode = 'generate';
+
+  /**
+   * Quick-prompt presets to render. When unset (`null`), falls back to the
+   * built-in set for the active {@link mode}. An empty array renders no chips.
+   */
+  @property({ attribute: false })
+  public presets: AiPreset[] | null = null;
 
   @property({ type: Boolean })
   public busy = false;
@@ -38,7 +45,7 @@ export class UcAiChips extends LitElement {
   }
 
   protected override updated(): void {
-    // The template set changes with the mode, so re-measure after each render.
+    // The preset set changes with the mode, so re-measure after each render.
     this._updateFades();
   }
 
@@ -71,14 +78,14 @@ export class UcAiChips extends LitElement {
     e.preventDefault();
   }
 
-  private _select(template: AiTemplate): void {
+  private _select(preset: AiPreset): void {
     this.dispatchEvent(
-      new CustomEvent<TemplateSelectDetail>('uc:select', { detail: { template }, bubbles: true, composed: true }),
+      new CustomEvent<PresetSelectDetail>('uc:select', { detail: { preset }, bubbles: true, composed: true }),
     );
   }
 
   public override render(): TemplateResult {
-    const templates: AiTemplate[] = MODES[this.mode].templates;
+    const presets: AiPreset[] = this.presets ?? MODES[this.mode].presets;
 
     // The fade-left/right classes are managed imperatively in `_updateFades`; a
     // static `class` (not a binding) leaves them untouched across re-renders.
@@ -90,10 +97,10 @@ export class UcAiChips extends LitElement {
         @scroll=${this._updateFades}
         @wheel=${this._onWheel}
       >
-        ${templates.map(
-          (tpl) => html`
-            <button type="button" class="chip" @click=${() => this._select(tpl)} ?disabled=${this.busy}>
-              ${tpl.label}
+        ${presets.map(
+          (preset) => html`
+            <button type="button" class="chip" @click=${() => this._select(preset)} ?disabled=${this.busy}>
+              ${preset.label}
             </button>
           `,
         )}
