@@ -104,7 +104,9 @@
   padding: 6px 10px;
   background: transparent;
   border: 0;
-  border-radius: var(--uc-ai-radius-button);
+  /* Concentric with the menu: the menu radius minus the 5px the options are
+     inset by (the popover padding), so option corners parallel the menu's. */
+  border-radius: max(0px, calc(var(--uc-ai-radius-input) - 5px));
   cursor: pointer;
   color: var(--uc-ai-foreground);
   font: inherit;
