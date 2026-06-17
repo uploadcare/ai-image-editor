@@ -121,6 +121,11 @@ uc-ai-canvas {
 .composer {
   width: 700px;
   max-width: calc(100% - 40px);
+}
+/* Inner wrapper holding the history strip + prompt. Separated from `.composer`
+   so docked auto-hide can slide the whole group (history + prompt together) to a
+   peek via one transform, while `.composer` stays the fixed reserved slot. */
+.composer__content {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -302,56 +307,67 @@ uc-ai-canvas {
   height: 320px;
 }
 
-/* Auto-hide for a DOCKED composer: it sits outside the canvas, so it hides by
-   collapsing its height to a small peek — the canvas (flex: 1) expands to fill.
-   Collapsing means clipping (overflow: hidden), which would crop the card's drop
-   shadow; so the card hugs the composer (padding: 0) and the lift shadow moves
-   onto the COMPOSER, whose own box-shadow isn't clipped by its own overflow. The
-   dropped padding becomes margin (spacing the composer off the canvas/toolbar). */
+/* Auto-hide for a DOCKED composer. The prompt reserves a fixed flex slot (sized
+   by the prompt only — the history overlays the canvas, see below), so the canvas
+   (flex: 1) NEVER resizes when the composer hides or shows. Hiding slides the
+   content to a peek WITHIN that slot via `transform` (layout untouched → canvas
+   stays put); the freed part of the slot shows empty until revealed. Clipping is
+   directional (clip-path on the tuck edge), so the prompt's peek is clipped past
+   the toolbar while the history overlay and the drop shadow extend over the
+   canvas. The card keeps its own shadow/radius (they move with the content). */
 :host([composer-auto-hide]) .shell--has-image .composer--docked {
-  padding: 0;
   margin-block: 8px 14px;
-  overflow: hidden;
-  border-radius: var(--uc-ai-composer-radius-top) var(--uc-ai-composer-radius-top)
-    var(--uc-ai-composer-radius-bottom) var(--uc-ai-composer-radius-bottom);
-  box-shadow: var(--uc-ai-composer-shadow);
-  /* Close to the real (prompt-only) height so the expand animates over most of
-     its duration rather than snapping (the classic max-height jump). */
-  max-height: 220px;
-  transition:
-    max-height 0.5s var(--uc-ai-ease-out),
-    border-radius 0.4s var(--uc-ai-ease-out),
-    box-shadow 0.4s var(--uc-ai-ease-out);
+  position: relative;
+}
+:host([composer-auto-hide]) .shell--has-image .composer--docked .composer__content {
+  position: relative; /* anchor for the absolute history overlay */
+  transition: transform 0.5s var(--uc-ai-ease-out);
+}
+/* The history overlays the canvas above the prompt instead of taking flow space,
+   so the reserved slot (and the canvas) is sized by the PROMPT only. It rides
+   inside `.composer__content`, so it still slides to the peek with the prompt. */
+:host([composer-auto-hide]) .shell--has-image .composer--docked .composer__content uc-ai-history {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+:host([composer-auto-hide]) .shell--has-image .composer--docked-bottom .composer__content uc-ai-history {
+  bottom: calc(100% + 14px);
+}
+:host([composer-auto-hide]) .shell--has-image .composer--docked-top .composer__content uc-ai-history {
+  top: calc(100% + 14px);
+}
+/* Clip only the tuck edge (directional). Unlike `overflow: hidden`, this clips
+   the prompt's peek as it tucks past the toolbar edge while letting the history
+   overlay and the drop shadow extend freely over the canvas. Constant (not
+   toggled per state) so revealing never flashes the sliding prompt. */
+:host([composer-auto-hide]) .shell--has-image .composer--docked-bottom {
+  clip-path: inset(-200px -200px 0 -200px);
 }
 :host([composer-auto-hide]) .shell--has-image .composer--docked-top {
-  /* docked-top hides upward, so its breathing room flips. */
-  margin-block: 14px 8px;
+  clip-path: inset(0 -200px -200px -200px);
 }
-/* Collapse to a peek — unless the composer OR its pinned history chips are
-   hovered/focused, so approaching either reveals it. */
+/* Hidden — unless the composer (incl. its history) is hovered/focused, so
+   approaching it reveals it. Soften the shadow (drop the ambient glow) and slide
+   the content (prompt + the history riding above it) to a peek. */
 :host([composer-auto-hide])
-  .shell--has-image:not(:has(.composer--docked:hover)):not(:has(.composer--docked:focus-within)):not(
-    :has(.history-pinned:hover)
-  )
+  .shell--has-image:not(:has(.composer--docked:hover)):not(:has(.composer--docked:focus-within))
   .composer--docked {
-  max-height: 36px;
-  /* Same as the overlay peek: drop the ambient glow while collapsed. */
   --uc-ai-composer-shadow: var(--uc-ai-composer-shadow-peek);
 }
-/* …and sharpen only the edge that collapses away, keeping the visible peek edge round. */
 :host([composer-auto-hide])
-  .shell--has-image:not(:has(.composer--docked:hover)):not(:has(.composer--docked:focus-within)):not(
-    :has(.history-pinned:hover)
-  )
-  .composer--docked-bottom {
-  --uc-ai-composer-radius-bottom: 0px;
+  .shell--has-image:not(:has(.composer--docked:hover)):not(:has(.composer--docked:focus-within))
+  .composer--docked-bottom
+  .composer__content {
+  /* ~36px peek: content height (100%) + the composer's top padding (14px) − the
+     peek (36px). */
+  transform: translateY(calc(100% - 22px));
 }
 :host([composer-auto-hide])
-  .shell--has-image:not(:has(.composer--docked:hover)):not(:has(.composer--docked:focus-within)):not(
-    :has(.history-pinned:hover)
-  )
-  .composer--docked-top {
-  --uc-ai-composer-radius-top: 0px;
+  .shell--has-image:not(:has(.composer--docked:hover)):not(:has(.composer--docked:focus-within))
+  .composer--docked-top
+  .composer__content {
+  transform: translateY(calc(-100% + 22px));
 }
 
 uc-ai-history,
