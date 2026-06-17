@@ -15,7 +15,7 @@ import {
   parseAspectRatioList,
   toAspectRatioOption,
 } from '../../../entities/aspect-ratio';
-import { type AiEditorMode, MODES } from '../../../entities/mode';
+import { type AiEditorMode, type AiPresets, MODES } from '../../../entities/mode';
 import { UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
 import { type AiEnhancerLocale, type AiEnhancerLocaleKey, enLocale, LOCALE_LOADERS, translate } from '../../../shared/i18n';
@@ -25,13 +25,13 @@ import type { SecureDeliveryProxyUrlResolver } from '../../../shared/lib/secureD
 import '../../../features/aspect-ratio-select';
 import '../../../features/prompt-history';
 import '../../../features/prompt-input';
-import '../../../features/template-chips';
+import '../../../features/preset-chips';
 import '../../../shared/ui/canvas';
 import '../../../shared/ui/footer';
 import type { AspectRatioSelectDetail } from '../../../features/aspect-ratio-select';
 import type { HistorySelectDetail } from '../../../features/prompt-history';
 import type { PromptInputDetail, UcAiPromptRow } from '../../../features/prompt-input';
-import type { TemplateSelectDetail } from '../../../features/template-chips';
+import type { PresetSelectDetail } from '../../../features/preset-chips';
 import type { UcAiCanvas } from '../../../shared/ui/canvas';
 import styles from './ai-editor.css?inline';
 
@@ -147,6 +147,18 @@ export class UcAiEditor extends LitElement {
    */
   @property({ type: Boolean, attribute: 'presets-only' })
   public presetsOnly = false;
+
+  /**
+   * Quick-prompt presets (the chips above the prompt), keyed by mode. Each preset
+   * is `{ label, prompt }`: clicking a chip fills the prompt with `prompt`. Modes
+   * left out use their built-in set; an empty array hides that mode's chips, e.g.
+   * `{ generate: [{ label: 'Logo', prompt: 'A logo of ' }], edit: [] }`.
+   *
+   * Keyed by {@link AiEditorMode} (and partial), so new modes/capabilities (e.g.
+   * `outpaint`) extend this additively — without breaking existing configs.
+   */
+  @property({ attribute: false })
+  public presets: AiPresets = {};
 
   /** Which edge the composer sits on: `bottom` (default) or `top`. */
   @property({ attribute: 'composer-placement' })
@@ -453,8 +465,8 @@ export class UcAiEditor extends LitElement {
     this._selectedRatio = e.detail.value;
   }
 
-  private _onSelectTemplate(e: CustomEvent<TemplateSelectDetail>): void {
-    this._prompt = e.detail.template.prompt;
+  private _onSelectPreset(e: CustomEvent<PresetSelectDetail>): void {
+    this._prompt = e.detail.preset.prompt;
     // With no free-text prompt, the preset is the whole action — generate now.
     if (this.presetsOnly) {
       void this._generate();
@@ -494,6 +506,8 @@ export class UcAiEditor extends LitElement {
     // start over to, so it's hidden.
     const showStartOver = mode === 'edit' && !this.source;
     const placeholderKey = MODES[mode].placeholderKey as keyof typeof enLocale;
+    // Quick-prompt chips: the per-mode preset override if set, else the built-in set.
+    const activePresets = this.presets?.[mode] ?? MODES[mode].presets;
     // The primary commits a generation result, so it's enabled only once one exists.
     const primaryDisabled = this._gen.busy || !this._gen.result;
 
@@ -567,12 +581,19 @@ export class UcAiEditor extends LitElement {
         @uc:input=${this._onPromptInput}
         @uc:send=${this._onSend}
       >
-        <uc-ai-chips
-          slot="chips"
-          .mode=${mode}
-          .busy=${this._gen.busy}
-          @uc:select=${this._onSelectTemplate}
-        ></uc-ai-chips>
+        ${
+          activePresets.length > 0
+            ? html`
+              <uc-ai-chips
+                slot="chips"
+                .mode=${mode}
+                .presets=${activePresets}
+                .busy=${this._gen.busy}
+                @uc:select=${this._onSelectPreset}
+              ></uc-ai-chips>
+            `
+            : nothing
+        }
         ${
           ratioOptions.length > 0
             ? html`

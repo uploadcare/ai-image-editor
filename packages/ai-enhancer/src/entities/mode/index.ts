@@ -1,1 +1,1 @@
-export { type AiEditorMode, type AiTemplate, MODES, type ModeMeta } from './model/modes';
+export { type AiEditorMode, type AiPreset, type AiPresets, MODES, type ModeMeta } from './model/modes';
