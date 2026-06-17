@@ -417,6 +417,9 @@ export class UcAiEditor extends LitElement {
         // "Original" (and generate's null) omit the ratio; only a concrete pick
         // is sent — in edit that reshapes, otherwise the source AR is preserved.
         aspectRatio: isConcreteRatio(this._selectedRatio) ? this._selectedRatio : undefined,
+        // Record the full selection (incl. "Original") so the history entry can
+        // restore the picker when re-selected.
+        ratioValue: this._selectedRatio,
         source: mode === 'edit' ? (this._currentSourceUuid ?? undefined) : undefined,
         // In edit mode, keep the source file's name on the result (if provided).
         filename: mode === 'edit' ? (this.sourceFilename ?? undefined) : undefined,
@@ -452,6 +455,9 @@ export class UcAiEditor extends LitElement {
   private _onSelectHistoryEntry(e: CustomEvent<HistorySelectDetail>): void {
     const { entry } = e.detail;
     this._prompt = entry.prompt;
+    // Restore the ratio that produced this entry (incl. "Original"), so the
+    // picker and canvas framing match the selected result.
+    this._selectedRatio = entry.ratio;
     this._gen.setResult({
       url: entry.url,
       uuid: entry.file.uuid,

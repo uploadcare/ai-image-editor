@@ -11,6 +11,7 @@ function entry(overrides: Partial<HistoryEntry> & { uuid?: string } = {}): Histo
     mode: overrides.mode ?? 'generate',
     url: overrides.url ?? `https://ucarecdn.com/${uuid}/`,
     file: { uuid } as HistoryEntry['file'],
+    ratio: overrides.ratio ?? null,
   };
 }
 

@@ -576,6 +576,47 @@ describe('<uc-ai-editor>', () => {
     expect(stub.generateBodies[0]!.source).toBe(SAMPLE_UUID);
   });
 
+  it('records the aspect ratio on a history entry and restores it when re-selected', async () => {
+    stubFetch({ uuid: 'r1' });
+    const el = mount({ ...STAGING, 'aspect-ratios': '16:9 1:1' });
+    await el.updateComplete;
+
+    const ratioEl = () => el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
+    const selected = () => (ratioEl() as unknown as { selected: unknown }).selected;
+    const pickOption = async (i: number) => {
+      (ratioEl().shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
+      await el.updateComplete;
+      (ratioEl().shadowRoot!.querySelectorAll('.option')[i] as HTMLButtonElement).click();
+      await el.updateComplete;
+    };
+
+    // Generate with 1:1 (generate options are [16:9, 1:1]).
+    await pickOption(1);
+    expect(selected()).toEqual([1, 1]);
+    typePrompt(el, 'a cat');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
+    await el.updateComplete;
+
+    const history = el.shadowRoot!.querySelector('uc-ai-history') as unknown as {
+      entries: Array<{ ratio: unknown }>;
+    };
+    expect(history.entries[0]!.ratio).toEqual([1, 1]);
+
+    // Change the ratio after the fact (edit options are [Original, 16:9, 1:1]).
+    await pickOption(1);
+    expect(selected()).toEqual([16, 9]);
+
+    // Re-selecting the history entry restores the 1:1 ratio it was made with.
+    const entry = history.entries[0];
+    el.shadowRoot!.querySelector('uc-ai-history')!.dispatchEvent(
+      new CustomEvent('uc:select', { detail: { entry }, bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+    expect(selected()).toEqual([1, 1]);
+  });
+
   it('sends sourceFilename as the result filename in edit mode (preserves the original name)', async () => {
     const stub = stubFetch({ uuid: 'edited' });
     const el = mount(STAGING);

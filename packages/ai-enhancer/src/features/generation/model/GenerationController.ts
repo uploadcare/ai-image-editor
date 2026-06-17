@@ -1,6 +1,6 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import type { AspectRatio } from '../../../entities/aspect-ratio';
+import type { AspectRatio, AspectRatioValue } from '../../../entities/aspect-ratio';
 import type { AiEditorMode } from '../../../entities/mode';
 import { AiProviderError, type AiProvider, type AiProviderResult } from '../../../entities/provider';
 
@@ -10,6 +10,9 @@ export type HistoryEntry = {
   mode: AiEditorMode;
   url: string;
   file: UploadcareFile;
+  /** The ratio selection that produced this entry, so re-selecting it restores
+   *  the picker (incl. "Original"). `null` when none was active. */
+  ratio: AspectRatioValue | null;
 };
 
 export type RunArgs = {
@@ -17,6 +20,10 @@ export type RunArgs = {
   prompt: string;
   mode: AiEditorMode;
   aspectRatio?: AspectRatio;
+  /** The full ratio selection (incl. the "Original" sentinel / null) at run time,
+   *  recorded on the history entry so it can be restored on re-select. The
+   *  provider still receives only the concrete {@link aspectRatio}. */
+  ratioValue?: AspectRatioValue | null;
   /** UUID of the source image to edit (when `mode` is `edit`). */
   source?: string;
   /** Desired output filename (e.g. preserve the edited file's original name). */
@@ -110,6 +117,7 @@ export class GenerationController implements ReactiveController {
           mode: result.mode,
           url: result.url,
           file: result.file,
+          ratio: args.ratioValue ?? null,
         },
         ...this.history,
       ].slice(0, MAX_HISTORY);
