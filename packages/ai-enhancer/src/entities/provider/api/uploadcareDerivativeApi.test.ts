@@ -54,6 +54,23 @@ describe('UploadcareDerivativeApi', () => {
     });
   });
 
+  it('forwards request metadata to the generate endpoint', async () => {
+    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
+    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
+    await provider.generate({ prompt: 'x', mode: 'generate', metadata: { source: 'ai-enhancer' } });
+    const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
+    expect(readSentBody(init).metadata).toEqual({ source: 'ai-enhancer' });
+  });
+
+  it('forwards request metadata to the edit endpoint', async () => {
+    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-e' }, [{ status: 'success', uuid: 'edited' }]);
+    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
+    await provider.generate({ prompt: 'x', mode: 'edit', source: 'src', metadata: { source: 'ai-enhancer' } });
+    const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
+    expect(url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
+    expect(readSentBody(init).metadata).toEqual({ source: 'ai-enhancer' });
+  });
+
   it('uses 1:1 when aspectRatio is missing or invalid', async () => {
     const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });

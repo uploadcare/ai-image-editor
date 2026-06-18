@@ -1,4 +1,4 @@
-import type { UploadcareFile } from '@uploadcare/upload-client';
+import type { Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import type { AspectRatio } from '../../aspect-ratio';
 import type { AiEditorMode } from '../../mode';
 
@@ -15,6 +15,7 @@ export type AiProviderRequest = {
   /** Desired output filename. Falls back to the provider's configured default. */
   filename?: string;
   signal?: AbortSignal;
+  metadata?: Metadata;
 };
 
 export type AiProviderResult = {

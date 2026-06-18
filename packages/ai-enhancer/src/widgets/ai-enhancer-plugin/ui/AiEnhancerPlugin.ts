@@ -1,4 +1,5 @@
 import type { UploaderPlugin } from '@uploadcare/file-uploader';
+import type { Metadata } from '@uploadcare/upload-client';
 import { type AspectRatio, isValidAspectRatio, POPULAR_ASPECT_RATIOS } from '../../../entities/aspect-ratio';
 import { type AiEnhancerLocale, enLocale, LOCALE_LOADERS } from '../../../shared/i18n';
 import { ICON_EDIT_AI, ICON_GENERATE } from '../../../shared/ui/icons';
@@ -225,6 +226,34 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         };
         refreshProviderConfig();
 
+        // Forward the uploader's `metadata` config so the AI result carries the
+        // same metadata as a regular upload. The config is either a static bag or
+        // a per-file `(entry) => Metadata` callback. For a callback we resolve it
+        // against the source entry being edited; a generate has no input file, so
+        // the callback can't run and metadata is left unset for that case.
+        const resolveConfigMetadata = async (): Promise<Metadata | undefined> => {
+          const meta = config.get('metadata');
+          if (!meta) return undefined;
+          if (typeof meta !== 'function') return meta;
+          if (!params.sourceInternalId) return undefined;
+          try {
+            return await meta(uploaderApi.getOutputItem(params.sourceInternalId));
+          } catch {
+            // Source entry gone, or the callback threw — fall back to no metadata.
+            return undefined;
+          }
+        };
+        // The callback form may be async, so the assignment lands a microtask
+        // later; a token drops a stale resolution if `metadata` changes meanwhile.
+        let metadataToken = 0;
+        const refreshMetadata = () => {
+          const token = ++metadataToken;
+          void resolveConfigMetadata().then((meta) => {
+            if (token === metadataToken) editor.metadata = meta;
+          });
+        };
+        refreshMetadata();
+
         // The editor owns locale loading + overrides; pass the uploader's
         // `localeName` and (locale-keyed) `localeDefinitionOverride` straight through.
         const refreshLocale = () => {
@@ -243,6 +272,7 @@ export const AiEnhancerPlugin: UploaderPlugin = {
           config.subscribe('cdnCname', refreshProviderConfig),
           config.subscribe('cdnCnamePrefixed', refreshProviderConfig),
           config.subscribe('secureDeliveryProxyUrlResolver', refreshProviderConfig),
+          config.subscribe('metadata', refreshMetadata),
           config.subscribe('localeName', refreshLocale),
           config.subscribe('localeDefinitionOverride', refreshLocale),
           config.subscribe('cropPreset', (value) => {

@@ -1,8 +1,8 @@
-import type { UploadcareFile } from '@uploadcare/upload-client';
+import type { Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { AspectRatio, AspectRatioValue } from '../../../entities/aspect-ratio';
 import type { AiEditorMode } from '../../../entities/mode';
-import { AiProviderError, type AiProvider, type AiProviderResult } from '../../../entities/provider';
+import { type AiProvider, AiProviderError, type AiProviderResult } from '../../../entities/provider';
 
 export type HistoryEntry = {
   id: string;
@@ -28,6 +28,8 @@ export type RunArgs = {
   source?: string;
   /** Desired output filename (e.g. preserve the edited file's original name). */
   filename?: string;
+  /** Arbitrary key/value metadata to attach to the resulting Uploadcare file. */
+  metadata?: Metadata;
 };
 
 const MAX_HISTORY = 20;
@@ -105,6 +107,7 @@ export class GenerationController implements ReactiveController {
         aspectRatio: args.aspectRatio,
         source: args.source,
         filename: args.filename,
+        metadata: args.metadata,
         signal: controller.signal,
       });
       if (controller.signal.aborted) return null;
