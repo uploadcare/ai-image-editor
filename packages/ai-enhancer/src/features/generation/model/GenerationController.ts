@@ -82,6 +82,13 @@ export class GenerationController implements ReactiveController {
     this._host.requestUpdate();
   }
 
+  /** Replace the strip with entries hydrated from storage (e.g. when the editor
+   *  opens on a source whose lineage was generated in a past session). */
+  public setHistory(entries: HistoryEntry[]): void {
+    this.history = entries.slice(0, MAX_HISTORY);
+    this._host.requestUpdate();
+  }
+
   public setResult(result: AiProviderResult): void {
     this.resultUrl = result.url;
     this.result = result;
