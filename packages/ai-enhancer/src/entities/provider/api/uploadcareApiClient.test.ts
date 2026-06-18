@@ -42,6 +42,19 @@ describe('UploadcareApiClient', () => {
       expect(JSON.parse(init.body as string).store).toBe(true);
     });
 
+    it('includes metadata only when provided', async () => {
+      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+
+      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
+      expect(JSON.parse((fetchImpl.mock.calls[0]![1] as RequestInit).body as string).metadata).toBeUndefined();
+
+      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png', metadata: { source: 'ai-enhancer' } });
+      expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).metadata).toEqual({
+        source: 'ai-enhancer',
+      });
+    });
+
     it('honours baseUrl override', async () => {
       const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'j' }));
       const client = new UploadcareApiClient({
@@ -122,6 +135,19 @@ describe('UploadcareApiClient', () => {
 
       await client.edit({ prompt: 'x', source: 'u', filename: 'f.png', aspectRatio: [16, 9] });
       expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).aspect_ratio).toEqual([16, 9]);
+    });
+
+    it('includes metadata only when provided', async () => {
+      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+
+      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png' });
+      expect(JSON.parse((fetchImpl.mock.calls[0]![1] as RequestInit).body as string).metadata).toBeUndefined();
+
+      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png', metadata: { source: 'ai-enhancer' } });
+      expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).metadata).toEqual({
+        source: 'ai-enhancer',
+      });
     });
 
     it('throws with status text on non-2xx', async () => {

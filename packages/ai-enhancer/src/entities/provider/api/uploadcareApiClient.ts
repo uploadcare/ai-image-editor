@@ -1,4 +1,4 @@
-import type { FileInfo } from '@uploadcare/upload-client';
+import type { FileInfo, Metadata } from '@uploadcare/upload-client';
 import type { SnakeCasedPropertiesDeep } from '../../../shared/lib/camelizeKeys';
 import { AiProviderError } from '../model/types';
 
@@ -31,6 +31,7 @@ export type GenerateRequestParams = {
   filename: string;
   store?: 'auto' | boolean;
   signal?: AbortSignal;
+  metadata?: Metadata;
 };
 
 /** Parameters for an image→image edit request. */
@@ -43,6 +44,7 @@ export type EditRequestParams = {
   filename: string;
   store?: 'auto' | boolean;
   signal?: AbortSignal;
+  metadata?: Metadata;
 };
 
 /** Job handle returned by the generate/edit endpoints. */
@@ -162,6 +164,7 @@ export class UploadcareApiClient {
       filename: params.filename,
     };
     if (params.store !== undefined) body.store = params.store;
+    if (params.metadata) body.metadata = params.metadata;
 
     await devValidate('generate', body);
     return this.startJob(new URL('/derivative/image/generate/', this.baseUrl), body, 'generate', params.signal);
@@ -177,6 +180,7 @@ export class UploadcareApiClient {
     };
     if (params.aspectRatio) body.aspect_ratio = [params.aspectRatio[0], params.aspectRatio[1]];
     if (params.store !== undefined) body.store = params.store;
+    if (params.metadata) body.metadata = params.metadata;
 
     await devValidate('edit', body);
     return this.startJob(new URL('/derivative/image/edit/', this.baseUrl), body, 'edit', params.signal);

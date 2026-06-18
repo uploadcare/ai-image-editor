@@ -1,6 +1,6 @@
 import { serializeCdnUrl } from '@uploadcare/cdn-url';
 import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-prefix/async';
-import { type FileInfo, UploadcareFile } from '@uploadcare/upload-client';
+import { type FileInfo, Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import { camelizeKeys } from '../../../shared/lib/camelizeKeys';
 import { isValidAspectRatio } from '../../aspect-ratio';
 import { AiProviderError, type AiProvider, type AiProviderRequest, type AiProviderResult } from '../model/types';
@@ -122,13 +122,14 @@ export class UploadcareDerivativeApi implements AiProvider {
     const filename = request.filename ?? this.filename;
     const job: UploadcareJobResponse =
       request.mode === 'edit'
-        ? await this.startEditJob(request, ratio, filename)
+        ? await this.startEditJob(request, ratio, filename, request.metadata)
         : await this.api.generate({
             prompt: request.prompt,
             aspectRatio: ratio ?? DEFAULT_RATIO,
             filename,
             store: this.store,
             signal: request.signal,
+            metadata: request.metadata,
           });
 
     if (!job.job_id) {
@@ -141,6 +142,7 @@ export class UploadcareDerivativeApi implements AiProvider {
     request: AiProviderRequest,
     ratio: [number, number] | undefined,
     filename: string,
+    metadata: Metadata | undefined,
   ): Promise<UploadcareJobResponse> {
     if (!request.source) {
       throw new Error('Uploadcare edit: a source image uuid is required');
@@ -152,6 +154,7 @@ export class UploadcareDerivativeApi implements AiProvider {
       filename,
       store: this.store,
       signal: request.signal,
+      metadata,
     });
   }
 

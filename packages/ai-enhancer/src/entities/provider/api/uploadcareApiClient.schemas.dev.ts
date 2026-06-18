@@ -16,6 +16,7 @@ const GenerateRequestSchema = z.object({
   aspect_ratio: z.tuple([z.number(), z.number()]),
   filename: z.string(),
   store: z.union([z.literal('auto'), z.boolean()]).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 });
 
 /**
@@ -32,6 +33,7 @@ const EditRequestSchema = z.object({
   aspect_ratio: z.tuple([z.number(), z.number()]).optional(),
   filename: z.string(),
   store: z.union([z.literal('auto'), z.boolean()]).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 });
 
 /** Job handle returned by the generate/edit POST. */

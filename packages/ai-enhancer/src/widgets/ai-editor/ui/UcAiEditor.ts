@@ -1,4 +1,4 @@
-import type { UploadcareFile } from '@uploadcare/upload-client';
+import type { Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
@@ -97,6 +97,14 @@ export class UcAiEditor extends LitElement {
    */
   @property({ attribute: 'source-filename' })
   public sourceFilename: string | null = null;
+
+  /**
+   * Key/value metadata attached to the resulting Uploadcare file, for both
+   * generate and edit. Same shape as the file uploader's `metadata` config
+   * (`Record<string, string>`), e.g. `{ source: 'ai-enhancer' }`. Property only.
+   */
+  @property({ attribute: false })
+  public metadata?: Metadata;
 
   /** Uploadcare public key. Required to enable generate/edit. */
   @property()
@@ -423,6 +431,8 @@ export class UcAiEditor extends LitElement {
         source: mode === 'edit' ? (this._currentSourceUuid ?? undefined) : undefined,
         // In edit mode, keep the source file's name on the result (if provided).
         filename: mode === 'edit' ? (this.sourceFilename ?? undefined) : undefined,
+        // Attach the configured metadata to the result, for both modes.
+        metadata: this.metadata,
       });
       // Clear the prompt only on a produced result — a failed/aborted run keeps
       // the text so the user can retry or tweak it.
