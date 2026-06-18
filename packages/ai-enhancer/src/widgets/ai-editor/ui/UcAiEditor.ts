@@ -20,6 +20,7 @@ import { UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
 import { type AiEnhancerLocale, type AiEnhancerLocaleKey, enLocale, LOCALE_LOADERS, translate } from '../../../shared/i18n';
 import { cdnPreviewUrl } from '../../../shared/lib/cdn';
+import { HistoryStorageController } from '../../../shared/lib/HistoryStorageController';
 import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
 import type { SecureDeliveryProxyUrlResolver } from '../../../shared/lib/secureDelivery';
 import '../../../features/aspect-ratio-select';
@@ -223,6 +224,7 @@ export class UcAiEditor extends LitElement {
   private _canvasEl?: UcAiCanvas;
 
   private readonly _gen = new GenerationController(this);
+  private readonly _history = new HistoryStorageController(this);
   private readonly _secure = new SecureUrlController(this);
   private _provider?: UploadcareDerivativeApi;
 
@@ -247,8 +249,15 @@ export class UcAiEditor extends LitElement {
     if (changed.has('secureDeliveryProxyUrlResolver')) {
       this._secure.setResolver(this.secureDeliveryProxyUrlResolver);
     }
-    if (changed.has('source')) {
-      this._gen.reset();
+    // Namespace persisted history by pubkey before any hydration below (both can
+    // land in the same update when the plugin sets pubkey and source together).
+    if (changed.has('pubkey')) this._history.setNamespace(this.pubkey);
+    if (changed.has('source')) this._gen.reset();
+    // Restore the strip for the current source's lineage from past sessions. Keyed
+    // off `source` (set by both the plugin file-action and the standalone attr), so
+    // reopening on a previously edited image rehydrates its results automatically.
+    if (changed.has('source') || changed.has('pubkey')) {
+      this._gen.setHistory(this._history.lineage(this.source));
     }
     // Re-resolve the input image's display URL once when its uuid or the
     // provider (CDN base) changed — covers both set in the same update.
@@ -417,6 +426,10 @@ export class UcAiEditor extends LitElement {
     const provider = this._provider;
     if (!prompt || !provider) return;
     const mode = this._mode;
+    // The result's parent is whatever image is on the canvas now (an edit chains
+    // off it; a generate has none). Captured before the run, since a produced
+    // result becomes the new `_currentSourceUuid`.
+    const parentUuid = mode === 'edit' ? this._currentSourceUuid : null;
     try {
       const result = await this._gen.run({
         provider,
@@ -436,7 +449,19 @@ export class UcAiEditor extends LitElement {
       });
       // Clear the prompt only on a produced result — a failed/aborted run keeps
       // the text so the user can retry or tweak it.
-      if (result) this._prompt = '';
+      if (result) {
+        this._prompt = '';
+        // Persist the result so its lineage survives a reload / activity unmount.
+        this._history.record({
+          uuid: result.uuid,
+          source: parentUuid,
+          url: result.url,
+          prompt: result.prompt,
+          mode: result.mode,
+          ratio: this._selectedRatio,
+          file: result.file,
+        });
+      }
     } catch (err) {
       this.dispatchEvent(new CustomEvent('uc:error', { detail: { error: err }, bubbles: true, composed: true }));
     }

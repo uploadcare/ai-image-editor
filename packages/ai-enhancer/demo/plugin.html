@@ -73,10 +73,6 @@
     const config = document.querySelector('uc-config');
     config.plugins = [AiEnhancerPlugin];
 
-    config.metadata = () => ({
-      TEST: "FUNC"
-    })
-
     const ENVIRONMENTS = {
       // Production is the SDK default — no need to set URLs explicitly.
       production: {
