@@ -136,7 +136,7 @@ describe('<uc-ai-editor>', () => {
     expect(await chipLabels()).toEqual(['Logo', 'Sticker']);
 
     // …and edit mode uses presets.edit.
-    el.source = SAMPLE_UUID;
+    el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
     expect(await chipLabels()).toEqual(['Enhance']);
   });
@@ -160,7 +160,7 @@ describe('<uc-ai-editor>', () => {
     const el = mount();
     await el.updateComplete;
     expect(editorMode(el)).toBe('generate');
-    el.source = SAMPLE_UUID;
+    el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
     expect(editorMode(el)).toBe('edit');
   });
@@ -213,7 +213,7 @@ describe('<uc-ai-editor>', () => {
 
   it('does not render Start over in edit mode opened with a source (uploader AI-edit)', async () => {
     const el = mount(STAGING);
-    el.source = SAMPLE_UUID;
+    el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
     await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
     await el.updateComplete;
@@ -353,7 +353,7 @@ describe('<uc-ai-editor>', () => {
     const el = mount(STAGING);
     el.canvasFit = 'full'; // an overlay (floating) composer
     el.composerAutoHide = true;
-    el.source = SAMPLE_UUID; // edit mode + an image to dock against
+    el.sourceUuid = SAMPLE_UUID; // edit mode + an image to dock against
     await el.updateComplete;
     await vi.waitFor(() => expect(canvasUrl(el)).toBeTruthy());
     await el.updateComplete;
@@ -383,7 +383,7 @@ describe('<uc-ai-editor>', () => {
 
   it('does not dock (no hotzone) when auto-hide is disabled', async () => {
     const el = mount(STAGING);
-    el.source = SAMPLE_UUID;
+    el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
     await vi.waitFor(() => expect(canvasUrl(el)).toBeTruthy());
 
@@ -394,7 +394,7 @@ describe('<uc-ai-editor>', () => {
 
   it('keeps a docked composer docked under auto-hide (no overlay, no hotzone), independent of canvas-fit', async () => {
     const el = mount(STAGING);
-    el.source = SAMPLE_UUID;
+    el.sourceUuid = SAMPLE_UUID;
     el.composerAutoHide = true;
     el.composerPlacement = 'bottom';
     el.canvasFit = 'available';
@@ -414,7 +414,7 @@ describe('<uc-ai-editor>', () => {
 
   it('docks an overlay composer with a hotzone when auto-hide is on', async () => {
     const el = mount(STAGING);
-    el.source = SAMPLE_UUID;
+    el.sourceUuid = SAMPLE_UUID;
     el.composerAutoHide = true;
     el.canvasFit = 'full'; // floating composer
     await el.updateComplete;
@@ -478,7 +478,7 @@ describe('<uc-ai-editor>', () => {
 
   it('keeps the primary disabled and fires no uc:done until a result exists (edit mode with a source)', async () => {
     const el = mount(STAGING);
-    el.source = SAMPLE_UUID;
+    el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
     expect(editorMode(el)).toBe('edit');
     const onDone = vi.fn();
@@ -555,7 +555,7 @@ describe('<uc-ai-editor>', () => {
   it('defaults edit mode to "Original" and omits aspect_ratio (preserving the source AR)', async () => {
     const stub = stubFetch({ uuid: 'edited' });
     const el = mount(STAGING);
-    el.source = SAMPLE_UUID;
+    el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
     expect(editorMode(el)).toBe('edit');
 
@@ -621,10 +621,13 @@ describe('<uc-ai-editor>', () => {
   it('names the result after the source file in edit mode (preserves the original name)', async () => {
     const stub = stubFetch({ uuid: 'edited' });
     const el = mount(STAGING);
-    el.source = SAMPLE_UUID;
-    // Inject the source's file info (as the plugin does) — its originalFilename
-    // is the default output name, so no separate fetch is needed.
-    el.sourceFileInfo = { originalFilename: 'holiday-photo.jpg', imageInfo: null } as unknown as UploadcareFile;
+    // Inject the source's file info (as the plugin does) — it carries the uuid
+    // (→ edit mode) and its originalFilename is the default output name.
+    el.sourceFileInfo = {
+      uuid: SAMPLE_UUID,
+      originalFilename: 'holiday-photo.jpg',
+      imageInfo: null,
+    } as unknown as UploadcareFile;
     await el.updateComplete;
     expect(editorMode(el)).toBe('edit');
 
@@ -640,8 +643,11 @@ describe('<uc-ai-editor>', () => {
     const stub = stubFetch({ uuid: 'r1' });
     const el = mount(STAGING);
     // A fresh uuid with no persisted lineage → counter starts at 1.
-    el.source = 'resolver-test-uuid-0001';
-    el.sourceFileInfo = { originalFilename: 'cat.png', imageInfo: null } as unknown as UploadcareFile;
+    el.sourceFileInfo = {
+      uuid: 'resolver-test-uuid-0001',
+      originalFilename: 'cat.png',
+      imageInfo: null,
+    } as unknown as UploadcareFile;
     // First generation in the session → counter is 1, original is the source's.
     el.outputFilename = (original, counter) => `${original ?? 'ai'}-edit-${counter}`;
     await el.updateComplete;
@@ -669,7 +675,7 @@ describe('<uc-ai-editor>', () => {
   it('sends an explicit ratio when the user reshapes in edit mode', async () => {
     const stub = stubFetch({ uuid: 'edited' });
     const el = mount({ ...STAGING, 'aspect-ratios': '1:1' });
-    el.source = SAMPLE_UUID;
+    el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
 
     const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
@@ -721,7 +727,7 @@ describe('<uc-ai-editor>', () => {
 
   it('renders the aspect-ratio picker in edit mode too', async () => {
     const el = mount(STAGING);
-    el.source = SAMPLE_UUID;
+    el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
     expect(editorMode(el)).toBe('edit');
     expect(el.shadowRoot!.querySelector('uc-ai-aspect-ratio')).toBeTruthy();
@@ -737,7 +743,7 @@ describe('<uc-ai-editor>', () => {
     });
     // Non-UUID-shaped ids keep the CDN preview helper from rewriting the URL,
     // so the canvas URL is the bare resolved source.
-    const el = mount({ ...STAGING, source: 'first-uuid' });
+    const el = mount({ ...STAGING, 'source-uuid': 'first-uuid' });
     await el.updateComplete;
 
     typePrompt(el, 'try');
@@ -745,7 +751,7 @@ describe('<uc-ai-editor>', () => {
     clickSend(el);
 
     // Change source mid-flight — this aborts the in-flight generation.
-    el.source = 'second-uuid';
+    el.sourceUuid = 'second-uuid';
     await el.updateComplete;
 
     // After the abort, the displayed image should be the new source (no result override).

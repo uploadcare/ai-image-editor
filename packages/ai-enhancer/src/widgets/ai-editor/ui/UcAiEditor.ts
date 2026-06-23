@@ -16,7 +16,7 @@ import {
   toAspectRatioOption,
 } from '../../../entities/aspect-ratio';
 import { type AiEditorMode, type AiPresets, MODES } from '../../../entities/mode';
-import { UploadcareDerivativeApi } from '../../../entities/provider';
+import { type AiProvider, UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
 import { type AiEnhancerLocale, type AiEnhancerLocaleKey, enLocale, LOCALE_LOADERS, translate } from '../../../shared/i18n';
 import { cdnPreviewUrl } from '../../../shared/lib/cdn';
@@ -96,24 +96,54 @@ const HISTORY_PLACEMENTS: readonly HistoryPlacement[] = [
   'canvas-bottom',
 ];
 
+/**
+ * `<uc-ai-editor>` — the standalone AI image generate/edit editor.
+ *
+ * Generates images from a text prompt and edits an existing image (`source`),
+ * backed by Uploadcare's derivative API (configured via {@link pubkey}).
+ *
+ * @summary AI image generation & editing web component.
+ *
+ * @fires uc:done - A `CustomEvent<DoneDetail>` fired when the user commits a
+ *   result (the Done button). `detail` carries the result `url`, `uuid`,
+ *   `prompt`, `mode`, optional `aspectRatio`, and the `file` object.
+ * @fires uc:cancel - Fired when the user cancels (the Cancel button). No detail.
+ * @fires uc:error - A `CustomEvent<{ error: unknown }>` fired when a generation
+ *   throws.
+ *
+ * @cssprop [--uc-ai-background] - Editor surface background.
+ * @cssprop [--uc-ai-foreground] - Primary text/icon colour.
+ * @cssprop [--uc-ai-muted-foreground] - Secondary/muted text colour.
+ * @cssprop [--uc-ai-accent] - Accent colour for primary actions.
+ * @cssprop [--uc-ai-radius-button] - Corner radius for buttons.
+ * @cssprop [--uc-ai-transition] - Base transition timing.
+ * @cssprop [--uc-ai-dot-grid-color] - Colour of the shimmer dot grid.
+ *
+ * @see The theming guide for the full token list.
+ */
 @customElement('uc-ai-editor')
 export class UcAiEditor extends LitElement {
   public static override styles = unsafeCSS(styles);
 
   /**
-   * UUID of an image to edit. When set, the editor opens straight in edit mode;
-   * when absent, it starts in generate mode. The mode is otherwise derived (see
-   * {@link _mode}) — there is no explicit mode property.
+   * UUID of an image to edit. When set (or {@link sourceFileInfo} is), the editor
+   * opens straight in edit mode; when absent, it starts in generate mode.
+   *
+   * Use **either** `sourceUuid` **or** {@link sourceFileInfo}, not both — they're
+   * two ways to point at the same source (a uuid the editor looks up, vs. the
+   * already-resolved file). The mode is otherwise derived (see {@link _mode}).
    */
-  @property()
-  public source: string | null = null;
+  @property({ attribute: 'source-uuid' })
+  public sourceUuid: string | null = null;
 
   /**
-   * The source image's full info (dimensions, original filename, …) as an
-   * Uploadcare file object. Set this to skip the lookup the editor would
-   * otherwise do from {@link source} — the file uploader plugin passes the entry
-   * it already holds, so the editor never re-fetches. When omitted (e.g. a bare
-   * uuid), the editor fetches it from {@link source}. Property only.
+   * The source image as an `UploadcareFile` — e.g. the object returned by
+   * `@uploadcare/upload-client`, or the `fileInfo` of a File Uploader output
+   * entry (`OutputFileEntry.fileInfo`). Hands the editor the file directly
+   * instead of having it look it up from a uuid.
+   *
+   * Use **either** `sourceFileInfo` **or** {@link sourceUuid}, not both. Property
+   * only.
    */
   @property({ attribute: false })
   public sourceFileInfo?: UploadcareFile;
@@ -141,6 +171,16 @@ export class UcAiEditor extends LitElement {
   /** Uploadcare public key. Required to enable generate/edit. */
   @property()
   public pubkey = '';
+
+  /**
+   * Custom AI provider that replaces the built-in Uploadcare provider (built
+   * from {@link pubkey}) — the editor calls its {@link AiProvider.generate} for
+   * every run. Internal/advanced; used by the docs demo to drive the editor with
+   * a fake backend. Property only.
+   * @internal
+   */
+  @property({ attribute: false })
+  public provider?: AiProvider;
 
   /** Upload API base URL. Defaults to the provider's default. */
   @property({ attribute: 'base-url' })
@@ -270,7 +310,7 @@ export class UcAiEditor extends LitElement {
   private readonly _gen = new GenerationController(this);
   private readonly _history = new HistoryStorageController(this);
   private readonly _secure = new SecureUrlController(this);
-  private _provider?: UploadcareDerivativeApi;
+  private _provider?: AiProvider;
 
   /** Effective strings for the active locale (built-ins + overrides). */
   @state()
@@ -279,39 +319,52 @@ export class UcAiEditor extends LitElement {
 
   public override willUpdate(changed: PropertyValues<this>): void {
     const providerConfigChanged =
-      changed.has('pubkey') || changed.has('baseUrl') || changed.has('cdnCname') || changed.has('cdnCnamePrefixed');
+      changed.has('provider') ||
+      changed.has('pubkey') ||
+      changed.has('baseUrl') ||
+      changed.has('cdnCname') ||
+      changed.has('cdnCnamePrefixed');
     if (providerConfigChanged) {
-      this._provider = this.pubkey
-        ? new UploadcareDerivativeApi({
-            publicKey: this.pubkey,
-            baseUrl: this.baseUrl,
-            cdnBaseUrl: this.cdnCname,
-            cdnCnamePrefixed: this.cdnCnamePrefixed,
-          })
-        : undefined;
+      // An injected provider wins; otherwise build the default Uploadcare one
+      // from `pubkey` (and stay disabled until a pubkey is set).
+      this._provider =
+        this.provider ??
+        (this.pubkey
+          ? new UploadcareDerivativeApi({
+              publicKey: this.pubkey,
+              baseUrl: this.baseUrl,
+              cdnBaseUrl: this.cdnCname,
+              cdnCnamePrefixed: this.cdnCnamePrefixed,
+            })
+          : undefined);
     }
     if (changed.has('secureDeliveryProxyUrlResolver')) {
       this._secure.setResolver(this.secureDeliveryProxyUrlResolver);
     }
+    // The source identity can change via either input property.
+    const sourceChanged = changed.has('sourceUuid') || changed.has('sourceFileInfo');
+    if (import.meta.env.DEV && this.sourceUuid && this.sourceFileInfo) {
+      console.warn('[uc-ai-editor] Set either `sourceUuid` or `sourceFileInfo`, not both.');
+    }
     // Namespace persisted history by pubkey before any hydration below (both can
     // land in the same update when the plugin sets pubkey and source together).
     if (changed.has('pubkey')) this._history.setNamespace(this.pubkey);
-    if (changed.has('source')) this._gen.reset();
+    if (sourceChanged) this._gen.reset();
     // Restore the strip for the current source's lineage from past sessions. Keyed
-    // off `source` (set by both the plugin file-action and the standalone attr), so
-    // reopening on a previously edited image rehydrates its results automatically.
-    if (changed.has('source') || changed.has('pubkey')) {
-      this._gen.setHistory(this._history.lineage(this.source));
+    // off the source uuid (from either input), so reopening on a previously edited
+    // image rehydrates its results automatically.
+    if (sourceChanged || changed.has('pubkey')) {
+      this._gen.setHistory(this._history.lineage(this._sourceUuid));
     }
     // Re-resolve the input image's display URL once when its uuid or the
     // provider (CDN base) changed — covers both set in the same update.
-    if (providerConfigChanged || changed.has('source')) {
+    if (providerConfigChanged || sourceChanged) {
       this._resolveInputUrl();
     }
     // Resolve the source's file info: use the injected value, else fetch it from
     // the uuid. Gives the canvas the source's true aspect ratio before its image
     // decodes (no portrait crop), and feeds the output-filename resolver.
-    if (providerConfigChanged || changed.has('source') || changed.has('sourceFileInfo')) {
+    if (providerConfigChanged || sourceChanged) {
       this._resolveSourceFileInfo();
     }
     // Default the ratio selection when the mode flips — edit defaults to
@@ -374,31 +427,37 @@ export class UcAiEditor extends LitElement {
     return this._l('ai-enhancer-error');
   }
 
+  /** The source image's uuid, from whichever input was given. */
+  private get _sourceUuid(): string | null {
+    return this.sourceUuid ?? this.sourceFileInfo?.uuid ?? null;
+  }
+
   /** UUID of the image the editor is currently operating on, if any. */
   private get _currentSourceUuid(): string | null {
-    return this._gen.result?.uuid ?? this.source;
+    return this._gen.result?.uuid ?? this._sourceUuid;
   }
 
   /**
    * Derived editor mode: `edit` whenever there is a current image (an input
-   * `source` or a generation result), otherwise `generate`. This makes the
-   * first successful generation flip the editor into edit mode for free.
+   * source or a generation result), otherwise `generate`. This makes the first
+   * successful generation flip the editor into edit mode for free.
    */
   private get _mode(): AiEditorMode {
     return this._currentSourceUuid ? 'edit' : 'generate';
   }
 
-  /** Resolve {@link source} to a display URL via the provider's CDN base. */
+  /** Resolve the source uuid to a display URL via the provider's CDN base.
+   *  No-op for a provider that can't resolve uuids (generate-only). */
   private _resolveInputUrl(): void {
-    const uuid = this.source;
+    const uuid = this._sourceUuid;
     const provider = this._provider;
-    if (!uuid || !provider) {
+    if (!uuid || !provider?.resolveCdnUrl) {
       this._inputUrl = null;
       return;
     }
     void provider.resolveCdnUrl(uuid).then((url) => {
       // Guard against races: a later source/provider change wins.
-      if (this.source === uuid && this._provider === provider) this._inputUrl = url;
+      if (this._sourceUuid === uuid && this._provider === provider) this._inputUrl = url;
     });
   }
 
@@ -407,19 +466,19 @@ export class UcAiEditor extends LitElement {
     return this.sourceFileInfo ?? this._fetchedFileInfo;
   }
 
-  /** Resolve {@link source} to its file info — injected wins; otherwise fetch
-   *  it from the uuid. Failures fall back silently (info is an optimization). */
+  /** Resolve the source's file info — an injected {@link sourceFileInfo} wins;
+   *  otherwise fetch it from {@link sourceUuid}. Failures fall back silently. */
   private _resolveSourceFileInfo(): void {
     this._fetchedFileInfo = undefined;
-    // Injected info (the plugin path) needs no fetch.
+    // Injected info (or the plugin path) needs no fetch.
     if (this.sourceFileInfo) return;
-    const uuid = this.source;
+    const uuid = this.sourceUuid;
     const provider = this._provider;
-    if (!uuid || !provider) return;
+    if (!uuid || !provider?.getFileInfo) return;
     void provider.getFileInfo(uuid).then(
       (file) => {
         // Guard against races and a value injected meanwhile.
-        if (this.source === uuid && this._provider === provider && !this.sourceFileInfo) {
+        if (this.sourceUuid === uuid && this._provider === provider && !this.sourceFileInfo) {
           this._fetchedFileInfo = file;
         }
       },
@@ -593,7 +652,8 @@ export class UcAiEditor extends LitElement {
   /** Discard the current image (input or result) and prompt history, returning
    *  to a blank generate session. */
   private _onStartOver(): void {
-    this.source = null;
+    this.sourceUuid = null;
+    this.sourceFileInfo = undefined;
     this._inputUrl = null;
     this._fetchedFileInfo = undefined;
     this._prompt = '';
@@ -667,9 +727,9 @@ export class UcAiEditor extends LitElement {
     // "Start over" discards the current image and returns to a blank generate
     // canvas, so it only makes sense for a generate session (edit mode reached
     // via a generation). When the editor was opened to edit an existing image
-    // (`source` set — e.g. the uploader's AI-edit action), there's nothing to
+    // (a source set — e.g. the uploader's AI-edit action), there's nothing to
     // start over to, so it's hidden.
-    const showStartOver = mode === 'edit' && !this.source;
+    const showStartOver = mode === 'edit' && !this.sourceUuid && !this.sourceFileInfo;
     const placeholderKey = MODES[mode].placeholderKey as keyof typeof enLocale;
     // Quick-prompt chips: the per-mode preset override if set, else the built-in set.
     const activePresets = this.presets?.[mode] ?? MODES[mode].presets;

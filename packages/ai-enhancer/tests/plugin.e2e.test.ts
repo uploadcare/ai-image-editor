@@ -69,12 +69,12 @@ describe('AiEnhancerPlugin', () => {
     await openModal();
     await page.getByText('Generate image').click();
     await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-editor') as (Element & { source?: string }) | null;
+      const editor = document.querySelector('uc-ai-editor') as (Element & { sourceFileInfo?: unknown }) | null;
       expect(editor).toBeTruthy();
       // No source → derived generate mode (read off the prompt-row child).
       const promptRow = editor?.shadowRoot?.querySelector('uc-ai-prompt-row') as (Element & { mode?: string }) | null;
       expect(promptRow?.mode).toBe('generate');
-      expect(editor?.source).toBeFalsy();
+      expect(editor?.sourceFileInfo).toBeFalsy();
     });
     cleanup();
   });
@@ -137,9 +137,9 @@ describe('AiEnhancerPlugin', () => {
     await page.getByRole('button', { name: 'AI Edit' }).click();
 
     await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-editor') as (Element & { source?: string }) | null;
-      expect(editor?.source).toBeTruthy();
-      // A source uuid → derived edit mode (read off the prompt-row child).
+      const editor = document.querySelector('uc-ai-editor') as (Element & { sourceFileInfo?: unknown }) | null;
+      expect(editor?.sourceFileInfo).toBeTruthy();
+      // A source file → derived edit mode (read off the prompt-row child).
       const promptRow = editor?.shadowRoot?.querySelector('uc-ai-prompt-row') as (Element & { mode?: string }) | null;
       expect(promptRow?.mode).toBe('edit');
     });
