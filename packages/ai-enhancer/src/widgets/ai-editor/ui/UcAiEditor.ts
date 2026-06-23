@@ -33,7 +33,7 @@ import type { AspectRatioSelectDetail } from '../../../features/aspect-ratio-sel
 import type { HistorySelectDetail } from '../../../features/prompt-history';
 import type { PromptInputDetail, UcAiPromptRow } from '../../../features/prompt-input';
 import type { PresetSelectDetail } from '../../../features/preset-chips';
-import type { UcAiCanvas } from '../../../shared/ui/canvas';
+import type { ShimmerConfig, UcAiCanvas } from '../../../shared/ui/canvas';
 import styles from './ai-editor.css?inline';
 
 export type { HistoryEntry } from '../../../features/generation';
@@ -234,6 +234,14 @@ export class UcAiEditor extends LitElement {
   /** Where the toolbar (Cancel / Done) sits: `bottom` (default) or `top`. */
   @property({ attribute: 'toolbar-placement' })
   public toolbarPlacement: ToolbarPlacement = 'bottom';
+
+  /**
+   * Shimmer tuning forwarded to the canvas's dot grid (e.g. force the 2D backend
+   * in tests). Not part of the public component API.
+   * @internal
+   */
+  @property({ attribute: false })
+  public shimmerConfig?: Partial<ShimmerConfig>;
 
   @state()
   private _prompt = '';
@@ -843,6 +851,7 @@ export class UcAiEditor extends LitElement {
             .ratio=${frameRatio}
             .naturalRatio=${this._displayedNaturalRatio()}
             .fullsizeUrl=${this._fullsizeUrl}
+            .shimmerConfig=${this.shimmerConfig}
             .busy=${this._gen.busy}
             .alt=${this._prompt}
             busy-label="${this._l('ai-enhancer-busy')}"

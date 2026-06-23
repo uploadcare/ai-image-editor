@@ -2,15 +2,19 @@ import { css, html, LitElement, nothing } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 
 import {
-  applyShimmerParams,
+  DEFAULT_SHIMMER_CONFIG,
   DotGridController,
-  getShimmerParams,
-  type ShimmerParams,
+  type ShimmerConfig,
 } from '../src/shared/ui/canvas/DotGridController';
 
 type Mode = 'idle' | 'shimmer' | 'over-image';
 
-type Slider = { key: keyof ShimmerParams; label: string; min: number; max: number; step: number };
+/** Only the numeric (slider-tunable) config keys. */
+type NumericKey = {
+  [K in keyof ShimmerConfig]-?: ShimmerConfig[K] extends number ? K : never;
+}[keyof ShimmerConfig];
+
+type Slider = { key: NumericKey; label: string; min: number; max: number; step: number };
 
 /** The tunable controls, grouped for the panel. */
 const GROUPS: { title: string; sliders: Slider[] }[] = [
@@ -25,51 +29,21 @@ const GROUPS: { title: string; sliders: Slider[] }[] = [
   {
     title: 'Shimmer (epicenters)',
     sliders: [
-      { key: 'alphaShimmer', label: 'Alpha shimmer (1) / size wave (0)', min: 0, max: 1, step: 1 },
-      { key: 'shimFloor', label: 'Brightness floor (alpha mode)', min: 0, max: 1, step: 0.02 },
-      { key: 'minScale', label: 'Min scale (size mode)', min: 0, max: 1, step: 0.02 },
+      { key: 'minScale', label: 'Min scale (×base)', min: 0, max: 1, step: 0.02 },
+      { key: 'peakScale', label: 'Peak scale (×base)', min: 0.5, max: 2.5, step: 0.05 },
+      { key: 'dither', label: 'Dither (size de-ring)', min: 0, max: 1, step: 0.02 },
       { key: 'epiCount', label: 'Epicenter count', min: 1, max: 6, step: 1 },
       { key: 'epiRadiusRatio', label: 'Falloff radius (×frame w)', min: 0.05, max: 1.2, step: 0.02 },
       { key: 'epiSpeed', label: 'Speed (px/ms)', min: 0, max: 2, step: 0.02 },
       { key: 'sizeScale', label: 'Canvas-size scale (speed)', min: -20, max: 20, step: 0.1 },
       { key: 'epiWander', label: 'Wander (rad/frame)', min: 0, max: 0.5, step: 0.005 },
       { key: 'epiFalloff', label: 'Falloff sharpness', min: 0.3, max: 4, step: 0.1 },
-      { key: 'peakScale', label: 'Peak scale (×base)', min: 0.5, max: 2.5, step: 0.05 },
       { key: 'falloffWarp', label: 'Falloff warp (de-ring)', min: 0, max: 0.6, step: 0.02 },
-      { key: 'alphaFalloff', label: 'Alpha falloff (gradient; de-ring)', min: 0, max: 1, step: 0.02 },
-      { key: 'dither', label: 'Dither (size)', min: 0, max: 1, step: 0.02 },
-      { key: 'alphaDither', label: 'Alpha dither (colour)', min: 0, max: 1, step: 0.02 },
-      { key: 'posJitter', label: 'Position jitter (×cell)', min: 0, max: 1, step: 0.02 },
-      { key: 'temporalJitter', label: 'Temporal jitter (Hz; de-ring)', min: 0, max: 30, step: 1 },
-    ],
-  },
-  {
-    title: 'Shape & pulse',
-    sliders: [
-      { key: 'roundness', label: 'Roundness (0 sq → 1 circle)', min: 0, max: 1, step: 0.05 },
-      { key: 'pulseAmount', label: 'Pulse amount', min: 0, max: 0.6, step: 0.02 },
-      { key: 'pulseSpeed', label: 'Pulse speed (Hz)', min: 0.1, max: 6, step: 0.1 },
-    ],
-  },
-  {
-    title: 'Glitch (row tear)',
-    sliders: [
-      { key: 'glitchAmount', label: 'Amount (rows torn)', min: 0, max: 1, step: 0.02 },
-      { key: 'glitchSpeed', label: 'Speed (re-rolls/s)', min: 1, max: 30, step: 1 },
-      { key: 'glitchShift', label: 'Shift (cells)', min: 0, max: 12, step: 0.5 },
-      { key: 'glitchSize', label: 'Size spike (×base)', min: 0, max: 3, step: 0.1 },
-      { key: 'glitchSpacing', label: 'Spacing (s; 0 = always)', min: 0, max: 8, step: 0.25 },
-      { key: 'glitchRandom', label: 'Burst randomness', min: 0, max: 1, step: 0.05 },
-      { key: 'revealGlitch', label: 'Reveal glitch (enter/exit)', min: 0, max: 1, step: 0.02 },
     ],
   },
   {
     title: 'Resolution',
-    sliders: [
-      { key: 'maxDpr', label: 'Max DPR (idle)', min: 1, max: 3, step: 0.5 },
-      { key: 'revealSsMin', label: 'Reveal supersample min', min: 1, max: 4, step: 0.5 },
-      { key: 'revealSsMax', label: 'Reveal supersample max', min: 1, max: 5, step: 0.5 },
-    ],
+    sliders: [{ key: 'maxDpr', label: 'Max DPR', min: 1, max: 3, step: 0.5 }],
   },
   {
     title: 'Timing (ms)',
@@ -233,19 +207,21 @@ export class ShimmerLab extends LitElement {
   `;
 
   @state() private _mode: Mode = 'shimmer';
-  @state() private _params: ShimmerParams = getShimmerParams();
+  @state() private _params: ShimmerConfig = { ...DEFAULT_SHIMMER_CONFIG };
   @state() private _dotColorHex = '#e1e1e1';
   @state() private _dotAlpha = 0.15;
   @state() private _exported = '';
   @state() private _fps = 0;
   @state() private _lightStage = false;
+  // Backend is chosen when the grid attaches, so the toggle persists + reloads.
+  @state() private _useWebgl = sessionStorage.getItem('uc-lab-webgl') !== '0';
 
   @query('.dot-grid') private _surface?: HTMLCanvasElement;
   @query('.viewport') private _viewport?: HTMLElement;
   @query('.frame') private _frame?: HTMLElement;
   @query('.image') private _image?: HTMLImageElement | null;
 
-  private readonly _grid = new DotGridController(this);
+  private readonly _grid = new DotGridController(this, { ...this._params, useWebgl: this._useWebgl });
   private readonly _ratio = 3 / 2;
   private readonly _sampleSrc = SAMPLE_IMAGE;
   private _resizeObs?: ResizeObserver;
@@ -357,10 +333,15 @@ export class ShimmerLab extends LitElement {
     });
   }
 
-  private _onParam(key: keyof ShimmerParams, value: number): void {
+  private _onParam(key: NumericKey, value: number): void {
     this._params = { ...this._params, [key]: value };
-    applyShimmerParams({ [key]: value });
-    this._grid.recalibrate();
+    this._grid.setConfig({ [key]: value });
+  }
+
+  /** Backend choice takes effect at attach time, so persist + reload to flip it. */
+  private _toggleWebgl(): void {
+    sessionStorage.setItem('uc-lab-webgl', this._useWebgl ? '0' : '1');
+    location.reload();
   }
 
   private _reset(): void {
@@ -372,43 +353,27 @@ export class ShimmerLab extends LitElement {
   private _export(): void {
     const p = this._params;
     const lines = [
-      `CELL_SIZE = ${p.cellSize};`,
-      `DOT_RATIO = ${p.dotRatio};`,
-      `MIN_SCALE = ${p.minScale};`,
-      `EPI_COUNT = ${p.epiCount};`,
-      `EPI_RADIUS_RATIO = ${p.epiRadiusRatio};`,
-      `EPI_SPEED = ${p.epiSpeed};`,
-      `EPI_WANDER = ${p.epiWander};`,
-      `EPI_FALLOFF = ${p.epiFalloff};`,
-      `PEAK_SCALE = ${p.peakScale};`,
-      `FALLOFF_WARP = ${p.falloffWarp};`,
-      `IDLE_SCALE = ${p.idleScale};`,
-      `SHIM_DITHER = ${p.dither};`,
-      `ALPHA_DITHER = ${p.alphaDither};`,
-      `ALPHA_FALLOFF = ${p.alphaFalloff};`,
-      `ALPHA_SHIMMER = ${p.alphaShimmer};`,
-      `SHIM_FLOOR = ${p.shimFloor};`,
-      `POS_JITTER = ${p.posJitter};`,
-      `TEMPORAL_JITTER = ${p.temporalJitter};`,
-      `ROUNDNESS = ${p.roundness};`,
-      `PULSE_AMOUNT = ${p.pulseAmount};`,
-      `PULSE_SPEED = ${p.pulseSpeed};`,
-      `GLITCH_AMOUNT = ${p.glitchAmount};`,
-      `GLITCH_SPEED = ${p.glitchSpeed};`,
-      `GLITCH_SHIFT = ${p.glitchShift};`,
-      `GLITCH_SIZE = ${p.glitchSize};`,
-      `GLITCH_SPACING = ${p.glitchSpacing};`,
-      `GLITCH_RANDOM = ${p.glitchRandom};`,
-      `REVEAL_GLITCH = ${p.revealGlitch};`,
-      `SIZE_SCALE = ${p.sizeScale};`,
-      `MAX_DPR = ${p.maxDpr};`,
-      `REVEAL_SS_MIN = ${p.revealSsMin};`,
-      `REVEAL_SS_MAX = ${p.revealSsMax};`,
-      `EDGE_TAU = ${p.edgeTau};`,
-      `ENTER_MS = ${p.enterMs};`,
-      `EXIT_MS = ${p.exitMs};`,
-      `SHIM_ENTER_MS = ${p.shimEnterMs};`,
-      `SHIM_EXIT_MS = ${p.shimExitMs};`,
+      'export const DEFAULT_SHIMMER_CONFIG: ShimmerConfig = {',
+      `  cellSize: ${p.cellSize},`,
+      `  dotRatio: ${p.dotRatio},`,
+      `  sizeScale: ${p.sizeScale},`,
+      `  minScale: ${p.minScale},`,
+      `  peakScale: ${p.peakScale},`,
+      `  dither: ${p.dither},`,
+      `  epiCount: ${p.epiCount},`,
+      `  epiRadiusRatio: ${p.epiRadiusRatio},`,
+      `  epiSpeed: ${p.epiSpeed},`,
+      `  epiWander: ${p.epiWander},`,
+      `  epiFalloff: ${p.epiFalloff},`,
+      `  falloffWarp: ${p.falloffWarp},`,
+      `  idleScale: ${p.idleScale},`,
+      `  maxDpr: ${p.maxDpr},`,
+      `  edgeTau: ${p.edgeTau},`,
+      `  enterMs: ${p.enterMs},`,
+      `  exitMs: ${p.exitMs},`,
+      `  shimEnterMs: ${p.shimEnterMs},`,
+      `  shimExitMs: ${p.shimExitMs},`,
+      '};',
       `/* dot colour: ${this._dotColorHex} @ alpha ${this._dotAlpha} */`,
     ];
     this._exported = lines.join('\n');
@@ -434,6 +399,9 @@ export class ShimmerLab extends LitElement {
           )}
           <button @click=${this._replayReveal}>↺ replay reveal</button>
           <button @click=${this._toggleStageTheme}>${this._lightStage ? '🌙 dark stage' : '☀ light stage'}</button>
+          <button class=${this._useWebgl ? 'active' : ''} @click=${this._toggleWebgl}>
+            ${this._useWebgl ? '⚡ WebGL' : '🖌 2D canvas'}
+          </button>
         </div>
 
         <div class="group">

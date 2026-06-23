@@ -5,7 +5,7 @@ import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
 import { ICON_FULLSCREEN, ICON_FULLSCREEN_EXIT } from '../icons';
 import styles from './canvas.css?inline';
-import { DotGridController } from './DotGridController';
+import { DotGridController, type ShimmerConfig } from './DotGridController';
 
 /** Frame aspect ratio used until an image's natural ratio is known. */
 const DEFAULT_RATIO = 3 / 2;
@@ -66,6 +66,15 @@ export class UcAiCanvas extends LitElement {
    */
   @property({ attribute: 'fullsize-url' })
   public fullsizeUrl: string | null = null;
+
+  /**
+   * Shimmer tuning passed straight to the dot grid — force the backend
+   * (`useWebgl`) or override any {@link ShimmerConfig} param. Used by tests and
+   * the shimmer-lab dev tool; not part of the public component API.
+   * @internal
+   */
+  @property({ attribute: false })
+  public shimmerConfig?: Partial<ShimmerConfig>;
 
   /** The image currently shown — only updated once a new `url` has loaded. */
   @state()
@@ -142,6 +151,9 @@ export class UcAiCanvas extends LitElement {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    // Apply config before `attach()` (firstUpdated) so the backend choice
+    // (`useWebgl`) is in effect when the grid wires up; later changes recalibrate.
+    if (changed.has('shimmerConfig')) this._dotGrid.setConfig(this.shimmerConfig);
     if (!changed.has('url')) return;
     if (!this.url) {
       this._displayedUrl = null;
