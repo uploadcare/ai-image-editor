@@ -77,6 +77,15 @@ them as attributes or properties):
 | `localeName` | | Drives the editor language (lazy-loaded; see [Localization](#localization)). |
 | `localeDefinitionOverride` | | Per-locale string overrides, layered onto the editor's built-ins. |
 | `secureDeliveryProxyUrlResolver` | | Signs/proxies the CDN URLs the editor renders (secure delivery). |
+| `useAiEditor` | | Plugin option (mirrors `useCloudImageEditor`). Show the **AI Edit** file action (default `true`). Set `false` / `use-ai-editor="false"` to hide it. |
+
+Importing the plugin augments the uploader's config types, so `useAiEditor`
+is type-checked on `<uc-config>` (reference `@uploadcare/ai-enhancer/plugin`
+types if your project doesn't pick it up automatically).
+
+> **Already-edited images:** the AI Edit action hides itself for images that
+> already carry CDN modifiers (e.g. edited with the Cloud Image Editor) — AI Edit
+> works on the original file and can't carry those modifiers over.
 
 ## Use the standalone editor
 
@@ -102,8 +111,7 @@ editor.addEventListener('uc:cancel', () => {/* closed without committing */})
 editor.addEventListener('uc:error', (e) => console.warn(e.detail.error))
 
 // Edit an existing image instead of generating from scratch:
-editor.source = 'c2499162-eb07-4b93-b31e-94a89a47e858'
-editor.sourceFilename = 'photo.jpg' // result keeps this name
+editor.sourceUuid = 'c2499162-eb07-4b93-b31e-94a89a47e858'
 ```
 
 ### `<uc-ai-editor>` properties
@@ -111,8 +119,8 @@ editor.sourceFilename = 'photo.jpg' // result keeps this name
 | Property | Attribute | Type | Description |
 |---|---|---|---|
 | `pubkey` | `pubkey` | `string` | Uploadcare public key. Required to enable generate/edit. |
-| `source` | `source` | `string \| null` | UUID of an image to edit. Absent → generate mode. |
-| `sourceFileInfo` | — | `UploadcareFile` | Property only. The source image's file info (dimensions, original filename, …). Set it to skip the lookup the editor otherwise does from `source` — the plugin passes the uploader entry it already holds, so the canvas frames to the source's true aspect ratio from the first paint. |
+| `sourceUuid` | `source-uuid` | `string \| null` | UUID of an image to edit. Absent → generate mode. Use either this or `sourceFileInfo`, not both. |
+| `sourceFileInfo` | — | `UploadcareFile` | Property only. The source image as an `UploadcareFile` (e.g. the object returned by `@uploadcare/upload-client`, or the `fileInfo` of a File Uploader output entry). An alternative to `sourceUuid` that hands the editor the file directly instead of having it look it up from the uuid. |
 | `outputFilename` | — | `string \| (originalFilename, counter) => string` | Property only. Names the result. A string is used verbatim; a function receives the source's original filename (`undefined` when generating from scratch) and the 1-based history counter (first is `1`). Unset → keep the source's original name. |
 | `baseUrl` | `base-url` | `string` | Upload API base URL. |
 | `cdnCname` | `cdn-cname` | `string` | CDN cname for resolving results. |

@@ -89,14 +89,29 @@ export type AiEditorActivityParams = {
 /**
  * Augment the file-uploader's type system so plugin-specific config is checked
  * instead of cast: the custom activity params for
- * `setCurrentActivity(AI_ENHANCER_ID, params)`, and the editor's locale keys so
- * `localeDefinitionOverride` is typed for them.
+ * `setCurrentActivity(AI_ENHANCER_ID, params)`, the editor's locale keys so
+ * `localeDefinitionOverride` is typed for them, and the plugin's own config
+ * options on `<uc-config>`.
+ *
+ * Importing the plugin brings these augmentations into scope. If your project
+ * doesn't pick them up automatically, reference the plugin's types once, e.g.
+ * `/// <reference types="@uploadcare/ai-enhancer/plugin" />`.
  */
 declare module '@uploadcare/file-uploader' {
   interface CustomActivities {
     [AI_ENHANCER_ID]: { params: AiEditorActivityParams };
   }
   interface CustomLocaleDefinition extends AiEnhancerLocale {}
+  interface CustomConfig {
+    /**
+     * Show the **AI Edit** file action on uploaded images (default `true`); set
+     * `false` (attribute `use-ai-editor="false"`) to hide it. Mirrors the
+     * uploader's `useCloudImageEditor`. Note: the action also hides itself for
+     * images that already carry CDN modifiers (e.g. edited with the Cloud Image
+     * Editor), regardless of this flag.
+     */
+    useAiEditor: boolean;
+  }
 }
 
 /**
@@ -132,6 +147,16 @@ export const AiEnhancerPlugin: UploaderPlugin = {
 
     registry.registerIcon({ name: 'ai-generate', svg: ICON_GENERATE });
     registry.registerIcon({ name: 'ai-edit', svg: ICON_EDIT_AI });
+
+    // Toggle for the "AI Edit" file action. Enabled by default; disable it (e.g.
+    // when using the Cloud Image Editor instead) via `use-ai-editor="false"`.
+    registry.registerConfig<boolean>({
+      name: 'useAiEditor',
+      defaultValue: true,
+      fromAttribute: (value) => value !== 'false',
+      toAttribute: (value) => (value ? null : 'false'),
+      normalize: (value) => value !== false,
+    });
 
     // English is the always-present synchronous fallback; every other locale
     // loads lazily and is registered with the uploader on demand.
@@ -180,13 +205,17 @@ export const AiEnhancerPlugin: UploaderPlugin = {
       },
     });
 
-    // The AI-edit file-action: edit an already-uploaded image. Passing its UUID
-    // as `source` opens the editor straight in edit mode.
+    // The AI-edit file-action: edit an already-uploaded image. Passing its file
+    // info opens the editor straight in edit mode.
     registry.registerFileAction({
       id: AI_ENHANCER_ID,
       icon: 'ai-edit',
       label: 'ai-enhancer-file-action-label',
-      shouldRender: (fileEntry) => Boolean(fileEntry.isImage && fileEntry.uuid),
+      // Hidden for images that already carry CDN modifiers (e.g. edited with the
+      // Cloud Image Editor): AI Edit operates on the original file and can't
+      // carry those modifiers over, so we'd silently drop the prior edits.
+      shouldRender: (fileEntry) =>
+        Boolean(config.get('useAiEditor') && fileEntry.isImage && fileEntry.uuid && !fileEntry.cdnUrlModifiers),
       onClick: (fileEntry) => {
         uploaderApi.setCurrentActivity(AI_ENHANCER_ID, { sourceInternalId: fileEntry.internalId });
         uploaderApi.setModalState(true);
@@ -205,17 +234,16 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         const editor = document.createElement('uc-ai-editor') as UcAiEditor;
         // Edit mode: resolve the source image's collection entry, so the edit
         // opens on that image. We hand the editor the entry's `fileInfo` it
-        // already holds, so the editor skips its own lookup and can frame the
-        // canvas to the source's true aspect ratio from the first paint (and
-        // name the result after the original). (Falls back to generate mode if
-        // the entry is gone.)
+        // already holds (which carries the uuid), so the editor skips its own
+        // lookup and can frame the canvas to the source's true aspect ratio from
+        // the first paint and name the result after the original. (Falls back to
+        // generate mode if the entry is gone.)
         if (params.sourceInternalId) {
           try {
             const sourceItem = uploaderApi.getOutputItem(params.sourceInternalId);
-            editor.source = sourceItem.uuid;
             editor.sourceFileInfo = sourceItem.fileInfo ?? undefined;
           } catch {
-            // Entry no longer exists — leave `editor.source` unset (generate mode).
+            // Entry no longer exists — leave the source unset (generate mode).
           }
         }
         applyUploaderTheme(editor);

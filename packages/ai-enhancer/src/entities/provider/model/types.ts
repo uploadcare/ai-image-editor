@@ -30,7 +30,20 @@ export type AiProviderResult = {
 
 export type AiProvider = {
   id: string;
+  /** Run a text→image generate or image→image edit job, resolved to a result. */
   generate(request: AiProviderRequest): Promise<AiProviderResult>;
+  /**
+   * Resolve a stored file's uuid to a display URL. Optional: only used when the
+   * editor opens on an existing {@link AiProviderRequest.source} image. A
+   * generate-only provider can omit it.
+   */
+  resolveCdnUrl?(uuid: string): Promise<string>;
+  /**
+   * Resolve a stored file's info (dimensions, original filename, …) by uuid.
+   * Optional: only used to frame/name an existing `source` image. A
+   * generate-only provider can omit it.
+   */
+  getFileInfo?(uuid: string, signal?: AbortSignal): Promise<UploadcareFile>;
 };
 
 /**

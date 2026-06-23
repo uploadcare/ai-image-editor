@@ -169,8 +169,8 @@
     });
     document.getElementById('source').addEventListener('change', (e) => {
       const uuid = e.target.value.trim();
-      editor.source = uuid || null;
-      shell.log(uuid ? `source → ${uuid} (edit mode)` : 'source cleared (generate mode)');
+      editor.sourceUuid = uuid || null;
+      shell.log(uuid ? `sourceUuid → ${uuid} (edit mode)` : 'sourceUuid cleared (generate mode)');
     });
     document.getElementById('output-filename').addEventListener('change', (e) => {
       const name = e.target.value.trim();
