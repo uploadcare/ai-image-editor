@@ -24,10 +24,21 @@ export class UcAiCanvas extends LitElement {
 
   /**
    * Aspect ratio (`width / height`) the frame is sized to. A concrete number
-   * pins the frame; `null` falls back to the displayed image's natural ratio.
+   * pins the frame; `null` falls back to {@link naturalRatio}, then to the
+   * displayed image's natural ratio.
    */
   @property({ type: Number })
   public ratio: number | null = null;
+
+  /**
+   * Best-known intrinsic ratio (`width / height`) of the image at {@link url},
+   * supplied from metadata ahead of decode. Used when no concrete {@link ratio}
+   * pins the frame, so the frame is sized correctly from the first paint instead
+   * of defaulting to landscape and snapping once the image loads. `null` when
+   * unknown — the frame then falls back to the decoded image's natural size.
+   */
+  @property({ type: Number, attribute: 'natural-ratio' })
+  public naturalRatio: number | null = null;
 
   @property({ type: Boolean })
   public busy = false;
@@ -143,7 +154,7 @@ export class UcAiCanvas extends LitElement {
   protected override updated(changed: PropertyValues<this>): void {
     // `keyof this` omits private @state, so reach the key through an untyped view.
     const displayedChanged = (changed as Map<string, unknown>).has('_displayedUrl');
-    if (changed.has('ratio') || displayedChanged) this._updateFrame();
+    if (changed.has('ratio') || changed.has('naturalRatio') || displayedChanged) this._updateFrame();
     if (changed.has('busy') || changed.has('url') || displayedChanged) {
       this._updateSwitchCover(changed.has('busy'));
       this._syncGrid();
@@ -217,7 +228,10 @@ export class UcAiCanvas extends LitElement {
   }
 
   private _frameRatioValue(): number {
+    // Precedence: a pinned ratio, then the metadata hint (known before decode),
+    // then the decoded image's own dimensions, then the landscape default.
     if (this.ratio && this.ratio > 0) return this.ratio;
+    if (this.naturalRatio && this.naturalRatio > 0) return this.naturalRatio;
     const img = this._imageEl;
     if (img && img.naturalWidth > 0 && img.naturalHeight > 0) return img.naturalWidth / img.naturalHeight;
     return DEFAULT_RATIO;
@@ -268,6 +282,12 @@ export class UcAiCanvas extends LitElement {
   private _onDisplayedLoad(): void {
     // The new image has painted — drop the under-layer it was covering.
     this._fadingUrl = null;
+    // Re-size the frame now that the image's natural dimensions are known. This
+    // is the safety net for when no ratio is pinned and no `naturalRatio` hint
+    // was supplied (e.g. a standalone uuid before its info fetch resolves):
+    // without it a portrait image stays cropped in the landscape default until
+    // an unrelated resize fires.
+    this._updateFrame();
     this._dotGrid.onImageLoad();
   }
 

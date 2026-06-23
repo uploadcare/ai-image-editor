@@ -168,11 +168,12 @@ describe('AiEnhancerPlugin', () => {
       const el = document.querySelector('uc-ai-editor');
       expect(el).toBeTruthy();
       return el!;
-    })) as Element & { sourceFilename?: string | null };
+    })) as Element & { sourceFileInfo?: { uuid?: string; originalFilename?: string } };
 
-    // The plugin hands the source file's name to the editor so the edit result
-    // keeps it (the editor sends it as the result filename).
-    expect(editor.sourceFilename).toBe(originalName);
+    // The plugin hands the source entry's file info to the editor (so it can
+    // frame the canvas and name the result after the original) — verify it's the
+    // source file's info that was wired through.
+    expect(editor.sourceFileInfo?.uuid).toBe(originalUuid);
 
     // The edit produced this already-uploaded result. Drive uc:done directly so
     // the test doesn't depend on the generation backend.

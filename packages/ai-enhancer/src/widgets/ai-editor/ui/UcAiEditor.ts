@@ -49,6 +49,14 @@ export type DoneDetail = {
   file: UploadcareFile;
 };
 
+/**
+ * Resolves the filename given to a generated/edited result. Receives the source
+ * image's original filename (`undefined` when generating from scratch) and the
+ * 1-based counter of this generation within the session's history (the first is
+ * `1`). Returns the desired output filename.
+ */
+export type OutputFilenameResolver = (originalFilename: string | undefined, counter: number) => string;
+
 /** Which edge the composer (prompt + chips + aspect ratio) sits on. */
 export type ComposerPlacement = 'top' | 'bottom';
 
@@ -92,12 +100,24 @@ export class UcAiEditor extends LitElement {
   public source: string | null = null;
 
   /**
-   * Filename to give the edited result. Lets an edit preserve the source file's
-   * original name instead of the provider's generic default. Only used in edit
-   * mode (when {@link source} is set).
+   * The source image's full info (dimensions, original filename, …) as an
+   * Uploadcare file object. Set this to skip the lookup the editor would
+   * otherwise do from {@link source} — the file uploader plugin passes the entry
+   * it already holds, so the editor never re-fetches. When omitted (e.g. a bare
+   * uuid), the editor fetches it from {@link source}. Property only.
    */
-  @property({ attribute: 'source-filename' })
-  public sourceFilename: string | null = null;
+  @property({ attribute: false })
+  public sourceFileInfo?: UploadcareFile;
+
+  /**
+   * Names the generated/edited result. A string is used verbatim; a function
+   * receives `(originalFilename, counter)` and returns the name (see
+   * {@link OutputFilenameResolver}). When unset, the result keeps the source's
+   * original filename (and falls back to the provider's default when generating
+   * from scratch). Property only (the function form can't be an attribute).
+   */
+  @property({ attribute: false })
+  public outputFilename?: string | OutputFilenameResolver;
 
   /**
    * Key/value metadata attached to the resulting Uploadcare file, for both
@@ -214,6 +234,11 @@ export class UcAiEditor extends LitElement {
   @state()
   private _inputUrl: string | null = null;
 
+  /** Source info fetched from {@link source} when none was injected via
+   *  {@link sourceFileInfo}. The injected value always takes precedence. */
+  @state()
+  private _fetchedFileInfo?: UploadcareFile;
+
   /** Last derived mode, to (re)default the ratio selection when it flips. */
   private _lastMode?: AiEditorMode;
 
@@ -263,6 +288,12 @@ export class UcAiEditor extends LitElement {
     // provider (CDN base) changed — covers both set in the same update.
     if (providerConfigChanged || changed.has('source')) {
       this._resolveInputUrl();
+    }
+    // Resolve the source's file info: use the injected value, else fetch it from
+    // the uuid. Gives the canvas the source's true aspect ratio before its image
+    // decodes (no portrait crop), and feeds the output-filename resolver.
+    if (providerConfigChanged || changed.has('source') || changed.has('sourceFileInfo')) {
+      this._resolveSourceFileInfo();
     }
     // Default the ratio selection when the mode flips — edit defaults to
     // "Original" (omit aspect_ratio → backend preserves the source AR), generate
@@ -352,8 +383,46 @@ export class UcAiEditor extends LitElement {
     });
   }
 
+  /** Effective source info: the injected value, else the fetched fallback. */
+  private get _effectiveSourceFileInfo(): UploadcareFile | undefined {
+    return this.sourceFileInfo ?? this._fetchedFileInfo;
+  }
+
+  /** Resolve {@link source} to its file info — injected wins; otherwise fetch
+   *  it from the uuid. Failures fall back silently (info is an optimization). */
+  private _resolveSourceFileInfo(): void {
+    this._fetchedFileInfo = undefined;
+    // Injected info (the plugin path) needs no fetch.
+    if (this.sourceFileInfo) return;
+    const uuid = this.source;
+    const provider = this._provider;
+    if (!uuid || !provider) return;
+    void provider.getFileInfo(uuid).then(
+      (file) => {
+        // Guard against races and a value injected meanwhile.
+        if (this.source === uuid && this._provider === provider && !this.sourceFileInfo) {
+          this._fetchedFileInfo = file;
+        }
+      },
+      () => {
+        // Silent fallback: the canvas re-frames on image load instead.
+      },
+    );
+  }
+
   private get _displayUrl(): string | null {
     return this._gen.resultUrl ?? this._inputUrl;
+  }
+
+  /**
+   * Intrinsic ratio of the image currently on the canvas, from metadata when
+   * known — the displayed result's file info, else the source's. Lets the canvas
+   * frame correctly before the image decodes. `null` when unknown.
+   */
+  private _displayedNaturalRatio(): number | null {
+    const info = this._gen.result?.file.imageInfo ?? this._effectiveSourceFileInfo?.imageInfo;
+    if (info && info.width > 0 && info.height > 0) return info.width / info.height;
+    return null;
   }
 
   /** Last non-null resolved preview, kept on screen while an async resolver runs. */
@@ -421,6 +490,23 @@ export class UcAiEditor extends LitElement {
     return option.labelKey ? this._l(option.labelKey) : '';
   };
 
+  /**
+   * Resolve the result's filename from {@link outputFilename}: a function gets
+   * the source's original name + this generation's 1-based counter; a string is
+   * used verbatim. Unset preserves the source's original name (`undefined` when
+   * generating from scratch → the provider's default).
+   */
+  private _resolveOutputFilename(): string | undefined {
+    const original = this._effectiveSourceFileInfo?.originalFilename || undefined;
+    const out = this.outputFilename;
+    if (typeof out === 'function') {
+      // Counter is the 1-based position of this result in the lineage history.
+      return out(original, this._gen.history.length + 1) || undefined;
+    }
+    if (typeof out === 'string') return out || undefined;
+    return original;
+  }
+
   private async _generate(): Promise<void> {
     const prompt = this._prompt.trim();
     const provider = this._provider;
@@ -442,8 +528,8 @@ export class UcAiEditor extends LitElement {
         // restore the picker when re-selected.
         ratioValue: this._selectedRatio,
         source: mode === 'edit' ? (this._currentSourceUuid ?? undefined) : undefined,
-        // In edit mode, keep the source file's name on the result (if provided).
-        filename: mode === 'edit' ? (this.sourceFilename ?? undefined) : undefined,
+        // Name the result (resolver / static string / preserved source name).
+        filename: this._resolveOutputFilename(),
         // Attach the configured metadata to the result, for both modes.
         metadata: this.metadata,
       });
@@ -472,6 +558,7 @@ export class UcAiEditor extends LitElement {
   private _onStartOver(): void {
     this.source = null;
     this._inputUrl = null;
+    this._fetchedFileInfo = undefined;
     this._prompt = '';
     this._gen.reset();
     this._gen.clearHistory();
@@ -725,6 +812,7 @@ export class UcAiEditor extends LitElement {
           <uc-ai-canvas
             .url=${this._previewUrl}
             .ratio=${frameRatio}
+            .naturalRatio=${this._displayedNaturalRatio()}
             .fullsizeUrl=${this._fullsizeUrl}
             .busy=${this._gen.busy}
             .alt=${this._prompt}

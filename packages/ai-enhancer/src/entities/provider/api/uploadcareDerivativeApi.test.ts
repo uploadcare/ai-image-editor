@@ -1,6 +1,15 @@
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
-import { describe, expect, it, vi } from 'vitest';
+import { info } from '@uploadcare/upload-client';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
+
+// Keep the real UploadcareFile (used to wrap the result) but stub the `info`
+// network call so getFileInfo is exercised without hitting the Upload API.
+vi.mock('@uploadcare/upload-client', async (importActual) => {
+  const actual = await importActual<typeof import('@uploadcare/upload-client')>();
+  return { ...actual, info: vi.fn() };
+});
+const mockInfo = vi.mocked(info);
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -276,6 +285,58 @@ describe('UploadcareDerivativeApi', () => {
         ...NO_DELAY,
       });
       expect(await provider.resolveCdnUrl('some-uuid')).toBe('https://cdn.example.com/some-uuid/');
+    });
+  });
+
+  describe('getFileInfo', () => {
+    afterEach(() => mockInfo.mockReset());
+
+    const fileInfoFixture = {
+      uuid: 'file-uuid',
+      originalFilename: 'portrait.png',
+      isImage: true,
+      mimeType: 'image/png',
+      imageInfo: { width: 800, height: 1200, format: 'PNG' },
+    } as unknown as Awaited<ReturnType<typeof info>>;
+
+    it('calls upload-client info() and wraps it as an UploadcareFile on the CDN base', async () => {
+      mockInfo.mockResolvedValue(fileInfoFixture);
+      const provider = new UploadcareDerivativeApi({
+        publicKey: 'pk',
+        cdnBaseUrl: 'https://cdn.example.com',
+        fetch: vi.fn<typeof fetch>(),
+        ...NO_DELAY,
+      });
+
+      const file = await provider.getFileInfo('file-uuid');
+
+      expect(mockInfo).toHaveBeenCalledWith('file-uuid', expect.objectContaining({ publicKey: 'pk' }));
+      expect(file.uuid).toBe('file-uuid');
+      expect(file.originalFilename).toBe('portrait.png');
+      expect(file.cdnUrl).toBe('https://cdn.example.com/file-uuid/');
+      expect(file.imageInfo).toMatchObject({ width: 800, height: 1200 });
+    });
+
+    it('forwards baseUrl + abort signal to info()', async () => {
+      mockInfo.mockResolvedValue(fileInfoFixture);
+      const provider = new UploadcareDerivativeApi({
+        publicKey: 'pk',
+        baseUrl: 'https://upload.example.com',
+        fetch: vi.fn<typeof fetch>(),
+        ...NO_DELAY,
+      });
+      const controller = new AbortController();
+      await provider.getFileInfo('file-uuid', controller.signal);
+      expect(mockInfo).toHaveBeenCalledWith(
+        'file-uuid',
+        expect.objectContaining({ baseURL: 'https://upload.example.com', signal: controller.signal }),
+      );
+    });
+
+    it('propagates info() failures', async () => {
+      mockInfo.mockRejectedValue(new Error('FileNotFound'));
+      const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: vi.fn<typeof fetch>(), ...NO_DELAY });
+      await expect(provider.getFileInfo('missing')).rejects.toThrow(/FileNotFound/);
     });
   });
 });

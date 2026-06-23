@@ -112,7 +112,8 @@ editor.sourceFilename = 'photo.jpg' // result keeps this name
 |---|---|---|---|
 | `pubkey` | `pubkey` | `string` | Uploadcare public key. Required to enable generate/edit. |
 | `source` | `source` | `string \| null` | UUID of an image to edit. Absent → generate mode. |
-| `sourceFilename` | `source-filename` | `string \| null` | Name to give the edited result (edit mode). |
+| `sourceFileInfo` | — | `UploadcareFile` | Property only. The source image's file info (dimensions, original filename, …). Set it to skip the lookup the editor otherwise does from `source` — the plugin passes the uploader entry it already holds, so the canvas frames to the source's true aspect ratio from the first paint. |
+| `outputFilename` | — | `string \| (originalFilename, counter) => string` | Property only. Names the result. A string is used verbatim; a function receives the source's original filename (`undefined` when generating from scratch) and the 1-based history counter (first is `1`). Unset → keep the source's original name. |
 | `baseUrl` | `base-url` | `string` | Upload API base URL. |
 | `cdnCname` | `cdn-cname` | `string` | CDN cname for resolving results. |
 | `cdnCnamePrefixed` | `cdn-cname-prefixed` | `string` | Base domain for prefixed CDN URLs. |
@@ -212,8 +213,8 @@ types come from `@uploadcare/ai-enhancer/plugin`).
 
 - **`AiEnhancerPlugin`** — `UploaderPlugin`. Add to `config.plugins`.
 - **`AiEditorActivityParams`** — `{ sourceInternalId?: string }`. Activity params;
-  presence of `sourceInternalId` means edit mode (the source uuid + name are read
-  from that entry, and `uc:done` replaces it in place).
+  presence of `sourceInternalId` means edit mode (the source uuid + file info are
+  read from that entry, and `uc:done` replaces it in place).
 - **`aspectRatiosFromCropPreset(cropPreset: string): AspectRatio[] | null`** —
   translate the uploader's `cropPreset` into the editor's offered ratios.
 
@@ -221,7 +222,8 @@ types come from `@uploadcare/ai-enhancer/plugin`).
 
 - **`UcAiEditor`** (`<uc-ai-editor>`) — the editor element (see properties /
   events above).
-- Types: **`DoneDetail`**, **`ComposerPlacement`**, **`CanvasFit`**, **`HistoryPlacement`**,
+- Types: **`DoneDetail`**, **`OutputFilenameResolver`** (`(originalFilename, counter) => string`),
+  **`ComposerPlacement`**, **`CanvasFit`**, **`HistoryPlacement`**,
   **`ToolbarPlacement`**, **`AspectRatio`**, **`AiPreset`** (`{ label, prompt }`),
   **`AiPresets`** (`Partial<Record<AiEditorMode, AiPreset[]>>`),
   **`AiEditorMode`** (`'generate' | 'edit'`).
