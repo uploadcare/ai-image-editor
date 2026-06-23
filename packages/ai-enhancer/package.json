@@ -26,7 +26,11 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "docs:api": "cem analyze && node scripts/build-cem-docs.mjs && typedoc",
+    "docs:dev": "npm run docs:api && vitepress dev docs",
+    "docs:build": "npm run docs:api && vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "@lit-labs/motion": "^1.1.0",
@@ -44,9 +48,14 @@
     }
   },
   "devDependencies": {
+    "@custom-elements-manifest/analyzer": "^0.11.0",
+    "@custom-elements-manifest/to-markdown": "^0.1.0",
     "@uploadcare/file-uploader": "1.32.0-alpha.1",
     "@vitest/browser": "^3.0.9",
     "playwright": "^1.49.0",
+    "typedoc": "^0.28.19",
+    "typedoc-plugin-markdown": "^4.12.0",
+    "vitepress": "^1.6.4",
     "zod": "^3.25.76"
   },
   "keywords": [
@@ -67,5 +76,6 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "customElements": "docs/api/custom-elements.json"
 }
