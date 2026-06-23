@@ -1,3 +1,4 @@
+import type { UploadcareFile } from '@uploadcare/upload-client';
 import { page } from '@vitest/browser/context';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MODES, type UcAiEditor as UcAiEditorType } from '../src/index';
@@ -618,11 +619,13 @@ describe('<uc-ai-editor>', () => {
     expect(selected()).toEqual([1, 1]);
   });
 
-  it('sends sourceFilename as the result filename in edit mode (preserves the original name)', async () => {
+  it('names the result after the source file in edit mode (preserves the original name)', async () => {
     const stub = stubFetch({ uuid: 'edited' });
     const el = mount(STAGING);
     el.source = SAMPLE_UUID;
-    el.sourceFilename = 'holiday-photo.jpg';
+    // Inject the source's file info (as the plugin does) — its originalFilename
+    // is the default output name, so no separate fetch is needed.
+    el.sourceFileInfo = { originalFilename: 'holiday-photo.jpg', imageInfo: null } as unknown as UploadcareFile;
     await el.updateComplete;
     expect(editorMode(el)).toBe('edit');
 
@@ -632,6 +635,36 @@ describe('<uc-ai-editor>', () => {
     await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
     // The edit result is named after the source, not the provider's default.
     expect(stub.generateBodies[0]!.filename).toBe('holiday-photo.jpg');
+  });
+
+  it('names the result via the outputFilename resolver (original + counter)', async () => {
+    const stub = stubFetch({ uuid: 'r1' });
+    const el = mount(STAGING);
+    // A fresh uuid with no persisted lineage → counter starts at 1.
+    el.source = 'resolver-test-uuid-0001';
+    el.sourceFileInfo = { originalFilename: 'cat.png', imageInfo: null } as unknown as UploadcareFile;
+    // First generation in the session → counter is 1, original is the source's.
+    el.outputFilename = (original, counter) => `${original ?? 'ai'}-edit-${counter}`;
+    await el.updateComplete;
+
+    typePrompt(el, 'add a hat');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
+    expect(stub.generateBodies[0]!.filename).toBe('cat.png-edit-1');
+  });
+
+  it('uses a static outputFilename string verbatim', async () => {
+    const stub = stubFetch({ uuid: 'r1' });
+    const el = mount(STAGING);
+    el.outputFilename = 'my-art.png';
+    await el.updateComplete;
+
+    typePrompt(el, 'a sunset');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
+    expect(stub.generateBodies[0]!.filename).toBe('my-art.png');
   });
 
   it('sends an explicit ratio when the user reshapes in edit mode', async () => {

@@ -201,14 +201,17 @@ export const AiEnhancerPlugin: UploaderPlugin = {
 
         const params = (activityParams ?? {}) as AiEditorActivityParams;
         const editor = document.createElement('uc-ai-editor') as UcAiEditor;
-        // Edit mode: resolve the source image's UUID + name from its collection
-        // entry, so the edit opens on that image and its result keeps the name.
-        // (Falls back to generate mode if the entry is gone.)
+        // Edit mode: resolve the source image's collection entry, so the edit
+        // opens on that image. We hand the editor the entry's `fileInfo` it
+        // already holds, so the editor skips its own lookup and can frame the
+        // canvas to the source's true aspect ratio from the first paint (and
+        // name the result after the original). (Falls back to generate mode if
+        // the entry is gone.)
         if (params.sourceInternalId) {
           try {
             const sourceItem = uploaderApi.getOutputItem(params.sourceInternalId);
             editor.source = sourceItem.uuid;
-            editor.sourceFilename = sourceItem.name;
+            editor.sourceFileInfo = sourceItem.fileInfo ?? undefined;
           } catch {
             // Entry no longer exists — leave `editor.source` unset (generate mode).
           }
@@ -290,8 +293,9 @@ export const AiEnhancerPlugin: UploaderPlugin = {
           // sourced to the AI enhancer.
           if (params.sourceInternalId) {
             try {
-              // The edited result already carries the source file's name (set via
-              // the editor's `sourceFilename`), so a plain replace preserves it.
+              // The edited result already carries the source file's name (the
+              // editor names it after the source's `fileInfo` by default), so a
+              // plain replace preserves it.
               uploaderApi.replaceFileFromUploadcareFile(params.sourceInternalId, file, { source: AI_ENHANCER_ID });
             } catch {
               // The source entry is gone (e.g. removed while editing) — fall back to adding.

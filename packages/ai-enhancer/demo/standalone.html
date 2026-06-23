@@ -50,8 +50,8 @@
       <input id="source" type="text" size="36" placeholder="uuid to edit (blank = generate)" />
     </label>
     <label slot="controls">
-      Source filename
-      <input id="source-filename" type="text" size="16" placeholder="result name (edit mode)" />
+      Output filename
+      <input id="output-filename" type="text" size="16" placeholder="result name (blank = keep original)" />
     </label>
     <label slot="controls">
       Metadata
@@ -172,10 +172,13 @@
       editor.source = uuid || null;
       shell.log(uuid ? `source → ${uuid} (edit mode)` : 'source cleared (generate mode)');
     });
-    document.getElementById('source-filename').addEventListener('change', (e) => {
+    document.getElementById('output-filename').addEventListener('change', (e) => {
       const name = e.target.value.trim();
-      editor.sourceFilename = name || null;
-      shell.log(`source-filename → ${name || '(none)'}`);
+      // `outputFilename` accepts a static string (used here) or a function
+      // `(originalFilename, counter) => string`, e.g.:
+      //   editor.outputFilename = (original, n) => `${original ?? 'ai'}-${n}.png`;
+      editor.outputFilename = name || undefined;
+      shell.log(`output-filename → ${name || '(keep original)'}`);
     });
     document.getElementById('metadata').addEventListener('change', (e) => {
       // Parse "key=value, key2=value2" into a flat Record<string, string>.

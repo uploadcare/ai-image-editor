@@ -44,6 +44,7 @@ export {
   type ComposerPlacement,
   type DoneDetail,
   type HistoryPlacement,
+  type OutputFilenameResolver,
   type ToolbarPlacement,
   UcAiEditor,
 } from './widgets/ai-editor';

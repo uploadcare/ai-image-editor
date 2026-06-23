@@ -1,6 +1,6 @@
 import { serializeCdnUrl } from '@uploadcare/cdn-url';
 import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-prefix/async';
-import { type FileInfo, Metadata, UploadcareFile } from '@uploadcare/upload-client';
+import { type FileInfo, info, Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import { camelizeKeys } from '../../../shared/lib/camelizeKeys';
 import { isValidAspectRatio } from '../../aspect-ratio';
 import { AiProviderError, type AiProvider, type AiProviderRequest, type AiProviderResult } from '../model/types';
@@ -72,6 +72,7 @@ export class UploadcareDerivativeApi implements AiProvider {
 
   private readonly api: UploadcareApiClient;
   private readonly publicKey: string;
+  private readonly baseUrl?: string;
   private readonly filename: string;
   private readonly store?: 'auto' | boolean;
   private readonly cname: string;
@@ -90,6 +91,7 @@ export class UploadcareDerivativeApi implements AiProvider {
       fetch: options.fetch,
     });
     this.publicKey = options.publicKey;
+    this.baseUrl = options.baseUrl;
     this.filename = options.filename ?? 'generated.png';
     this.store = options.store;
     this.cname = options.cdnBaseUrl ?? DEFAULT_CDN_CNAME;
@@ -110,6 +112,17 @@ export class UploadcareDerivativeApi implements AiProvider {
    */
   async resolveCdnUrl(uuid: string): Promise<string> {
     return serializeCdnUrl({ origin: await this.getCdnBase(), uuid });
+  }
+
+  /**
+   * Resolve a stored file's full info (image dimensions, original filename,
+   * mime, …) from its uuid, as an {@link UploadcareFile} — the same shape
+   * generation results carry. Lets the editor frame the canvas to the source's
+   * true aspect ratio before the image decodes, and name outputs after it.
+   */
+  async getFileInfo(uuid: string, signal?: AbortSignal): Promise<UploadcareFile> {
+    const fileInfo = await info(uuid, { publicKey: this.publicKey, baseURL: this.baseUrl, signal });
+    return new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
   }
 
   private async startJob(request: AiProviderRequest): Promise<string> {

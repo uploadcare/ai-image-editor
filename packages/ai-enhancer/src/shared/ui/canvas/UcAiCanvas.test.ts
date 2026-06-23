@@ -60,6 +60,57 @@ describe('UcAiCanvas', () => {
     expect(el.shadowRoot!.querySelector('.canvas__frame')).toBeTruthy();
   });
 
+  describe('frame sizing', () => {
+    /** happy-dom reports 0 for clientWidth/Height — stub a square viewport. */
+    function stubViewport(el: UcAiCanvas, w = 1000, h = 1000): void {
+      const vp = el.shadowRoot!.querySelector('.canvas__viewport')!;
+      Object.defineProperty(vp, 'clientWidth', { value: w, configurable: true });
+      Object.defineProperty(vp, 'clientHeight', { value: h, configurable: true });
+    }
+    const frameEl = (el: UcAiCanvas) => el.shadowRoot!.querySelector('.canvas__frame') as HTMLElement;
+
+    it('sizes the frame to naturalRatio before the image decodes', async () => {
+      const el = await mount('https://example.com/portrait.png');
+      stubViewport(el);
+      // Portrait hint (2:3) into a square viewport → height fills, width = h * 2/3.
+      el.naturalRatio = 2 / 3;
+      await el.updateComplete;
+      expect(frameEl(el).style.height).toBe('1000px');
+      expect(frameEl(el).style.width).toBe('667px');
+    });
+
+    it('prefers a pinned ratio over naturalRatio', async () => {
+      const el = await mount('https://example.com/a.png');
+      stubViewport(el);
+      el.naturalRatio = 2 / 3;
+      el.ratio = 1; // square pin wins
+      await el.updateComplete;
+      expect(frameEl(el).style.width).toBe('1000px');
+      expect(frameEl(el).style.height).toBe('1000px');
+    });
+
+    it('re-sizes to the decoded image dimensions on load when no ratio is known', async () => {
+      const el = await mount('https://example.com/portrait.png');
+      stubViewport(el);
+
+      // Displaying the image (no ratio, no hint, img not yet decoded) frames to
+      // the landscape default (3/2).
+      preloadImg(el)!.dispatchEvent(new Event('load'));
+      await el.updateComplete;
+      expect(frameEl(el).style.width).toBe('1000px');
+      expect(frameEl(el).style.height).toBe('667px');
+
+      // Image decodes as portrait; the displayed <img>'s load must re-frame it.
+      const shown = shownImg(el)!;
+      Object.defineProperty(shown, 'naturalWidth', { value: 800, configurable: true });
+      Object.defineProperty(shown, 'naturalHeight', { value: 1200, configurable: true });
+      shown.dispatchEvent(new Event('load'));
+      await el.updateComplete;
+      expect(frameEl(el).style.height).toBe('1000px');
+      expect(frameEl(el).style.width).toBe('667px');
+    });
+  });
+
   it('shows an error state and emits uc:image-error when the image fails to load', async () => {
     const el = await mount('https://example.com/broken.png');
     const onError = vi.fn();
