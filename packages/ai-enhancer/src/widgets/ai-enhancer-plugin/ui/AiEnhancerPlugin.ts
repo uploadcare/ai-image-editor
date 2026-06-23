@@ -1,5 +1,4 @@
 import type { UploaderPlugin } from '@uploadcare/file-uploader';
-import type { Metadata } from '@uploadcare/upload-client';
 import { type AspectRatio, isValidAspectRatio, POPULAR_ASPECT_RATIOS } from '../../../entities/aspect-ratio';
 import { type AiEnhancerLocale, enLocale, LOCALE_LOADERS } from '../../../shared/i18n';
 import { ICON_EDIT_AI, ICON_GENERATE } from '../../../shared/ui/icons';
@@ -230,30 +229,19 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         refreshProviderConfig();
 
         // Forward the uploader's `metadata` config so the AI result carries the
-        // same metadata as a regular upload. The config is either a static bag or
-        // a per-file `(entry) => Metadata` callback. For a callback we resolve it
-        // against the source entry being edited; a generate has no input file, so
-        // the callback can't run and metadata is left unset for that case.
-        const resolveConfigMetadata = async (): Promise<Metadata | undefined> => {
-          const meta = config.get('metadata');
-          if (!meta) return undefined;
-          if (typeof meta !== 'function') return meta;
-          if (!params.sourceInternalId) return undefined;
-          try {
-            return await meta(uploaderApi.getOutputItem(params.sourceInternalId));
-          } catch {
-            // Source entry gone, or the callback threw — fall back to no metadata.
-            return undefined;
-          }
-        };
-        // The callback form may be async, so the assignment lands a microtask
-        // later; a token drops a stale resolution if `metadata` changes meanwhile.
-        let metadataToken = 0;
+        // same metadata as a regular upload. A static bag passes straight
+        // through; a callback is adapted to the editor's `(UploadcareFile)`
+        // callback — the editor invokes it only in edit mode (a source exists),
+        // and we resolve that source's live entry so the configured callback
+        // still receives the `OutputFileEntry` it expects.
         const refreshMetadata = () => {
-          const token = ++metadataToken;
-          void resolveConfigMetadata().then((meta) => {
-            if (token === metadataToken) editor.metadata = meta;
-          });
+          const meta = config.get('metadata');
+          if (typeof meta !== 'function') {
+            editor.metadata = meta;
+            return;
+          }
+          const sourceInternalId = params.sourceInternalId;
+          editor.metadata = () => (sourceInternalId ? meta(uploaderApi.getOutputItem(sourceInternalId)) : {});
         };
         refreshMetadata();
 
@@ -261,6 +249,11 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         // `localeName` and (locale-keyed) `localeDefinitionOverride` straight through.
         const refreshLocale = () => {
           editor.localeName = config.get('localeName') || 'en';
+          // TODO(file-uploader): drop this cast once a release ships the
+          // augmentable `CustomLocaleDefinition` type. Then augment it here
+          // (`declare module '@uploadcare/file-uploader' { interface
+          // CustomLocaleDefinition extends AiEnhancerLocale {} }`) so
+          // `config.get('localeDefinitionOverride')` is typed for our keys.
           editor.localeDefinitionOverride =
             (config.get('localeDefinitionOverride') as Record<string, Partial<AiEnhancerLocale>>) ?? {};
         };

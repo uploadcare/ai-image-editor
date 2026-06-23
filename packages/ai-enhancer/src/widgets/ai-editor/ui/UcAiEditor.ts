@@ -57,6 +57,15 @@ export type DoneDetail = {
  */
 export type OutputFilenameResolver = (originalFilename: string | undefined, counter: number) => string;
 
+/**
+ * Per-file metadata callback, mirroring the file uploader's `metadata` config
+ * option. Called at generation time with the source image's file info (the
+ * uploader passes its entry's `.fileInfo`); returns the metadata bag, optionally
+ * async. Only invoked when there is a source (an edit); a generate-from-scratch
+ * gets no callback. Use the static {@link Metadata} form to cover both.
+ */
+export type MetadataCallback = (fileInfo: UploadcareFile) => Promise<Metadata> | Metadata;
+
 /** Which edge the composer (prompt + chips + aspect ratio) sits on. */
 export type ComposerPlacement = 'top' | 'bottom';
 
@@ -120,12 +129,14 @@ export class UcAiEditor extends LitElement {
   public outputFilename?: string | OutputFilenameResolver;
 
   /**
-   * Key/value metadata attached to the resulting Uploadcare file, for both
-   * generate and edit. Same shape as the file uploader's `metadata` config
-   * (`Record<string, string>`), e.g. `{ source: 'ai-enhancer' }`. Property only.
+   * Metadata attached to the resulting Uploadcare file, for both generate and
+   * edit. Mirrors the file uploader's `metadata` config: either a static bag
+   * (`Record<string, string>`, e.g. `{ source: 'ai-enhancer' }`) or a
+   * {@link MetadataCallback} resolved at generation time against the source file.
+   * Property only.
    */
   @property({ attribute: false })
-  public metadata?: Metadata;
+  public metadata?: Metadata | MetadataCallback | null;
 
   /** Uploadcare public key. Required to enable generate/edit. */
   @property()
@@ -507,6 +518,23 @@ export class UcAiEditor extends LitElement {
     return original;
   }
 
+  /**
+   * Resolve {@link metadata}: a static bag is used as-is; a callback is invoked
+   * with the source file (only when one exists — a generate-from-scratch gets
+   * none) and may be async. A throwing callback yields no metadata.
+   */
+  private async _resolveMetadata(): Promise<Metadata | undefined> {
+    const meta = this.metadata;
+    if (typeof meta !== 'function') return meta ?? undefined;
+    const source = this._effectiveSourceFileInfo;
+    if (!source) return undefined;
+    try {
+      return await meta(source);
+    } catch {
+      return undefined;
+    }
+  }
+
   private async _generate(): Promise<void> {
     const prompt = this._prompt.trim();
     const provider = this._provider;
@@ -516,6 +544,7 @@ export class UcAiEditor extends LitElement {
     // off it; a generate has none). Captured before the run, since a produced
     // result becomes the new `_currentSourceUuid`.
     const parentUuid = mode === 'edit' ? this._currentSourceUuid : null;
+    const metadata = await this._resolveMetadata();
     try {
       const result = await this._gen.run({
         provider,
@@ -531,7 +560,7 @@ export class UcAiEditor extends LitElement {
         // Name the result (resolver / static string / preserved source name).
         filename: this._resolveOutputFilename(),
         // Attach the configured metadata to the result, for both modes.
-        metadata: this.metadata,
+        metadata,
       });
       // Clear the prompt only on a produced result — a failed/aborted run keeps
       // the text so the user can retry or tweak it.

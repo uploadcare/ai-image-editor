@@ -120,7 +120,7 @@ editor.sourceFilename = 'photo.jpg' // result keeps this name
 | `aspectRatios` | `aspect-ratios` | `AspectRatio[] \| null` | Ratios offered in generate mode, e.g. `aspect-ratios="16:9 5:4 1:1"`. Empty → popular set. |
 | `presetsOnly` | `presets-only` | `boolean` | Hide the free-text prompt; preset chips only, and picking one generates immediately. |
 | `presets` | — | `AiPresets` | Property only. Quick-prompt chips keyed by mode, e.g. `{ generate: [{ label, prompt }], edit: [...] }`. Clicking a chip fills the prompt. Modes left out use the built-in set; an empty array (`{ generate: [] }`) hides that mode's chips. Keyed by mode, so future modes extend it without breaking existing configs. |
-| `metadata` | — | `Metadata` | Property only. Key/value metadata (`Record<string, string>`) attached to the result, for both generate and edit, e.g. `{ source: 'ai-enhancer' }`. Same shape as the file uploader's `metadata` config. |
+| `metadata` | — | `Metadata \| MetadataCallback \| null` | Property only. Same shape as the file uploader's `metadata` config: a static key/value bag (`Record<string, string>`, e.g. `{ source: 'ai-enhancer' }`) or a `MetadataCallback` the editor calls at generation time with the source file (optionally async). |
 | `composerPlacement` | `composer-placement` | `ComposerPlacement` | Which edge the composer sits on: `bottom` (default) or `top`. |
 | `canvasFit` | `canvas-fit` | `CanvasFit` | How the canvas sizes relative to the composer: `available` (default) shrinks the canvas to the space left by the composer (docked outside the image; history chips still overlay it); `full` lets the canvas fill the area with the composer floating over it. |
 | `historyPlacement` | `history-placement` | `HistoryPlacement` | Where the history strip sits: `composer-above` (default) / `composer-below` (relative to the composer) or `canvas-top` / `canvas-bottom` (pinned to the canvas edge). |
@@ -223,6 +223,7 @@ types come from `@uploadcare/ai-enhancer/plugin`).
 - **`UcAiEditor`** (`<uc-ai-editor>`) — the editor element (see properties /
   events above).
 - Types: **`DoneDetail`**, **`OutputFilenameResolver`** (`(originalFilename, counter) => string`),
+  **`MetadataCallback`** (`(fileInfo: UploadcareFile) => Metadata | Promise<Metadata>`),
   **`ComposerPlacement`**, **`CanvasFit`**, **`HistoryPlacement`**,
   **`ToolbarPlacement`**, **`AspectRatio`**, **`AiPreset`** (`{ label, prompt }`),
   **`AiPresets`** (`Partial<Record<AiEditorMode, AiPreset[]>>`),

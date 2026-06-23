@@ -3,6 +3,7 @@ export {
   type ComposerPlacement,
   type DoneDetail,
   type HistoryPlacement,
+  type MetadataCallback,
   type OutputFilenameResolver,
   type ToolbarPlacement,
   UcAiEditor,
