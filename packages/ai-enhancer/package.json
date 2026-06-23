@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@uploadcare/file-uploader": "1.32.0-alpha.1",
-    "@vitest/browser": "^3.0.9",
+    "@vitest/browser": "^4.1.9",
     "playwright": "^1.49.0",
     "zod": "^3.25.76"
   },
