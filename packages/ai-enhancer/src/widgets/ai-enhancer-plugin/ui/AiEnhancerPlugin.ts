@@ -87,13 +87,16 @@ export type AiEditorActivityParams = {
 };
 
 /**
- * Register the plugin's custom activity with the file-uploader's type system so
- * `setCurrentActivity(AI_ENHANCER_ID, params)` is type-checked instead of cast.
+ * Augment the file-uploader's type system so plugin-specific config is checked
+ * instead of cast: the custom activity params for
+ * `setCurrentActivity(AI_ENHANCER_ID, params)`, and the editor's locale keys so
+ * `localeDefinitionOverride` is typed for them.
  */
 declare module '@uploadcare/file-uploader' {
   interface CustomActivities {
     [AI_ENHANCER_ID]: { params: AiEditorActivityParams };
   }
+  interface CustomLocaleDefinition extends AiEnhancerLocale {}
 }
 
 /**
@@ -123,7 +126,7 @@ export function aspectRatiosFromCropPreset(cropPreset: string): AspectRatio[] | 
 export const AiEnhancerPlugin: UploaderPlugin = {
   id: AI_ENHANCER_ID,
   setup: ({ pluginApi, uploaderApi }) => {
-    const { registry, config } = pluginApi;
+    const { registry, config, files } = pluginApi;
 
     ensureActivityModalSize();
 
@@ -249,13 +252,9 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         // `localeName` and (locale-keyed) `localeDefinitionOverride` straight through.
         const refreshLocale = () => {
           editor.localeName = config.get('localeName') || 'en';
-          // TODO(file-uploader): drop this cast once a release ships the
-          // augmentable `CustomLocaleDefinition` type. Then augment it here
-          // (`declare module '@uploadcare/file-uploader' { interface
-          // CustomLocaleDefinition extends AiEnhancerLocale {} }`) so
-          // `config.get('localeDefinitionOverride')` is typed for our keys.
-          editor.localeDefinitionOverride =
-            (config.get('localeDefinitionOverride') as Record<string, Partial<AiEnhancerLocale>>) ?? {};
+          // Typed for our locale keys via the `CustomLocaleDefinition`
+          // augmentation above — no cast needed.
+          editor.localeDefinitionOverride = config.get('localeDefinitionOverride') ?? {};
         };
         refreshLocale();
 
@@ -280,7 +279,7 @@ export const AiEnhancerPlugin: UploaderPlugin = {
           const { file } = (e as CustomEvent<DoneDetail>).detail;
           // The result is already stored on Uploadcare — hand the full file
           // object over so the uploader takes it in `success` state without
-          // re-fetching file info (needs file-uploader >= 1.32.0-alpha.0).
+          // re-fetching file info (needs file-uploader >= 1.32.0-alpha.1).
           // Edit mode replaces the source entry in place (keeping its list
           // position); generate mode adds a new entry. Either way the file is
           // sourced to the AI enhancer.
@@ -288,8 +287,9 @@ export const AiEnhancerPlugin: UploaderPlugin = {
             try {
               // The edited result already carries the source file's name (the
               // editor names it after the source's `fileInfo` by default), so a
-              // plain replace preserves it.
-              uploaderApi.replaceFileFromUploadcareFile(params.sourceInternalId, file, { source: AI_ENHANCER_ID });
+              // plain replace preserves it. `files.replace` removes the source
+              // entry and adds the result in its place (a NEW internalId).
+              files.replace(params.sourceInternalId, file, { source: AI_ENHANCER_ID });
             } catch {
               // The source entry is gone (e.g. removed while editing) — fall back to adding.
               uploaderApi.addFileFromUploadcareFile(file, { source: AI_ENHANCER_ID });
