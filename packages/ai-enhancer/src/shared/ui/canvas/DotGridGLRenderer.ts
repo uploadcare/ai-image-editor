@@ -37,31 +37,18 @@ export type GLFrame = {
   // Mode.
   mask: boolean;
   generating: boolean;
-  alphaShimmer: boolean;
-  // Sizing.
+  // Sizing (size-wave shimmer).
   minScale: number;
   peakScale: number;
   idleScale: number;
-  // Epicentre brightness wave.
+  // Epicentre size wave.
   epis: Float32Array; // flat [x0,y0, x1,y1, …] in CSS px
   epiCount: number;
   epiRadius: number;
   epiFalloff: number;
-  shimFloor: number;
   // Effects.
   falloffWarp: number;
   dither: number;
-  alphaDither: number;
-  posJitter: number;
-  roundness: number;
-  alphaFalloff: number;
-  pulse: number; // precomputed global size multiplier
-  noiseSeed: number;
-  glitchOn: boolean;
-  glitchSeed: number;
-  glitchAmount: number;
-  glitchShift: number;
-  glitchSize: number;
   // Dot colour (0..1 each) for the non-mask grid.
   color: [number, number, number, number];
   /** Per-dot frame-clip factor (0 = outside frame, 1 = fully in), length cols*rows. */
@@ -90,7 +77,6 @@ uniform float uEnv;
 uniform float uShimMix;
 uniform int uMask;
 uniform int uGenerating;
-uniform int uAlphaShimmer;
 uniform float uMinScale;
 uniform float uPeakScale;
 uniform float uIdleScale;
@@ -98,21 +84,9 @@ uniform int uEpiCount;
 uniform vec2 uEpis[${MAX_EPIS}];
 uniform float uEpiRadius;
 uniform float uEpiFalloff;
-uniform float uShimFloor;
 uniform float uColorA;
-// ----- effects -----
 uniform float uFalloffWarp;   // bends the distance field (de-ring)
-uniform float uDither;        // per-dot size dither (size-wave mode)
-uniform float uAlphaDither;   // per-dot opacity noise
-uniform float uPosJitter;     // per-dot position jitter (× cell)
-uniform float uPulse;         // global size multiplier (breathing)
-uniform float uNoiseSeed;     // animates the per-dot noise (temporal jitter)
-uniform int uGlitchOn;
-uniform float uGlitchSeed;
-uniform float uGlitchAmount;
-uniform float uGlitchShift;
-uniform float uGlitchSize;
-uniform float uAlphaFalloff;  // legacy radial dimming (size-wave mode)
+uniform float uDither;        // per-dot size dither
 out float vAlpha;
 out vec2 vLocalPx;            // fragment offset from the dot centre, CSS px
 out float vHalf;             // dot half-size, CSS px
@@ -148,48 +122,24 @@ void main() {
   // soft per-dot clip so stray dots never show outside the frame.
   float clipv = (uMask == 1) ? 1.0 : aClip;
 
-  // Per-row digital glitch (a torn row jumps sideways and may spike in size).
-  float rowShift = 0.0;
-  float rowSize = 1.0;
-  if (uGlitchOn == 1 && hash(row, uGlitchSeed) < uGlitchAmount) {
-    rowShift = (hash(row + 31.0, uGlitchSeed) - 0.5) * 2.0 * uGlitchShift * uCell;
-    if (uGlitchSize > 0.0) rowSize = 1.0 + uGlitchSize * hash(row + 67.0, uGlitchSeed);
-  }
-
-  float sizeDither = (hash(col, row + uNoiseSeed) - 0.5) * uDither * intensity;
+  // Per-dot size dither (scaled by intensity), breaking the size-wave's banding.
+  float sizeDither = (hash(col, row) - 0.5) * uDither * intensity;
 
   float halfSize;
-  float brightness;
   if (uMask == 1) {
-    float animated;
-    if (uAlphaShimmer == 1) {
-      animated = uPeakScale;
-      float amount = ((uGenerating == 1) ? 1.0 : 0.0) * (1.0 - uShimFloor);
-      brightness = (1.0 - amount) + amount * intensity;
-    } else {
-      float wave = uMinScale + (uPeakScale - uMinScale) * intensity + sizeDither;
-      animated = (uGenerating == 1) ? wave : uMinScale;
-      brightness = (uAlphaFalloff > 0.0 && uGenerating == 1) ? ((1.0 - uAlphaFalloff) + uAlphaFalloff * intensity) : 1.0;
-    }
+    float wave = uMinScale + (uPeakScale - uMinScale) * intensity + sizeDither;
+    float animated = (uGenerating == 1) ? wave : uMinScale;
     float smallHalf = uBaseRadius * animated;
     halfSize = (uFullHalf + uEnv * (smallHalf - uFullHalf)) * clipv;
   } else {
-    if (uAlphaShimmer == 1) {
-      halfSize = uBaseRadius * uIdleScale * clipv;
-      float amount = uShimMix * (1.0 - uShimFloor);
-      brightness = (1.0 - amount) + amount * intensity;
-    } else {
-      float scale = uIdleScale;
-      if (uShimMix > 0.0) {
-        float wave = uMinScale + (uPeakScale - uMinScale) * intensity + sizeDither;
-        scale += (wave - scale) * uShimMix;
-      }
-      halfSize = uBaseRadius * scale * clipv;
-      brightness = (uAlphaFalloff > 0.0 && uShimMix > 0.0) ? ((1.0 - uAlphaFalloff) + uAlphaFalloff * intensity) : 1.0;
+    float scale = uIdleScale;
+    if (uShimMix > 0.0) {
+      float wave = uMinScale + (uPeakScale - uMinScale) * intensity + sizeDither;
+      scale += (wave - scale) * uShimMix;
     }
+    halfSize = uBaseRadius * scale * clipv;
   }
 
-  halfSize *= uPulse * rowSize;
   if (halfSize <= 0.0) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // offscreen → culled
     vAlpha = 0.0;
@@ -198,28 +148,17 @@ void main() {
     return;
   }
 
-  vec2 pos = center + vec2(rowShift, 0.0);
-  if (uPosJitter > 0.0) {
-    float amt = uPosJitter * uCell * intensity * (uMask == 1 ? 1.0 : uShimMix);
-    pos.x += (hash(col + uNoiseSeed, row) - 0.5) * amt;
-    pos.y += (hash(col + 101.0, row + 53.0 + uNoiseSeed) - 0.5) * amt;
-  }
   // Expand the quad ~1px beyond the dot so the fragment can anti-alias the edge
   // sub-pixel — without this, hard quad edges snap to whole pixels and the
   // grow/shrink reveal looks stepped.
   float ext = halfSize + 1.0;
   vLocalPx = aCorner * (2.0 * ext);
   vHalf = halfSize;
-  pos += aCorner * (2.0 * ext);
+  vec2 pos = center + aCorner * (2.0 * ext);
   vec2 ndc = (pos / uResolution) * 2.0 - 1.0;
   gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
 
-  float a = (uMask == 1 ? 1.0 : uColorA) * brightness;
-  if (uAlphaDither > 0.0) {
-    float bucket = floor(hash(col + 7.0, row + uNoiseSeed) * 8.0);
-    a *= (1.0 - uAlphaDither) + uAlphaDither * (bucket + 0.5) / 8.0;
-  }
-  vAlpha = a;
+  vAlpha = (uMask == 1) ? 1.0 : uColorA;
 }`;
 
 const DOT_FRAG = `#version 300 es
@@ -230,15 +169,13 @@ in vec2 vLocalPx;       // CSS px from the dot centre
 in float vHalf;         // dot half-size, CSS px
 uniform vec3 uColorRGB;
 uniform int uMask;
-uniform float uRoundness; // 0 = square, 1 = circle
 out vec4 frag;
 void main() {
-  // (Rounded-)box signed distance, evaluated in CSS px, anti-aliased over ~1px
-  // of screen space via fwidth. Always on, so size changes are sub-pixel-smooth
-  // (no stepping) while a square at idle still reads crisp.
-  float rr = uRoundness * vHalf;
-  vec2 d = abs(vLocalPx) - (vec2(vHalf) - rr);
-  float sd = min(max(d.x, d.y), 0.0) + length(max(d, vec2(0.0))) - rr;
+  // Box signed distance, evaluated in CSS px, anti-aliased over ~1px of screen
+  // space via fwidth — so size changes are sub-pixel-smooth (no stepping) while
+  // a square at idle still reads crisp.
+  vec2 d = abs(vLocalPx) - vec2(vHalf);
+  float sd = min(max(d.x, d.y), 0.0) + length(max(d, vec2(0.0)));
   float aaw = max(fwidth(sd), 1e-4);
   float cov = clamp(0.5 - sd / aaw, 0.0, 1.0);
   vec3 rgb = (uMask == 1) ? vec3(1.0) : uColorRGB;
@@ -327,7 +264,7 @@ export class DotGridGLRenderer {
     gl.vertexAttribPointer(aQuad, 2, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
 
-    for (const name of ['uResolution','uCols','uOffset','uCell','uBaseRadius','uFullHalf','uEnv','uShimMix','uMask','uGenerating','uAlphaShimmer','uMinScale','uPeakScale','uIdleScale','uEpiCount','uEpis','uEpiRadius','uEpiFalloff','uShimFloor','uColorA','uColorRGB','uFalloffWarp','uDither','uAlphaDither','uPosJitter','uPulse','uNoiseSeed','uGlitchOn','uGlitchSeed','uGlitchAmount','uGlitchShift','uGlitchSize','uAlphaFalloff','uRoundness']) {
+    for (const name of ['uResolution','uCols','uOffset','uCell','uBaseRadius','uFullHalf','uEnv','uShimMix','uMask','uGenerating','uMinScale','uPeakScale','uIdleScale','uEpiCount','uEpis','uEpiRadius','uEpiFalloff','uColorA','uColorRGB','uFalloffWarp','uDither']) {
       this._dotUniforms[name] = gl.getUniformLocation(this._dotProgram, name);
     }
     for (const name of ['uResolution','uFrame','uImage','uFrameSize','uImageSize']) {
@@ -439,7 +376,6 @@ export class DotGridGLRenderer {
     gl.uniform1f(u.uShimMix, f.shimMix);
     gl.uniform1i(u.uMask, f.mask ? 1 : 0);
     gl.uniform1i(u.uGenerating, f.generating ? 1 : 0);
-    gl.uniform1i(u.uAlphaShimmer, f.alphaShimmer ? 1 : 0);
     gl.uniform1f(u.uMinScale, f.minScale);
     gl.uniform1f(u.uPeakScale, f.peakScale);
     gl.uniform1f(u.uIdleScale, f.idleScale);
@@ -447,22 +383,10 @@ export class DotGridGLRenderer {
     gl.uniform2fv(u.uEpis, f.epis);
     gl.uniform1f(u.uEpiRadius, f.epiRadius);
     gl.uniform1f(u.uEpiFalloff, f.epiFalloff);
-    gl.uniform1f(u.uShimFloor, f.shimFloor);
     gl.uniform1f(u.uColorA, f.color[3]);
     gl.uniform3f(u.uColorRGB, f.color[0], f.color[1], f.color[2]);
     gl.uniform1f(u.uFalloffWarp, f.falloffWarp);
     gl.uniform1f(u.uDither, f.dither);
-    gl.uniform1f(u.uAlphaDither, f.alphaDither);
-    gl.uniform1f(u.uPosJitter, f.posJitter);
-    gl.uniform1f(u.uPulse, f.pulse);
-    gl.uniform1f(u.uNoiseSeed, f.noiseSeed);
-    gl.uniform1i(u.uGlitchOn, f.glitchOn ? 1 : 0);
-    gl.uniform1f(u.uGlitchSeed, f.glitchSeed);
-    gl.uniform1f(u.uGlitchAmount, f.glitchAmount);
-    gl.uniform1f(u.uGlitchShift, f.glitchShift);
-    gl.uniform1f(u.uGlitchSize, f.glitchSize);
-    gl.uniform1f(u.uAlphaFalloff, f.alphaFalloff);
-    gl.uniform1f(u.uRoundness, f.roundness);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
 
     // ----- Pass 2: image keeps only the dot-shaped, brightness-graded part -----
