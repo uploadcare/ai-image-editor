@@ -1,5 +1,5 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
-import type { AiProvider, AiProviderRequest, AiProviderResult } from '../../../src';
+import type { AiProvider, AiProviderRequest, AiProviderResult } from '../../../src/entities/provider';
 
 /** A handful of stable Unsplash photos, cycled through per "generation". */
 const PHOTOS = [

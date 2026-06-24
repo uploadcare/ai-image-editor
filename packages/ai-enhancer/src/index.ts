@@ -16,15 +16,8 @@ export {
   toAspectRatioOption,
 } from './entities/aspect-ratio';
 export { type AiEditorMode, type AiPreset, type AiPresets, MODES, type ModeMeta } from './entities/mode';
-export {
-  type AiProvider,
-  type AiProviderRequest,
-  type AiProviderResult,
-  UploadcareDerivativeApi,
-  type UploadcareDerivativeApiOptions,
-  type UploadcareJobResponse,
-  type UploadcareJobStatus,
-} from './entities/provider';
+// The provider (UploadcareDerivativeApi + AiProvider* types) is an internal
+// implementation detail of the editor and is intentionally not re-exported here.
 export { enLocale, translate } from './shared/i18n';
 export {
   resolveSecureDeliveryUrl,
