@@ -11,7 +11,6 @@ const OUT = new URL('../docs/api/components.md', import.meta.url);
 
 // Types we link from the Type column.
 const TYPE_LINKS = {
-  AiProvider: '/api/typescript/type-aliases/AiProvider',
   AspectRatio: '/api/typescript/type-aliases/AspectRatio',
   MetadataCallback: '/api/typescript/type-aliases/MetadataCallback',
   OutputFilenameResolver: '/api/typescript/type-aliases/OutputFilenameResolver',

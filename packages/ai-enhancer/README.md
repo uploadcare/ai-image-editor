@@ -289,26 +289,6 @@ types come from `@uploadcare/ai-enhancer/plugin`).
   **`AiPresets`** (`Partial<Record<AiEditorMode, AiPreset[]>>`),
   **`AiEditorMode`** (`'generate' | 'edit'`).
 
-### Provider
-
-For generating programmatically (without the UI).
-
-- **`UploadcareDerivativeApi`** — the `AiProvider` backed by Uploadcare's
-  `derivative/*` API; dispatches on `request.mode` (`generate` | `edit`), polls
-  the async job to completion, and resolves the result to a CDN URL.
-- **`UploadcareDerivativeApiOptions`** — `{ publicKey (required), baseUrl?,
-  filename?, store?, cdnBaseUrl?, cdnCnamePrefixed?, pollIntervalMs?, pollTimeoutMs? }`.
-- **`AiProvider`**, **`AiProviderRequest`**, **`AiProviderResult`** — the
-  TypeScript types describing `generate()`'s request and result.
-
-```ts
-import { UploadcareDerivativeApi } from '@uploadcare/ai-enhancer'
-
-const provider = new UploadcareDerivativeApi({ publicKey: 'YOUR_PUBLIC_KEY' })
-const result = await provider.generate({ prompt: 'a tiger', mode: 'generate' })
-// { url, uuid, prompt, mode, file }
-```
-
 ### Localization & secure delivery
 
 - **`translate(key, overrides?)`**, **`enLocale`**, **`AiEnhancerLocale`** — look
