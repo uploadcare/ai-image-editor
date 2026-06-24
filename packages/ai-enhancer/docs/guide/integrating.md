@@ -19,6 +19,47 @@ Importing the package registers the element as a side effect:
 import '@uploadcare/ai-enhancer'
 ```
 
+## Without a build step (CDN)
+
+No npm, no bundler? Load the element straight from a CDN as an ES module.
+[esm.run](https://esm.run) (jsDelivr's ESM CDN) bundles the dependencies (Lit)
+for you, so a single import registers `<uc-ai-enhancer>`:
+
+```html
+<script type="module">
+  import 'https://esm.run/@uploadcare/ai-enhancer@0.1.0'
+</script>
+
+<uc-ai-enhancer pubkey="YOUR_PUBLIC_KEY"></uc-ai-enhancer>
+```
+
+Set object/function properties and listen for events from a module script:
+
+```html
+<script type="module">
+  import 'https://esm.run/@uploadcare/ai-enhancer@0.1.0'
+
+  const editor = document.querySelector('uc-ai-enhancer')
+  editor.aspectRatios = [[1, 1], [16, 9]]
+  editor.addEventListener('uc:done', (e) => console.log(e.detail.url))
+</script>
+```
+
+### Dynamic locales over the CDN
+
+Languages other than English [load on demand](/guide/localization) via dynamic
+import — and this works over a CDN with no extra setup. The locale modules are
+resolved relative to the entry you imported, so the browser fetches the matching
+one (`de`, `ja`, …) from the same CDN when you set the language:
+
+```html
+<uc-ai-enhancer pubkey="YOUR_PUBLIC_KEY" locale-name="de"></uc-ai-enhancer>
+```
+
+**Pin a version** (e.g. `@0.1.0`) in production. The lazy locale modules must come
+from the same build as the entry; an unpinned URL can otherwise resolve them to a
+different version.
+
 ## React
 
 Use the **`@uploadcare/react-ai-enhancer`** wrapper — typed props plus `onDone` /
