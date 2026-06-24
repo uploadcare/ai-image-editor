@@ -7,7 +7,7 @@ import { cleanup } from './test-renderer';
 let UcAiEditorCtor: CustomElementConstructor;
 
 beforeAll(async () => {
-  // Importing the module registers <uc-ai-editor> and all sub-elements.
+  // Importing the module registers <uc-ai-enhancer> and all sub-elements.
   const mod = await import('../src/index');
   UcAiEditorCtor = mod.UcAiEditor;
 });
@@ -50,7 +50,7 @@ function stubFetch(opts: { uuid?: string; status?: (signal?: AbortSignal) => Pro
 }
 
 function mount(attrs: Record<string, string> = {}): UcAiEditorType {
-  const el = document.createElement('uc-ai-editor') as UcAiEditorType;
+  const el = document.createElement('uc-ai-enhancer') as UcAiEditorType;
   for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
   // These tests exercise editor *logic* (modes, generation flow, events), which
   // is backend-agnostic. Force the dot-grid's 2D path: headless Chromium uses a
@@ -97,9 +97,9 @@ const editorMode = (el: UcAiEditorType): string =>
 
 const SAMPLE_UUID = '11111111-2222-3333-4444-555555555555';
 
-describe('<uc-ai-editor>', () => {
+describe('<uc-ai-enhancer>', () => {
   it('registers the custom element', () => {
-    expect(customElements.get('uc-ai-editor')).toBe(UcAiEditorCtor);
+    expect(customElements.get('uc-ai-enhancer')).toBe(UcAiEditorCtor);
   });
 
   it('mounts in generate mode and renders the canvas + prompt + chips + footer (no history strip yet)', async () => {

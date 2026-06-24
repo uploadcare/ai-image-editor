@@ -97,7 +97,7 @@ const HISTORY_PLACEMENTS: readonly HistoryPlacement[] = [
 ];
 
 /**
- * `<uc-ai-editor>` — the standalone AI image generate/edit editor.
+ * `<uc-ai-enhancer>` — the standalone AI image generate/edit editor.
  *
  * Generates images from a text prompt and edits an existing image (`source`),
  * backed by Uploadcare's derivative API (configured via {@link pubkey}).
@@ -121,7 +121,7 @@ const HISTORY_PLACEMENTS: readonly HistoryPlacement[] = [
  *
  * @see The theming guide for the full token list.
  */
-@customElement('uc-ai-editor')
+@customElement('uc-ai-enhancer')
 export class UcAiEditor extends LitElement {
   public static override styles = unsafeCSS(styles);
 
@@ -344,7 +344,7 @@ export class UcAiEditor extends LitElement {
     // The source identity can change via either input property.
     const sourceChanged = changed.has('sourceUuid') || changed.has('sourceFileInfo');
     if (import.meta.env.DEV && this.sourceUuid && this.sourceFileInfo) {
-      console.warn('[uc-ai-editor] Set either `sourceUuid` or `sourceFileInfo`, not both.');
+      console.warn('[uc-ai-enhancer] Set either `sourceUuid` or `sourceFileInfo`, not both.');
     }
     // Namespace persisted history by pubkey before any hydration below (both can
     // land in the same update when the plugin sets pubkey and source together).

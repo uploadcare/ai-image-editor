@@ -69,11 +69,11 @@ watch(opts, () => {
 });
 
 onMounted(async () => {
-  // Client-only: registers <uc-ai-editor> (a web component) — never during SSR.
+  // Client-only: registers <uc-ai-enhancer> (a web component) — never during SSR.
   await import('../../../src');
   const { UnsplashFakeProvider } = await import('./UnsplashFakeProvider');
 
-  editor = document.createElement('uc-ai-editor');
+  editor = document.createElement('uc-ai-enhancer');
   editor.provider = new UnsplashFakeProvider();
   for (const type of ['uc:done', 'uc:cancel', 'uc:error'] as const) {
     editor.addEventListener(type, (e: Event) => {

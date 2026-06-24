@@ -10,7 +10,11 @@ export default defineConfig({
     template: { compilerOptions: { isCustomElement: (tag) => tag.startsWith('uc-') } },
   },
   themeConfig: {
-    logo: 'https://avatars.githubusercontent.com/u/1525984?s=80',
+    logo: {
+      light: 'https://ucarecdn.com/1b4714cd-53be-447b-bbde-e061f1e5a22f/logosafespacetransparent.svg',
+      dark: 'https://ucarecdn.com/3b610a0a-780c-4750-a8b4-3bf4a8c90389/logotransparentinverted.svg',
+      alt: 'Uploadcare',
+    },
     siteTitle: 'AI Enhancer',
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
@@ -36,7 +40,9 @@ export default defineConfig({
           text: 'Guide',
           items: [
             { text: 'Getting started', link: '/guide/getting-started' },
+            { text: 'Integrating into your app', link: '/guide/integrating' },
             { text: 'File Uploader plugin', link: '/guide/plugin' },
+            { text: 'UI & layout', link: '/guide/layout' },
             { text: 'Theming', link: '/guide/theming' },
             { text: 'Localization', link: '/guide/localization' },
           ],

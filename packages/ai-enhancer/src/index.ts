@@ -25,20 +25,15 @@ export {
   type UploadcareJobResponse,
   type UploadcareJobStatus,
 } from './entities/provider';
-export { type AspectRatioSelectDetail, UcAiAspectRatio } from './features/aspect-ratio-select';
-export { GenerationController, type HistoryEntry } from './features/generation';
-export { type HistorySelectDetail, UcAiHistory } from './features/prompt-history';
-export { type PromptInputDetail, UcAiPromptRow } from './features/prompt-input';
-export { type PresetSelectDetail, UcAiChips } from './features/preset-chips';
 export { enLocale, translate } from './shared/i18n';
-export { SecureUrlController } from './shared/lib/SecureUrlController';
 export {
   resolveSecureDeliveryUrl,
   type SecureDeliveryProxyUrlResolver,
   type SecureDeliveryUrlParts,
 } from './shared/lib/secureDelivery';
-export { UcAiCanvas } from './shared/ui/canvas';
-export { UcAiFooter } from './shared/ui/footer';
+// Internal sub-component elements (uc-ai-canvas/-chips/-history/-prompt-row/
+// -aspect-ratio/-footer) and the controllers are registered as a side effect of
+// importing the editor; they are not part of the public API.
 export {
   type CanvasFit,
   type ComposerPlacement,

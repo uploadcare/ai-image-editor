@@ -5,7 +5,7 @@ title: Getting started
 # Getting started
 
 AI image generation and editing for [Uploadcare](https://uploadcare.com/) — a
-framework-agnostic `<uc-ai-editor>` web component, plus an optional plugin that
+framework-agnostic `<uc-ai-enhancer>` web component, plus an optional plugin that
 adds an **AI Edit** action and a **Generate image** source to the
 [File Uploader](https://uploadcare.com/docs/file-uploader/).
 
@@ -42,7 +42,7 @@ Two entry points, imported independently so you only pull in what you use:
 
 | Import | What it gives you |
 |---|---|
-| `@uploadcare/ai-enhancer` | Registers the `<uc-ai-editor>` element and exports its public types, the provider, and the localization helpers. |
+| `@uploadcare/ai-enhancer` | Registers the `<uc-ai-enhancer>` element and exports its public types, the provider, and the localization helpers. |
 | `@uploadcare/ai-enhancer/plugin` | Just the `AiEnhancerPlugin` for the File Uploader — no eager component registration. |
 
 ::: tip Plugin peer dependency
@@ -61,11 +61,11 @@ import '@uploadcare/ai-enhancer'
 ```
 
 ```html
-<uc-ai-editor pubkey="YOUR_PUBLIC_KEY"></uc-ai-editor>
+<uc-ai-enhancer pubkey="YOUR_PUBLIC_KEY"></uc-ai-enhancer>
 ```
 
 ```ts
-const editor = document.querySelector('uc-ai-editor')
+const editor = document.querySelector('uc-ai-enhancer')
 
 editor.addEventListener('uc:done', (e) => {
   const { url, uuid, file } = e.detail // file: UploadcareFile
@@ -88,9 +88,10 @@ editor.sourceUuid = 'c2499162-eb07-4b93-b31e-94a89a47e858'
 ```
 
 The editor resolves the image and frames the canvas to its real aspect ratio.
-If you already hold the file (e.g. an `UploadcareFile` from
-[`@uploadcare/upload-client`](https://uploadcare.com/docs/uploads/)), pass it as
-`sourceFileInfo` instead to skip the lookup — use **one or the other**, not both.
+If you already hold the file as an `UploadcareFile` (returned by
+[`@uploadcare/upload-client`](https://uploadcare.com/docs/uploads/), or the
+`fileInfo` of a File Uploader output entry), pass it as `sourceFileInfo` instead
+to skip the lookup — use **one or the other**, not both.
 The first successful generation also flips a from-scratch session into edit mode,
 so you can chain edits.
 

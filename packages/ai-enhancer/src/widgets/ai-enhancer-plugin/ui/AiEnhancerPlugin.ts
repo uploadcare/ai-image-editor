@@ -231,7 +231,7 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         }
 
         const params = (activityParams ?? {}) as AiEditorActivityParams;
-        const editor = document.createElement('uc-ai-editor') as UcAiEditor;
+        const editor = document.createElement('uc-ai-enhancer') as UcAiEditor;
         // Edit mode: resolve the source image's collection entry, so the edit
         // opens on that image. We hand the editor the entry's `fileInfo` it
         // already holds (which carries the uuid), so the editor skips its own

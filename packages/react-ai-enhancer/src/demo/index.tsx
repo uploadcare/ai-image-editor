@@ -29,7 +29,6 @@ function App() {
         </select>
       </label>
       <AiEnhancer
-        mode="generate"
         pubkey="90c654b71e238b7a4023"
         baseUrl="https://upload.staging0.uploadcare.com"
         cdnCnamePrefixed="https://staging0.ucarecd.net"

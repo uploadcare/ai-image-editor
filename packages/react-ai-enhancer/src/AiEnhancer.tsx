@@ -1,10 +1,4 @@
-import {
-  type AiCapability,
-  type AiEditorMode,
-  type AspectRatio,
-  type DoneDetail,
-  UcAiEditor,
-} from '@uploadcare/ai-enhancer';
+import { type DoneDetail, UcAiEditor } from '@uploadcare/ai-enhancer';
 import { customElementToReactComponent } from '@uploadcare/react-adapter';
 import React, { type FC, type Ref, useMemo } from 'react';
 
@@ -12,20 +6,37 @@ import '@uploadcare/ai-enhancer';
 
 const AdapterAiEditor = customElementToReactComponent({
   react: React,
-  tag: 'uc-ai-editor',
+  tag: 'uc-ai-enhancer',
   elClass: UcAiEditor,
 });
 
+/**
+ * Props mirror the public `<uc-ai-enhancer>` API via indexed-access types, so they
+ * track the element automatically. Keep this in sync when the element's public
+ * properties change — see AGENTS.md.
+ */
 export type AiEnhancerProps = {
-  mode?: AiEditorMode;
-  capability?: AiCapability;
-  src?: string | null;
-  aspectRatios?: AspectRatio[];
   pubkey: string;
-  baseUrl?: string;
-  cdnCname?: string;
-  cdnCnamePrefixed?: string;
-  l10n?: Record<string, string>;
+  /** Edit an existing image by uuid (use this OR `sourceFileInfo`). */
+  sourceUuid?: UcAiEditor['sourceUuid'];
+  /** Edit an existing image from its UploadcareFile (use this OR `sourceUuid`). */
+  sourceFileInfo?: UcAiEditor['sourceFileInfo'];
+  aspectRatios?: UcAiEditor['aspectRatios'];
+  presets?: UcAiEditor['presets'];
+  presetsOnly?: UcAiEditor['presetsOnly'];
+  metadata?: UcAiEditor['metadata'];
+  outputFilename?: UcAiEditor['outputFilename'];
+  baseUrl?: UcAiEditor['baseUrl'];
+  cdnCname?: UcAiEditor['cdnCname'];
+  cdnCnamePrefixed?: UcAiEditor['cdnCnamePrefixed'];
+  localeName?: UcAiEditor['localeName'];
+  localeDefinitionOverride?: UcAiEditor['localeDefinitionOverride'];
+  composerPlacement?: UcAiEditor['composerPlacement'];
+  canvasFit?: UcAiEditor['canvasFit'];
+  historyPlacement?: UcAiEditor['historyPlacement'];
+  composerAutoHide?: UcAiEditor['composerAutoHide'];
+  toolbarPlacement?: UcAiEditor['toolbarPlacement'];
+  secureDeliveryProxyUrlResolver?: UcAiEditor['secureDeliveryProxyUrlResolver'];
   className?: string;
   apiRef?: Ref<UcAiEditor>;
   onDone?: (detail: DoneDetail) => void;

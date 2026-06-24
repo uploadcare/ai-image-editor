@@ -9,7 +9,7 @@ used as a plugin, most tokens inherit from the uploader's `--uc-*` theme
 automatically. Set any of these to customize:
 
 ```css
-uc-ai-editor {
+uc-ai-enhancer {
   --uc-ai-primary: #6d28d9;
   --uc-ai-radius: 20px;
   --uc-ai-dot-grid-color: #2a2a2a;
@@ -24,5 +24,5 @@ uc-ai-editor {
 | Canvas / motion | `--uc-ai-dot-grid-color`, `--uc-ai-shadow-color`, `--uc-ai-dialog-shadow`, `--uc-ai-transition`, `--uc-ai-ease-in-out`, `--uc-ai-ease-out` |
 | Prompt | `--uc-ai-prompt-max-height`, `--uc-ai-prompt-max-lines` |
 
-The [Components API](/api/components#css-properties) lists the tokens captured
-from the source.
+The [Components API](/api/components#css-properties) lists every CSS custom
+property the component exposes.
