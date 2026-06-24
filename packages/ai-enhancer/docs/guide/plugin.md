@@ -50,7 +50,7 @@ them as attributes or properties):
 | `cdnCname` | | CDN cname for resolving results. |
 | `cdnCnamePrefixed` | | Base domain for public-key-prefixed CDN URLs. |
 | `cropPreset` | | Reused to derive the editor's offered aspect ratios. |
-| `metadata` | | Key/value metadata attached to the AI result. A `MetadataCallback` is resolved against the source entry in edit mode; in generate mode only the static object form applies. |
+| `metadata` | | Key/value metadata attached to the AI result. A `MetadataCallback` is resolved against the source entry in edit mode; when generating from scratch there's no source to pass it, so the callback is skipped — use the static object form for generate-mode metadata. |
 | `localeName` | | Drives the editor language (lazy-loaded; see [Localization](/guide/localization)). |
 | `localeDefinitionOverride` | | Per-locale string overrides, layered onto the editor's built-ins. |
 | `secureDeliveryProxyUrlResolver` | | Signs/proxies the CDN URLs the editor renders ([secure delivery](https://uploadcare.com/docs/security/secure-delivery/)). |

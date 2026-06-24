@@ -1,7 +1,7 @@
 # @uploadcare/ai-enhancer
 
 AI image generation and editing for [Uploadcare](https://uploadcare.com/) — a
-framework-agnostic `<uc-ai-editor>` web component, plus an optional plugin that
+framework-agnostic `<uc-ai-enhancer>` web component, plus an optional plugin that
 adds an **AI Edit** action and a **Generate image** source to the
 [Uploadcare File Uploader](https://uploadcare.com/docs/file-uploader/). Generate
 images from a text prompt, edit existing ones by uuid, pick aspect ratios, and
@@ -18,12 +18,17 @@ Two entry points, imported independently so you only pull in what you use:
 
 | Import | What it gives you |
 |---|---|
-| `@uploadcare/ai-enhancer` | Registers the `<uc-ai-editor>` element and exports its public types, the provider, and the localization helpers. |
+| `@uploadcare/ai-enhancer` | Registers the `<uc-ai-enhancer>` element and exports its public types, the provider, and the localization helpers. |
 | `@uploadcare/ai-enhancer/plugin` | Just the `AiEnhancerPlugin` for the File Uploader — no eager component registration. |
 
-> The plugin entry needs `@uploadcare/file-uploader` **≥ 1.32.0-alpha.0** as a
+> The plugin entry needs `@uploadcare/file-uploader` **≥ 1.32.0-alpha.1** as a
 > peer dependency (it relies on `pluginApi.files.replace`). The standalone editor
 > has no peer dependency.
+
+You need an Uploadcare **public key** (from the
+[dashboard](https://app.uploadcare.com/)) and the **AI feature enabled** for your
+project — it's gated per project, so [contact support](https://uploadcare.com/support/)
+to turn it on before generation works.
 
 ## Use as a File Uploader plugin
 
@@ -89,7 +94,7 @@ types if your project doesn't pick it up automatically).
 
 ## Use the standalone editor
 
-`<uc-ai-editor>` works without the uploader. Importing the package registers the
+`<uc-ai-enhancer>` works without the uploader. Importing the package registers the
 element; configure it via attributes/properties and listen for `uc:*` events.
 
 ```ts
@@ -97,11 +102,11 @@ import '@uploadcare/ai-enhancer'
 ```
 
 ```html
-<uc-ai-editor pubkey="YOUR_PUBLIC_KEY"></uc-ai-editor>
+<uc-ai-enhancer pubkey="YOUR_PUBLIC_KEY"></uc-ai-enhancer>
 ```
 
 ```ts
-const editor = document.querySelector('uc-ai-editor')
+const editor = document.querySelector('uc-ai-enhancer')
 
 editor.addEventListener('uc:done', (e) => {
   const { uuid, cdnUrl, file } = e.detail // file: UploadcareFile
@@ -114,7 +119,7 @@ editor.addEventListener('uc:error', (e) => console.warn(e.detail.error))
 editor.sourceUuid = 'c2499162-eb07-4b93-b31e-94a89a47e858'
 ```
 
-### `<uc-ai-editor>` properties
+### `<uc-ai-enhancer>` properties
 
 | Property | Attribute | Type | Description |
 |---|---|---|---|
@@ -128,7 +133,7 @@ editor.sourceUuid = 'c2499162-eb07-4b93-b31e-94a89a47e858'
 | `aspectRatios` | `aspect-ratios` | `AspectRatio[] \| null` | Ratios offered in generate mode, e.g. `aspect-ratios="16:9 5:4 1:1"`. Empty → popular set. |
 | `presetsOnly` | `presets-only` | `boolean` | Hide the free-text prompt; preset chips only, and picking one generates immediately. |
 | `presets` | — | `AiPresets` | Property only. Quick-prompt chips keyed by mode, e.g. `{ generate: [{ label, prompt }], edit: [...] }`. Clicking a chip fills the prompt. Modes left out use the built-in set; an empty array (`{ generate: [] }`) hides that mode's chips. Keyed by mode, so future modes extend it without breaking existing configs. |
-| `metadata` | — | `Metadata \| MetadataCallback \| null` | Property only. Same shape as the file uploader's `metadata` config: a static key/value bag (`Record<string, string>`, e.g. `{ source: 'ai-enhancer' }`) or a `MetadataCallback` the editor calls at generation time with the source file (optionally async). |
+| `metadata` | — | `Metadata \| MetadataCallback \| null` | Property only. Same shape as the file uploader's `metadata` config: a static key/value bag (`Record<string, string>`, e.g. `{ source: 'ai-enhancer' }`) or a `MetadataCallback` the editor calls at generation time with the source file (optionally async). The callback only runs when there's a source to pass it (editing an existing image); when generating from scratch it's skipped, so use the static object form there. |
 | `composerPlacement` | `composer-placement` | `ComposerPlacement` | Which edge the composer sits on: `bottom` (default) or `top`. |
 | `canvasFit` | `canvas-fit` | `CanvasFit` | How the canvas sizes relative to the composer: `available` (default) shrinks the canvas to the space left by the composer (docked outside the image; history chips still overlay it); `full` lets the canvas fill the area with the composer floating over it. |
 | `historyPlacement` | `history-placement` | `HistoryPlacement` | Where the history strip sits: `composer-above` (default) / `composer-below` (relative to the composer) or `canvas-top` / `canvas-bottom` (pinned to the canvas edge). |
@@ -138,7 +143,7 @@ editor.sourceUuid = 'c2499162-eb07-4b93-b31e-94a89a47e858'
 | `localeDefinitionOverride` | — | `Record<string, Partial<AiEnhancerLocale>>` | Per-locale string overrides, keyed by locale name (see [Localization](#localization)). |
 | `secureDeliveryProxyUrlResolver` | — | `SecureDeliveryProxyUrlResolver` | Property only. Signs/proxies rendered CDN URLs. |
 
-### `<uc-ai-editor>` events
+### `<uc-ai-enhancer>` events
 
 All events bubble and are `composed`.
 
@@ -162,10 +167,57 @@ type DoneDetail = {
 ### Edit vs. generate mode
 
 Mode is **derived**, not set explicitly: the editor is in `edit` mode whenever
-there's a current image — an input `source` or a generation result — and
-`generate` otherwise. So the first successful generation flips the editor into
-edit mode for free, and a "Start over" affordance appears (only for generate
-sessions — editing an existing `source` has nothing to start over to).
+there's a current image — an input source (`sourceUuid` / `sourceFileInfo`) or a
+generation result — and `generate` otherwise. So the first successful generation
+flips the editor into edit mode for free, and a "Start over" affordance appears
+(only for generate sessions — editing an existing source has nothing to start
+over to).
+
+## Framework usage
+
+`<uc-ai-enhancer>` is a standard custom element, so it works in any framework. Two
+things to wire up: object/function values (`metadata`, `presets`,
+`sourceFileInfo`, `outputFilename`, …) must be set as **DOM properties**, not
+string attributes, and `uc:*` events are plain DOM events.
+
+For **React**, install the [`@uploadcare/react-ai-enhancer`](../react-ai-enhancer)
+wrapper — typed props + `onDone` / `onCancel` / `onError` callbacks:
+
+```bash
+npm install @uploadcare/react-ai-enhancer
+```
+
+```tsx
+import { AiEnhancer } from '@uploadcare/react-ai-enhancer'
+
+<AiEnhancer pubkey="YOUR_PUBLIC_KEY" onDone={(d) => console.log(d.url)} />
+```
+
+```vue
+<!-- Vue 3: mark `uc-` tags as custom elements (vite.config / compilerOptions),
+     then bind properties with `.prop` and events with `@`. -->
+<uc-ai-enhancer :pubkey="key" .metadata="meta" @uc:done="onDone" />
+```
+
+- **Angular** — add `CUSTOM_ELEMENTS_SCHEMA`; bind `[prop]` and `(uc:done)`.
+- **Svelte** — works natively: attributes/properties and `on:uc:done`.
+
+## Bundlers & SSR
+
+The two entry points are imported independently, so you only ship what you use,
+and the editor's styles live in its shadow DOM — there's no separate CSS import.
+
+**SSR (Next.js, Nuxt, …):** the editor is a browser web component — register it
+**client-side only** (e.g. a dynamic `import('@uploadcare/ai-enhancer')` inside an
+effect, or a `'use client'` component), never during server render.
+
+## TypeScript
+
+- Event details are typed — cast `e.detail` to `DoneDetail` (exported), or augment
+  your framework's event map.
+- Importing `@uploadcare/ai-enhancer/plugin` augments the uploader's config types
+  (`useAiEditor`, the editor's locale keys). If your project doesn't pick that up
+  automatically, reference it once: `/// <reference types="@uploadcare/ai-enhancer/plugin" />`.
 
 ## Theming
 
@@ -174,7 +226,7 @@ used as a plugin, most tokens inherit from the uploader's `--uc-*` theme
 automatically. Set any of these to customize:
 
 ```css
-uc-ai-editor {
+uc-ai-enhancer {
   --uc-ai-primary: #6d28d9;
   --uc-ai-radius: 20px;
   --uc-ai-dot-grid-color: #2a2a2a;
@@ -228,7 +280,7 @@ types come from `@uploadcare/ai-enhancer/plugin`).
 
 ### Editor
 
-- **`UcAiEditor`** (`<uc-ai-editor>`) — the editor element (see properties /
+- **`UcAiEditor`** (`<uc-ai-enhancer>`) — the editor element (see properties /
   events above).
 - Types: **`DoneDetail`**, **`OutputFilenameResolver`** (`(originalFilename, counter) => string`),
   **`MetadataCallback`** (`(fileInfo: UploadcareFile) => Metadata | Promise<Metadata>`),
@@ -239,15 +291,15 @@ types come from `@uploadcare/ai-enhancer/plugin`).
 
 ### Provider
 
-For generating programmatically, or supplying your own backend.
+For generating programmatically (without the UI).
 
-- **`UploadcareDerivativeApi`** — the built-in `AiProvider` backed by Uploadcare's
+- **`UploadcareDerivativeApi`** — the `AiProvider` backed by Uploadcare's
   `derivative/*` API; dispatches on `request.mode` (`generate` | `edit`), polls
   the async job to completion, and resolves the result to a CDN URL.
 - **`UploadcareDerivativeApiOptions`** — `{ publicKey (required), baseUrl?,
   filename?, store?, cdnBaseUrl?, cdnCnamePrefixed?, pollIntervalMs?, pollTimeoutMs? }`.
-- **`AiProvider`**, **`AiProviderRequest`**, **`AiProviderResult`** — the provider
-  contract, so you can plug in a custom backend.
+- **`AiProvider`**, **`AiProviderRequest`**, **`AiProviderResult`** — the
+  TypeScript types describing `generate()`'s request and result.
 
 ```ts
 import { UploadcareDerivativeApi } from '@uploadcare/ai-enhancer'

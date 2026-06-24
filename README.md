@@ -6,7 +6,7 @@ AI image generation and editing web component for Uploadcare, plus a React wrapp
 
 | Package | Description |
 |---|---|
-| [`@uploadcare/ai-enhancer`](packages/ai-enhancer) | Standalone `<uc-ai-editor>` web component + optional `/plugin` sub-export for the Uploadcare file uploader. |
+| [`@uploadcare/ai-enhancer`](packages/ai-enhancer) | Standalone `<uc-ai-enhancer>` web component + optional `/plugin` sub-export for the Uploadcare file uploader. |
 | [`@uploadcare/react-ai-enhancer`](packages/react-ai-enhancer) | Thin React wrapper around the web component. |
 
 ## Quick start

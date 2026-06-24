@@ -29,7 +29,6 @@ function App() {
         </select>
       </label>
       <AiEnhancer
-        mode="generate"
         pubkey="YOUR_PUBLIC_KEY"
         baseUrl="https://upload.example.com"
         cdnCnamePrefixed="https://cdn.example.com"

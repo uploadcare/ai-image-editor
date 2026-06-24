@@ -18,13 +18,13 @@
       color: light-dark(#111, #f5f5f5);
       min-height: 100vh;
     }
-    uc-ai-editor {
+    uc-ai-enhancer {
       display: block;
       max-width: 1200px;
       height: min(82vh, 820px);
       margin: 0 auto;
     }
-    uc-ai-editor.brand-overrides {
+    uc-ai-enhancer.brand-overrides {
       --uc-ai-primary: oklch(0.6 0.18 25);
       --uc-ai-primary-hover: oklch(0.55 0.18 25);
       --uc-ai-radius: 20px;
@@ -108,7 +108,7 @@
       <input id="branded" type="checkbox" /> Brand-themed
     </label>
 
-    <uc-ai-editor></uc-ai-editor>
+    <uc-ai-enhancer></uc-ai-enhancer>
   </demo-shell>
 
   <script type="module">
@@ -133,7 +133,7 @@
     const savedEnv = localStorage.getItem(ENV_STORAGE_KEY);
 
     const shell = document.querySelector('demo-shell');
-    const editor = document.querySelector('uc-ai-editor');
+    const editor = document.querySelector('uc-ai-enhancer');
     const pubkeyInput = document.getElementById('pubkey');
     const envSelect = document.getElementById('env');
 

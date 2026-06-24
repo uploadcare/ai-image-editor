@@ -48,7 +48,7 @@ beforeAll(async () => {
   // The uploader bundles only English by default; define its German locale so
   // switching `localeName` to "de" doesn't throw "Locale de is not defined".
   UC.defineLocale('de', () => import('@uploadcare/file-uploader/locales/file-uploader/de.js').then((m) => m.default));
-  // Registers <uc-ai-editor> and sub-elements
+  // Registers <uc-ai-enhancer> and sub-elements
   await import('../src/index');
 });
 
@@ -69,7 +69,7 @@ describe('AiEnhancerPlugin', () => {
     await openModal();
     await page.getByText('Generate image').click();
     await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-editor') as (Element & { sourceFileInfo?: unknown }) | null;
+      const editor = document.querySelector('uc-ai-enhancer') as (Element & { sourceFileInfo?: unknown }) | null;
       expect(editor).toBeTruthy();
       // No source → derived generate mode (read off the prompt-row child).
       const promptRow = editor?.shadowRoot?.querySelector('uc-ai-prompt-row') as (Element & { mode?: string }) | null;
@@ -83,11 +83,11 @@ describe('AiEnhancerPlugin', () => {
   // row's `send-aria-label`, and the cancel label as the footer's `cancel-label`.
   const generateLabel = () =>
     document
-      .querySelector('uc-ai-editor')
+      .querySelector('uc-ai-enhancer')
       ?.shadowRoot?.querySelector('uc-ai-prompt-row')
       ?.getAttribute('send-aria-label');
   const cancelLabel = () =>
-    document.querySelector('uc-ai-editor')?.shadowRoot?.querySelector('uc-ai-footer')?.getAttribute('cancel-label');
+    document.querySelector('uc-ai-enhancer')?.shadowRoot?.querySelector('uc-ai-footer')?.getAttribute('cancel-label');
 
   it('feeds editor locale overrides from the uploader config (localeDefinitionOverride)', async () => {
     const { AiEnhancerPlugin } = await import('../src/plugin');
@@ -137,7 +137,7 @@ describe('AiEnhancerPlugin', () => {
     await page.getByRole('button', { name: 'AI Edit' }).click();
 
     await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-editor') as (Element & { sourceFileInfo?: unknown }) | null;
+      const editor = document.querySelector('uc-ai-enhancer') as (Element & { sourceFileInfo?: unknown }) | null;
       expect(editor?.sourceFileInfo).toBeTruthy();
       // A source file → derived edit mode (read off the prompt-row child).
       const promptRow = editor?.shadowRoot?.querySelector('uc-ai-prompt-row') as (Element & { mode?: string }) | null;
@@ -165,7 +165,7 @@ describe('AiEnhancerPlugin', () => {
 
     await page.getByRole('button', { name: 'AI Edit' }).click();
     const editor = (await vi.waitFor(() => {
-      const el = document.querySelector('uc-ai-editor');
+      const el = document.querySelector('uc-ai-enhancer');
       expect(el).toBeTruthy();
       return el!;
     })) as Element & { sourceFileInfo?: { uuid?: string; originalFilename?: string } };
@@ -218,7 +218,7 @@ describe('AiEnhancerPlugin', () => {
     await page.getByText('Generate image').click();
 
     const editor = (await vi.waitFor(() => {
-      const el = document.querySelector('uc-ai-editor');
+      const el = document.querySelector('uc-ai-enhancer');
       expect(el).toBeTruthy();
       return el as HTMLElement;
     })) as HTMLElement;
