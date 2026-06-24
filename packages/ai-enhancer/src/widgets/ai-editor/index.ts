@@ -6,5 +6,5 @@ export {
   type MetadataCallback,
   type OutputFilenameResolver,
   type ToolbarPlacement,
-  UcAiEditor,
-} from './ui/UcAiEditor';
+  UcAiEnhancer,
+} from './ui/UcAiEnhancer';

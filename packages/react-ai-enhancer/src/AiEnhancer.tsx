@@ -1,4 +1,4 @@
-import { type DoneDetail, UcAiEditor } from '@uploadcare/ai-enhancer';
+import { type DoneDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
 import { customElementToReactComponent } from '@uploadcare/react-adapter';
 import React, { type FC, type Ref, useMemo } from 'react';
 
@@ -7,7 +7,7 @@ import '@uploadcare/ai-enhancer';
 const AdapterAiEditor = customElementToReactComponent({
   react: React,
   tag: 'uc-ai-enhancer',
-  elClass: UcAiEditor,
+  elClass: UcAiEnhancer,
 });
 
 /**
@@ -18,27 +18,27 @@ const AdapterAiEditor = customElementToReactComponent({
 export type AiEnhancerProps = {
   pubkey: string;
   /** Edit an existing image by uuid (use this OR `sourceFileInfo`). */
-  sourceUuid?: UcAiEditor['sourceUuid'];
+  sourceUuid?: UcAiEnhancer['sourceUuid'];
   /** Edit an existing image from its UploadcareFile (use this OR `sourceUuid`). */
-  sourceFileInfo?: UcAiEditor['sourceFileInfo'];
-  aspectRatios?: UcAiEditor['aspectRatios'];
-  presets?: UcAiEditor['presets'];
-  presetsOnly?: UcAiEditor['presetsOnly'];
-  metadata?: UcAiEditor['metadata'];
-  outputFilename?: UcAiEditor['outputFilename'];
-  baseUrl?: UcAiEditor['baseUrl'];
-  cdnCname?: UcAiEditor['cdnCname'];
-  cdnCnamePrefixed?: UcAiEditor['cdnCnamePrefixed'];
-  localeName?: UcAiEditor['localeName'];
-  localeDefinitionOverride?: UcAiEditor['localeDefinitionOverride'];
-  composerPlacement?: UcAiEditor['composerPlacement'];
-  canvasFit?: UcAiEditor['canvasFit'];
-  historyPlacement?: UcAiEditor['historyPlacement'];
-  composerAutoHide?: UcAiEditor['composerAutoHide'];
-  toolbarPlacement?: UcAiEditor['toolbarPlacement'];
-  secureDeliveryProxyUrlResolver?: UcAiEditor['secureDeliveryProxyUrlResolver'];
+  sourceFileInfo?: UcAiEnhancer['sourceFileInfo'];
+  aspectRatios?: UcAiEnhancer['aspectRatios'];
+  presets?: UcAiEnhancer['presets'];
+  presetsOnly?: UcAiEnhancer['presetsOnly'];
+  metadata?: UcAiEnhancer['metadata'];
+  outputFilename?: UcAiEnhancer['outputFilename'];
+  baseUrl?: UcAiEnhancer['baseUrl'];
+  cdnCname?: UcAiEnhancer['cdnCname'];
+  cdnCnamePrefixed?: UcAiEnhancer['cdnCnamePrefixed'];
+  localeName?: UcAiEnhancer['localeName'];
+  localeDefinitionOverride?: UcAiEnhancer['localeDefinitionOverride'];
+  composerPlacement?: UcAiEnhancer['composerPlacement'];
+  canvasFit?: UcAiEnhancer['canvasFit'];
+  historyPlacement?: UcAiEnhancer['historyPlacement'];
+  composerAutoHide?: UcAiEnhancer['composerAutoHide'];
+  toolbarPlacement?: UcAiEnhancer['toolbarPlacement'];
+  secureDeliveryProxyUrlResolver?: UcAiEnhancer['secureDeliveryProxyUrlResolver'];
   className?: string;
-  apiRef?: Ref<UcAiEditor>;
+  apiRef?: Ref<UcAiEnhancer>;
   onDone?: (detail: DoneDetail) => void;
   onCancel?: () => void;
   onError?: (error: unknown) => void;
@@ -56,7 +56,7 @@ export const AiEnhancer: FC<AiEnhancerProps> = ({ apiRef, className, onDone, onC
 
   return (
     <AdapterAiEditor
-      ref={apiRef as Ref<UcAiEditor>}
+      ref={apiRef as Ref<UcAiEnhancer>}
       // @ts-expect-error className passes through to the custom element
       class={className}
       {...props}

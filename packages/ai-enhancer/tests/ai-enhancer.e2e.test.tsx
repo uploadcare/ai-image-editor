@@ -1,15 +1,16 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { page } from '@vitest/browser/context';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { MODES, type UcAiEditor as UcAiEditorType } from '../src/index';
+import type { UcAiEnhancer as UcAiEnhancerType } from '../src/index';
+import { MODES } from '../src/internal';
 import { cleanup } from './test-renderer';
 
-let UcAiEditorCtor: CustomElementConstructor;
+let UcAiEnhancerCtor: CustomElementConstructor;
 
 beforeAll(async () => {
   // Importing the module registers <uc-ai-enhancer> and all sub-elements.
   const mod = await import('../src/index');
-  UcAiEditorCtor = mod.UcAiEditor;
+  UcAiEnhancerCtor = mod.UcAiEnhancer;
 });
 
 let restoreFetch: (() => void) | null = null;
@@ -49,8 +50,8 @@ function stubFetch(opts: { uuid?: string; status?: (signal?: AbortSignal) => Pro
   return { generateBodies };
 }
 
-function mount(attrs: Record<string, string> = {}): UcAiEditorType {
-  const el = document.createElement('uc-ai-enhancer') as UcAiEditorType;
+function mount(attrs: Record<string, string> = {}): UcAiEnhancerType {
+  const el = document.createElement('uc-ai-enhancer') as UcAiEnhancerType;
   for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
   // These tests exercise editor *logic* (modes, generation flow, events), which
   // is backend-agnostic. Force the dot-grid's 2D path: headless Chromium uses a
@@ -64,42 +65,42 @@ function mount(attrs: Record<string, string> = {}): UcAiEditorType {
 
 const STAGING = { pubkey: 'demopublickey', 'cdn-cname': 'https://cdn.example.com' };
 
-function typePrompt(el: UcAiEditorType, value: string): void {
+function typePrompt(el: UcAiEnhancerType, value: string): void {
   const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
   input.value = value;
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-function primaryBtn(el: UcAiEditorType): HTMLButtonElement {
+function primaryBtn(el: UcAiEnhancerType): HTMLButtonElement {
   return el.shadowRoot!.querySelector('uc-ai-footer')!.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement;
 }
 
 /** Footer primary commits the result (fires uc:done). */
-function clickPrimary(el: UcAiEditorType): void {
+function clickPrimary(el: UcAiEnhancerType): void {
   primaryBtn(el).click();
 }
 
 /** The prompt row's send button triggers generation. */
-function clickSend(el: UcAiEditorType): void {
+function clickSend(el: UcAiEnhancerType): void {
   const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
   (promptRow.shadowRoot!.querySelector('.send') as HTMLButtonElement).click();
 }
 
-const historyEl = (el: UcAiEditorType) =>
+const historyEl = (el: UcAiEnhancerType) =>
   el.shadowRoot!.querySelector('uc-ai-history') as (HTMLElement & { entries: unknown[] }) | null;
 
-const canvasUrl = (el: UcAiEditorType): string | null =>
+const canvasUrl = (el: UcAiEnhancerType): string | null =>
   (el.shadowRoot!.querySelector('uc-ai-canvas') as unknown as { url: string | null }).url;
 
 /** The derived editor mode, read off the prompt-row child the editor feeds. */
-const editorMode = (el: UcAiEditorType): string =>
+const editorMode = (el: UcAiEnhancerType): string =>
   (el.shadowRoot!.querySelector('uc-ai-prompt-row') as unknown as { mode: string }).mode;
 
 const SAMPLE_UUID = '11111111-2222-3333-4444-555555555555';
 
 describe('<uc-ai-enhancer>', () => {
   it('registers the custom element', () => {
-    expect(customElements.get('uc-ai-enhancer')).toBe(UcAiEditorCtor);
+    expect(customElements.get('uc-ai-enhancer')).toBe(UcAiEnhancerCtor);
   });
 
   it('mounts in generate mode and renders the canvas + prompt + chips + footer (no history strip yet)', async () => {
@@ -127,7 +128,10 @@ describe('<uc-ai-enhancer>', () => {
     await el.updateComplete;
 
     const chipLabels = async (): Promise<string[]> => {
-      const chips = el.shadowRoot!.querySelector('uc-ai-chips') as unknown as { updateComplete: Promise<unknown>; shadowRoot: ShadowRoot } | null;
+      const chips = el.shadowRoot!.querySelector('uc-ai-chips') as unknown as {
+        updateComplete: Promise<unknown>;
+        shadowRoot: ShadowRoot;
+      } | null;
       await chips?.updateComplete;
       return [...(chips?.shadowRoot.querySelectorAll('.chip') ?? [])].map((c) => c.textContent!.trim());
     };

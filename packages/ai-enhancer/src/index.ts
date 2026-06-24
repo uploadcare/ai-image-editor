@@ -1,32 +1,8 @@
-export {
-  type AspectRatio,
-  type AspectRatioLabelKey,
-  type AspectRatioOption,
-  aspectRatioEquals,
-  aspectRatioKey,
-  type AspectRatioValue,
-  aspectRatioValueEquals,
-  DEFAULT_GENERATE_RATIO,
-  isConcreteRatio,
-  isValidAspectRatio,
-  labelKeyForRatio,
-  ORIGINAL_RATIO,
-  POPULAR_ASPECT_RATIOS,
-  parseAspectRatioList,
-  toAspectRatioOption,
-} from './entities/aspect-ratio';
-export { type AiEditorMode, type AiPreset, type AiPresets, MODES, type ModeMeta } from './entities/mode';
-// The provider (UploadcareDerivativeApi + AiProvider* types) is an internal
-// implementation detail of the editor and is intentionally not re-exported here.
-export { enLocale, translate } from './shared/i18n';
-export {
-  resolveSecureDeliveryUrl,
-  type SecureDeliveryProxyUrlResolver,
-  type SecureDeliveryUrlParts,
-} from './shared/lib/secureDelivery';
-// Internal sub-component elements (uc-ai-canvas/-chips/-history/-prompt-row/
-// -aspect-ratio/-footer) and the controllers are registered as a side effect of
-// importing the editor; they are not part of the public API.
+// Public API of `@uploadcare/ai-enhancer`. Keep this surface minimal — it's the
+// only entry point TypeDoc documents. Implementation details live in
+// `./internal` and are intentionally not re-exported here.
+
+// The editor element, plus the types for its events and configurable properties.
 export {
   type CanvasFit,
   type ComposerPlacement,
@@ -35,5 +11,13 @@ export {
   type MetadataCallback,
   type OutputFilenameResolver,
   type ToolbarPlacement,
-  UcAiEditor,
+  UcAiEnhancer,
 } from './widgets/ai-editor';
+// Aspect ratios offered by the `aspectRatios` property.
+export { type AspectRatio } from './entities/aspect-ratio';
+// Modes and quick-prompt presets (`presets` property).
+export { type AiEditorMode, type AiPreset, type AiPresets } from './entities/mode';
+// Secure (signed) CDN delivery (`secureDeliveryProxyUrlResolver` property).
+export { type SecureDeliveryProxyUrlResolver, type SecureDeliveryUrlParts } from './shared/lib/secureDelivery';
+// Localization helpers.
+export { type AiEnhancerLocale, enLocale } from './shared/i18n';

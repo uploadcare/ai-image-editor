@@ -18,7 +18,13 @@ import {
 import { type AiEditorMode, type AiPresets, MODES } from '../../../entities/mode';
 import { type AiProvider, UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController } from '../../../features/generation';
-import { type AiEnhancerLocale, type AiEnhancerLocaleKey, enLocale, LOCALE_LOADERS, translate } from '../../../shared/i18n';
+import {
+  type AiEnhancerLocale,
+  type AiEnhancerLocaleKey,
+  enLocale,
+  LOCALE_LOADERS,
+  translate,
+} from '../../../shared/i18n';
 import { cdnPreviewUrl } from '../../../shared/lib/cdn';
 import { HistoryStorageController } from '../../../shared/lib/HistoryStorageController';
 import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
@@ -99,8 +105,9 @@ const HISTORY_PLACEMENTS: readonly HistoryPlacement[] = [
 /**
  * `<uc-ai-enhancer>` — the standalone AI image generate/edit editor.
  *
- * Generates images from a text prompt and edits an existing image (`source`),
- * backed by Uploadcare's derivative API (configured via {@link pubkey}).
+ * Generates images from a text prompt and edits an existing image (set
+ * {@link sourceUuid} or {@link sourceFileInfo}), backed by Uploadcare's
+ * derivative API (configured via {@link pubkey}).
  *
  * @summary AI image generation & editing web component.
  *
@@ -122,7 +129,8 @@ const HISTORY_PLACEMENTS: readonly HistoryPlacement[] = [
  * @see The theming guide for the full token list.
  */
 @customElement('uc-ai-enhancer')
-export class UcAiEditor extends LitElement {
+export class UcAiEnhancer extends LitElement {
+  /** @internal */
   public static override styles = unsafeCSS(styles);
 
   /**
@@ -317,6 +325,7 @@ export class UcAiEditor extends LitElement {
   private _localeStrings: Partial<typeof enLocale> = enLocale;
   private _localeToken = 0;
 
+  /** @internal */
   public override willUpdate(changed: PropertyValues<this>): void {
     const providerConfigChanged =
       changed.has('provider') ||
@@ -722,6 +731,7 @@ export class UcAiEditor extends LitElement {
     this.dispatchEvent(new CustomEvent('uc:cancel', { bubbles: true, composed: true }));
   }
 
+  /** @internal */
   public override render(): TemplateResult {
     const mode = this._mode;
     // "Start over" discards the current image and returns to a blank generate
@@ -740,9 +750,7 @@ export class UcAiEditor extends LitElement {
     const hasImage = this._displayUrl != null;
     // A concrete pick sizes the frame (as width/height); "Original"/null lets
     // the canvas fall back to the displayed image's natural ratio.
-    const frameRatio = isConcreteRatio(this._selectedRatio)
-      ? this._selectedRatio[0] / this._selectedRatio[1]
-      : null;
+    const frameRatio = isConcreteRatio(this._selectedRatio) ? this._selectedRatio[0] / this._selectedRatio[1] : null;
     const stageClasses = {
       stage: true,
       'is-empty': !hasImage,
