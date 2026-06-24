@@ -2,7 +2,7 @@ import type { UploaderPlugin } from '@uploadcare/file-uploader';
 import { type AspectRatio, isValidAspectRatio, POPULAR_ASPECT_RATIOS } from '../../../entities/aspect-ratio';
 import { type AiEnhancerLocale, enLocale, LOCALE_LOADERS } from '../../../shared/i18n';
 import { ICON_EDIT_AI, ICON_GENERATE } from '../../../shared/ui/icons';
-import type { DoneDetail, UcAiEditor } from '../../ai-editor';
+import type { DoneDetail, UcAiEnhancer } from '../../ai-editor';
 import { parseCropPreset } from '../lib/parseCropPreset';
 
 import '../../ai-editor';
@@ -231,7 +231,7 @@ export const AiEnhancerPlugin: UploaderPlugin = {
         }
 
         const params = (activityParams ?? {}) as AiEditorActivityParams;
-        const editor = document.createElement('uc-ai-enhancer') as UcAiEditor;
+        const editor = document.createElement('uc-ai-enhancer') as UcAiEnhancer;
         // Edit mode: resolve the source image's collection entry, so the edit
         // opens on that image. We hand the editor the entry's `fileInfo` it
         // already holds (which carries the uuid), so the editor skips its own

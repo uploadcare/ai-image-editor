@@ -6,7 +6,7 @@
  * chips, …) are intentionally excluded.
  */
 export default {
-  globs: ['src/widgets/ai-editor/ui/UcAiEditor.ts'],
+  globs: ['src/widgets/ai-editor/ui/UcAiEnhancer.ts'],
   outdir: 'docs/api',
   litelement: true,
 };
