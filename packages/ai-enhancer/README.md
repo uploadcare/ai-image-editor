@@ -26,9 +26,7 @@ Two entry points, imported independently so you only pull in what you use:
 > has no peer dependency.
 
 You need an Uploadcare **public key** (from the
-[dashboard](https://app.uploadcare.com/)) and the **AI feature enabled** for your
-project — it's gated per project, so [contact support](https://uploadcare.com/support/)
-to turn it on before generation works.
+[dashboard](https://app.uploadcare.com/)) to generate or edit images.
 
 ## Use as a File Uploader plugin
 
@@ -117,6 +115,17 @@ editor.addEventListener('uc:error', (e) => console.warn(e.detail.error))
 
 // Edit an existing image instead of generating from scratch:
 editor.sourceUuid = 'c2499162-eb07-4b93-b31e-94a89a47e858'
+```
+
+**No bundler?** Load it from a CDN — [esm.run](https://esm.run) bundles the
+dependencies, and lazy-loaded locales resolve from the same CDN automatically
+(pin a version in production):
+
+```html
+<script type="module">
+  import 'https://esm.run/@uploadcare/ai-enhancer@0.1.0'
+</script>
+<uc-ai-enhancer pubkey="YOUR_PUBLIC_KEY" locale-name="de"></uc-ai-enhancer>
 ```
 
 ### `<uc-ai-enhancer>` properties
@@ -261,8 +270,7 @@ editor.localeDefinitionOverride = {
 Supported locales: `en ar az ca cs da de el es et fi fr he hy is it ja ka kk ko
 lv nb nl pl pt ro ru sk sr sv tr uk vi zh` (and `zh-TW`). Error-code messages
 (`ai-enhancer-error-<code>`) are optional per locale and fall back to the generic
-message. `translate(key, overrides?)` and `enLocale` are exported for looking up
-strings outside the element.
+message. `enLocale` is exported for looking up strings outside the element.
 
 ## API reference
 
@@ -280,7 +288,7 @@ types come from `@uploadcare/ai-enhancer/plugin`).
 
 ### Editor
 
-- **`UcAiEditor`** (`<uc-ai-enhancer>`) — the editor element (see properties /
+- **`UcAiEnhancer`** (`<uc-ai-enhancer>`) — the editor element (see properties /
   events above).
 - Types: **`DoneDetail`**, **`OutputFilenameResolver`** (`(originalFilename, counter) => string`),
   **`MetadataCallback`** (`(fileInfo: UploadcareFile) => Metadata | Promise<Metadata>`),
@@ -291,10 +299,9 @@ types come from `@uploadcare/ai-enhancer/plugin`).
 
 ### Localization & secure delivery
 
-- **`translate(key, overrides?)`**, **`enLocale`**, **`AiEnhancerLocale`** — look
-  up / type editor strings.
-- **`SecureDeliveryProxyUrlResolver`**, **`resolveSecureDeliveryUrl`**,
-  **`SecureDeliveryUrlParts`** — sign / proxy the CDN URLs the editor renders.
+- **`enLocale`**, **`AiEnhancerLocale`** — look up / type editor strings.
+- **`SecureDeliveryProxyUrlResolver`**, **`SecureDeliveryUrlParts`** — sign /
+  proxy the CDN URLs the editor renders.
 
 ## Useful links
 

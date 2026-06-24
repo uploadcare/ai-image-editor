@@ -32,12 +32,6 @@ You'll also need an Uploadcare **public key** to enable generate/edit. Grab one
 from the [Uploadcare dashboard](https://app.uploadcare.com/) — see
 [API keys](https://uploadcare.com/docs/start/settings/#api-keys) in the docs.
 
-::: warning Enable the AI feature
-AI image generation/editing is gated per project — ask
-[Uploadcare support](https://uploadcare.com/support/) to enable it for your
-project before the editor can generate results.
-:::
-
 Two entry points, imported independently so you only pull in what you use:
 
 | Import | What it gives you |
