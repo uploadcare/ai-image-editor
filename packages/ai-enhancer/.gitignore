@@ -8,3 +8,7 @@ docs/api/components.md
 docs/api/typescript/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+
+# Demo / hosting build outputs
+dist-demo/
+dist-site/
