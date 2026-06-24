@@ -264,10 +264,32 @@ export class DotGridGLRenderer {
     gl.vertexAttribPointer(aQuad, 2, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
 
-    for (const name of ['uResolution','uCols','uOffset','uCell','uBaseRadius','uFullHalf','uEnv','uShimMix','uMask','uGenerating','uMinScale','uPeakScale','uIdleScale','uEpiCount','uEpis','uEpiRadius','uEpiFalloff','uColorA','uColorRGB','uFalloffWarp','uDither']) {
+    for (const name of [
+      'uResolution',
+      'uCols',
+      'uOffset',
+      'uCell',
+      'uBaseRadius',
+      'uFullHalf',
+      'uEnv',
+      'uShimMix',
+      'uMask',
+      'uGenerating',
+      'uMinScale',
+      'uPeakScale',
+      'uIdleScale',
+      'uEpiCount',
+      'uEpis',
+      'uEpiRadius',
+      'uEpiFalloff',
+      'uColorA',
+      'uColorRGB',
+      'uFalloffWarp',
+      'uDither',
+    ]) {
       this._dotUniforms[name] = gl.getUniformLocation(this._dotProgram, name);
     }
-    for (const name of ['uResolution','uFrame','uImage','uFrameSize','uImageSize']) {
+    for (const name of ['uResolution', 'uFrame', 'uImage', 'uFrameSize', 'uImageSize']) {
       this._imgUniforms[name] = gl.getUniformLocation(this._imgProgram, name);
     }
 

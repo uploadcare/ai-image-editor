@@ -91,13 +91,15 @@ export class UcAiHistory extends LitElement {
 
     return html`
       <div class=${classMap(stripClasses)} role="toolbar" aria-label="${this.listLabel}">
-        ${this.showStartOver
-          ? html`
+        ${
+          this.showStartOver
+            ? html`
               <div class="startover">
                 <button type="button" class="startover__btn" @click=${this._startOver}>${this.startOverLabel}</button>
               </div>
             `
-          : nothing}
+            : nothing
+        }
         ${repeat(
           ordered,
           (entry) => entry.id,

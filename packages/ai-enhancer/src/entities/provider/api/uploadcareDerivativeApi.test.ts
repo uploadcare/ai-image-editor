@@ -229,9 +229,7 @@ describe('UploadcareDerivativeApi', () => {
     controller.abort();
     const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new DOMException('Aborted', 'AbortError'));
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await expect(
-      provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal }),
-    ).rejects.toThrow();
+    await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toThrow();
   });
 
   describe('edit mode', () => {

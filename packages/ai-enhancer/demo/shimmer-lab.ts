@@ -395,7 +395,8 @@ export class ShimmerLab extends LitElement {
       <div class="panel">
         <div class="modes">
           ${(['idle', 'shimmer', 'over-image'] as Mode[]).map(
-            (m) => html`<button class=${m === this._mode ? 'active' : ''} @click=${() => this._setMode(m)}>${m}</button>`,
+            (m) =>
+              html`<button class=${m === this._mode ? 'active' : ''} @click=${() => this._setMode(m)}>${m}</button>`,
           )}
           <button @click=${this._replayReveal}>↺ replay reveal</button>
           <button @click=${this._toggleStageTheme}>${this._lightStage ? '🌙 dark stage' : '☀ light stage'}</button>

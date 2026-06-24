@@ -135,7 +135,9 @@ async function readJson(response: Response, action: string): Promise<unknown> {
     throw new AiProviderError(error_code, content ?? error_code);
   }
   if (!response.ok) {
-    throw new Error(`Uploadcare ${action} failed (${response.status} ${response.statusText})${text ? `: ${text}` : ''}`);
+    throw new Error(
+      `Uploadcare ${action} failed (${response.status} ${response.statusText})${text ? `: ${text}` : ''}`,
+    );
   }
   return data;
 }

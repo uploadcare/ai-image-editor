@@ -43,13 +43,20 @@ describe('UploadcareApiClient', () => {
     });
 
     it('includes metadata only when provided', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
       const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
 
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
       expect(JSON.parse((fetchImpl.mock.calls[0]![1] as RequestInit).body as string).metadata).toBeUndefined();
 
-      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png', metadata: { source: 'ai-enhancer' } });
+      await client.generate({
+        prompt: 'x',
+        aspectRatio: [1, 1],
+        filename: 'f.png',
+        metadata: { source: 'ai-enhancer' },
+      });
       expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).metadata).toEqual({
         source: 'ai-enhancer',
       });
@@ -95,7 +102,9 @@ describe('UploadcareApiClient', () => {
 
     it('surfaces a platform error envelope as an AiProviderError with its code', async () => {
       const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-        jsonResponse({ error: { status_code: 400, error_code: 'canvas_too_large', content: 'Canvas size exceeds the 4MP limit.' } }),
+        jsonResponse({
+          error: { status_code: 400, error_code: 'canvas_too_large', content: 'Canvas size exceeds the 4MP limit.' },
+        }),
       );
       const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
       await expect(client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' })).rejects.toMatchObject({
@@ -127,7 +136,9 @@ describe('UploadcareApiClient', () => {
 
     it('includes aspect_ratio only when provided', async () => {
       // Fresh Response per call — a single shared Response body can be read once.
-      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
       const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
 
       await client.edit({ prompt: 'x', source: 'u', filename: 'f.png' });
@@ -138,7 +149,9 @@ describe('UploadcareApiClient', () => {
     });
 
     it('includes metadata only when provided', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
       const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
 
       await client.edit({ prompt: 'x', source: 'u', filename: 'f.png' });
@@ -192,7 +205,9 @@ describe('UploadcareApiClient', () => {
 
     it('surfaces a platform error envelope (e.g. job_not_found) as an AiProviderError', async () => {
       const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-        jsonResponse({ error: { status_code: 404, error_code: 'job_not_found', content: 'Derivative job is not found.' } }),
+        jsonResponse({
+          error: { status_code: 404, error_code: 'job_not_found', content: 'Derivative job is not found.' },
+        }),
       );
       const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
       const err = await client.getJobStatus('job-1').catch((e) => e);

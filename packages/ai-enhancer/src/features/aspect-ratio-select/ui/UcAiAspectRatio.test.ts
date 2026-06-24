@@ -41,7 +41,10 @@ describe('UcAiAspectRatio', () => {
 
   it('renders an Original entry when one is provided (edit mode)', async () => {
     const el = await mount({
-      options: [{ value: ORIGINAL_RATIO, labelKey: 'ai-enhancer-aspect-original' }, ...POPULAR_ASPECT_RATIOS.map(toAspectRatioOption)],
+      options: [
+        { value: ORIGINAL_RATIO, labelKey: 'ai-enhancer-aspect-original' },
+        ...POPULAR_ASPECT_RATIOS.map(toAspectRatioOption),
+      ],
       selected: ORIGINAL_RATIO,
       labelFor: () => 'Original',
     });

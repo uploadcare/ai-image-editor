@@ -23,7 +23,11 @@ function urlPartsOf(url: string): SecureDeliveryUrlParts {
   try {
     const parsed = parseCdnUrl(url);
     if (parsed.kind === 'file') {
-      return { uuid: parsed.uuid, cdnUrlModifiers: serializeOperations(parsed.operations), fileName: parsed.filename ?? '' };
+      return {
+        uuid: parsed.uuid,
+        cdnUrlModifiers: serializeOperations(parsed.operations),
+        fileName: parsed.filename ?? '',
+      };
     }
   } catch {
     // Not a CDN url — hand the resolver empty parts (it still gets the url).
