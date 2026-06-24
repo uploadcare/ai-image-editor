@@ -66,4 +66,5 @@ export type AiEnhancerLocaleKey = keyof typeof enLocale;
  * optional (they fall back to English / the generic message), so translations
  * can adopt them incrementally without every locale listing every code.
  */
-export type AiEnhancerLocale = Record<keyof typeof coreLocale, string> & Partial<Record<keyof typeof errorLocale, string>>;
+export type AiEnhancerLocale = Record<keyof typeof coreLocale, string> &
+  Partial<Record<keyof typeof errorLocale, string>>;

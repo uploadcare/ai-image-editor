@@ -13,8 +13,8 @@
   border: 1px solid var(--uc-ai-floating-border, transparent);
   /* The base radius (via the composer-radius tokens). Split top/bottom so
      auto-hide can flatten just the tucked-away edge. */
-  border-radius: var(--uc-ai-composer-radius-top) var(--uc-ai-composer-radius-top)
-    var(--uc-ai-composer-radius-bottom) var(--uc-ai-composer-radius-bottom);
+  border-radius: var(--uc-ai-composer-radius-top) var(--uc-ai-composer-radius-top) var(--uc-ai-composer-radius-bottom)
+    var(--uc-ai-composer-radius-bottom);
   transition:
     border-radius 0.4s var(--uc-ai-ease-out),
     box-shadow 0.4s var(--uc-ai-ease-out);

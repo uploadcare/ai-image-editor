@@ -169,9 +169,11 @@ export class DemoShell extends LitElement {
 
       <div class="stage"><slot></slot></div>
 
-      ${this._entries.length
-        ? html`<div class="log">${this._entries.map((entry) => html`<p>${entry}</p>`)}</div>`
-        : nothing}
+      ${
+        this._entries.length
+          ? html`<div class="log">${this._entries.map((entry) => html`<p>${entry}</p>`)}</div>`
+          : nothing
+      }
     `;
   }
 }

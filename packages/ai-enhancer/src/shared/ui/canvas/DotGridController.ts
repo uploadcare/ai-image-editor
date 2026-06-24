@@ -266,7 +266,8 @@ export class DotGridController implements ReactiveController {
     if (typeof MutationObserver === 'function' && typeof document !== 'undefined') {
       this._themeObserver = new MutationObserver(this._onThemeChange);
       for (const node of [document.documentElement, document.body]) {
-        if (node) this._themeObserver.observe(node, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
+        if (node)
+          this._themeObserver.observe(node, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
       }
     }
 

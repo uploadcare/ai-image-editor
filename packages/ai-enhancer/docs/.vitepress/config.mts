@@ -32,7 +32,8 @@ export default defineConfig({
     ],
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Built by <a href="https://uploadcare.com">Uploadcare</a> · <a href="https://uploadcare.com/docs/">Docs</a>',
+      copyright:
+        'Built by <a href="https://uploadcare.com">Uploadcare</a> · <a href="https://uploadcare.com/docs/">Docs</a>',
     },
     sidebar: {
       '/guide/': [

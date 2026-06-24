@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "React wrapper for @uploadcare/ai-enhancer",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/react-ai-enhancer.cjs",
   "module": "./dist/react-ai-enhancer.js",
   "types": "./dist/react-ai-enhancer.d.ts",
