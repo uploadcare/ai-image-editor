@@ -79,6 +79,22 @@ export class HistoryStorageController implements ReactiveController {
   }
 
   /**
+   * Persist the original source image as a root node (`source: null`), so it
+   * survives reloads as the base of its lineage. Idempotent: keeps an existing
+   * node untouched (preserving its ordering). New nodes are dated just before the
+   * lineage's oldest entry so the source always sorts last (the base of the strip).
+   */
+  public recordSource(input: Omit<HistoryNode, 'createdAt' | 'source'>): void {
+    const key = this._key;
+    if (!key) return;
+    const map = this._read(key);
+    if (map[input.uuid]) return; // already stored — leave its ordering intact
+    const oldest = Object.values(map).reduce((min, n) => Math.min(min, n.createdAt), Date.now());
+    map[input.uuid] = { ...input, source: null, createdAt: oldest - 1 };
+    this._write(key, this._evict(map));
+  }
+
+  /**
    * The history strip for `uuid`'s lineage, newest-first: every stored result
    * connected to it by parent/child links (so branches off an older result are
    * included). Returns `[]` when persistence is off or nothing is connected — incl.
