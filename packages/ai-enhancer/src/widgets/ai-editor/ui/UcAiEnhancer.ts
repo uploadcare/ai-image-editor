@@ -466,7 +466,26 @@ export class UcAiEnhancer extends LitElement {
     }
     void provider.resolveCdnUrl(uuid).then((url) => {
       // Guard against races: a later source/provider change wins.
-      if (this._sourceUuid === uuid && this._provider === provider) this._inputUrl = url;
+      if (this._sourceUuid === uuid && this._provider === provider) {
+        this._inputUrl = url;
+        this._persistSourceEntry();
+      }
+    });
+  }
+
+  /** Persist the original source as the root node of its lineage, so it survives
+   *  reloads as the base of the strip. Runs once both its url and file info are
+   *  known; idempotent in storage. */
+  private _persistSourceEntry(): void {
+    const entry = this._sourceEntry;
+    if (!entry) return;
+    this._history.recordSource({
+      uuid: entry.file.uuid,
+      url: entry.url,
+      prompt: entry.prompt,
+      mode: entry.mode,
+      ratio: entry.ratio,
+      file: entry.file,
     });
   }
 
@@ -489,6 +508,7 @@ export class UcAiEnhancer extends LitElement {
         // Guard against races and a value injected meanwhile.
         if (this.sourceUuid === uuid && this._provider === provider && !this.sourceFileInfo) {
           this._fetchedFileInfo = file;
+          this._persistSourceEntry();
         }
       },
       () => {

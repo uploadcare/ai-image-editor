@@ -229,7 +229,8 @@ describe('<uc-ai-enhancer>', () => {
     expect(startOver).toBeNull();
   });
 
-  it('shows the original image in the history strip when editing (plugin path)', async () => {
+  it('shows and persists the original image in the history strip when editing (plugin path)', async () => {
+    localStorage.removeItem(`uc-ai-enhancer/history/${STAGING.pubkey}`);
     const el = mount(STAGING);
     // The plugin hands the editor the source's file info directly.
     el.sourceFileInfo = { uuid: SAMPLE_UUID } as UploadcareFile;
@@ -243,6 +244,10 @@ describe('<uc-ai-enhancer>', () => {
       expect(strip).not.toBeNull();
       expect(strip!.entries.some((entry) => entry.file.uuid === SAMPLE_UUID)).toBe(true);
     });
+
+    // …and the original is persisted as a root node so it survives a reload.
+    const stored = JSON.parse(localStorage.getItem(`uc-ai-enhancer/history/${STAGING.pubkey}`) ?? '{}');
+    expect(stored[SAMPLE_UUID]?.source).toBe(null);
   });
 
   it('places the composer per composer-placement + canvas-fit', async () => {
