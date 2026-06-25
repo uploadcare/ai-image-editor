@@ -70,6 +70,8 @@ function ensureActivityModalSize(): void {
   // cloud-image-edit / camera / external size their modal).
   style.textContent = [
     `[uc-modal]:not(#\\#) > dialog:has([activity="${AI_ENHANCER_ID}"][active]) {`,
+    '  --uc-dialog-max-width: 1120px;',
+    '  --uc-dialog-max-height: 720px;',
     '  width: 100%;',
     '  height: 100%;',
     '}',
