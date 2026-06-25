@@ -65,7 +65,7 @@ export type ShimmerConfig = {
   dither: number;
   // ----- Epicentre roam -----
   epiCount: number;
-  epiRadiusRatio: number; // falloff radius as a fraction of the frame width
+  epiRadiusRatio: number; // falloff radius as a fraction of the frame's square-equivalent size √(w·h)
   epiSpeed: number; // travel speed, px per ms
   epiWander: number; // max heading jitter per frame, in radians
   epiFalloff: number; // falloff exponent: >1 tightens the hotspot, <1 broadens it
@@ -470,6 +470,16 @@ export class DotGridController implements ReactiveController {
     return this._rectCache ?? this._frameRect();
   }
 
+  /** Epicentre falloff radius for the live frame. Based on the frame's geometric
+   *  mean √(w·h) — a square-equivalent size — rather than its width, so the
+   *  spotlight stays balanced on portrait frames (a narrow width would otherwise
+   *  shrink it). Stays a constant *relative* fraction of the frame on any AR. */
+  private _epiRadiusFor(r: Rect): number {
+    const w = Math.max(0, r.right - r.left);
+    const h = Math.max(0, r.bottom - r.top);
+    return Math.sqrt(w * h) * this._cfg.epiRadiusRatio || 1;
+  }
+
   private _inFrame(x: number, y: number, r: Rect): boolean {
     return (
       x - this._baseRadius >= r.left &&
@@ -731,11 +741,10 @@ export class DotGridController implements ReactiveController {
     this._ensureScale(animating);
     ctx.clearRect(0, 0, this._w, this._h);
 
-    // Falloff radius tracks the live frame width (rides the AR transition). It's a
-    // constant fraction of the live frame, so the epicentre keeps the same
-    // *relative* size on every canvas; sizeScale only scales the roam speed.
+    // Falloff radius tracks the live frame (rides the AR transition), keyed off
+    // its square-equivalent size so it stays balanced on portrait frames.
     const fr = this._liveRect();
-    this._epiRadius = (fr.right - fr.left) * this._cfg.epiRadiusRatio || 1;
+    this._epiRadius = this._epiRadiusFor(fr);
 
     const cell = this._cfg.cellSize;
     const fullHalf = cell / 2;
@@ -805,9 +814,9 @@ export class DotGridController implements ReactiveController {
     if (!(this._state.shimmering || this._state.empty || mask)) return;
 
     const fr = this._liveRect();
-    // Radius is a constant fraction of the live frame, so the epicentre keeps the
-    // same *relative* size on every canvas; sizeScale only scales the roam speed.
-    this._epiRadius = (fr.right - fr.left) * this._cfg.epiRadiusRatio || 1;
+    // Keyed off the frame's square-equivalent size (not width) so the epicentre
+    // stays balanced on portrait frames; sizeScale only scales the roam speed.
+    this._epiRadius = this._epiRadiusFor(fr);
 
     // Upload the mask image lazily — only when the element or its readiness flips.
     if (mask) {
