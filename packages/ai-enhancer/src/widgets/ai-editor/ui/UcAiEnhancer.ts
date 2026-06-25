@@ -363,7 +363,21 @@ export class UcAiEnhancer extends LitElement {
     // off the source uuid (from either input), so reopening on a previously edited
     // image rehydrates its results automatically.
     if (sourceChanged || changed.has('pubkey')) {
-      this._gen.setHistory(this._history.lineage(this._sourceUuid));
+      const lineage = this._history.lineage(this._sourceUuid);
+      this._gen.setHistory(lineage);
+      // Resume on the most recent result in the lineage rather than the original
+      // source, so the canvas + shimmer show — and edits process — the latest
+      // image. The original stays available as the base entry of the strip.
+      const latest = lineage[0];
+      if (latest && latest.file.uuid !== this._sourceUuid) {
+        this._gen.setResult({
+          url: latest.url,
+          uuid: latest.file.uuid,
+          prompt: latest.prompt,
+          mode: latest.mode,
+          file: latest.file,
+        });
+      }
     }
     // Re-resolve the input image's display URL once when its uuid or the
     // provider (CDN base) changed — covers both set in the same update.
