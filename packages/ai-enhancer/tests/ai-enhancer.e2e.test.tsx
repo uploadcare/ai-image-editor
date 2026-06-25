@@ -18,6 +18,9 @@ let restoreFetch: (() => void) | null = null;
 afterEach(() => {
   restoreFetch?.();
   restoreFetch = null;
+  // Persisted history is namespaced by pubkey in localStorage; clear it so a
+  // seeded/recorded lineage in one test can't leak into the next.
+  localStorage.clear();
   cleanup();
 });
 
@@ -248,6 +251,36 @@ describe('<uc-ai-enhancer>', () => {
     // …and the original is persisted as a root node so it survives a reload.
     const stored = JSON.parse(localStorage.getItem(`uc-ai-enhancer/history/${STAGING.pubkey}`) ?? '{}');
     expect(stored[SAMPLE_UUID]?.source).toBe(null);
+  });
+
+  it('resumes on the latest result (not the original) when reopening a lineage', async () => {
+    const LATEST = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    const key = `uc-ai-enhancer/history/${STAGING.pubkey}`;
+    // Seed a prior edit of SAMPLE_UUID into storage (a result whose parent is it).
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        [LATEST]: {
+          uuid: LATEST,
+          source: SAMPLE_UUID,
+          url: `https://cdn.example.com/${LATEST}/`,
+          prompt: 'edited',
+          mode: 'edit',
+          ratio: null,
+          file: { uuid: LATEST, cdnUrl: `https://cdn.example.com/${LATEST}/`, originalFilename: 'r.png' },
+          createdAt: Date.now(),
+        },
+      }),
+    );
+
+    const el = mount(STAGING);
+    el.sourceFileInfo = { uuid: SAMPLE_UUID } as UploadcareFile;
+    await el.updateComplete;
+    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
+
+    // The canvas (and shimmer) resume on the latest result, not the original.
+    await vi.waitFor(() => expect(canvasUrl(el)).toContain(LATEST));
+    expect(canvasUrl(el)).not.toContain(SAMPLE_UUID);
   });
 
   it('places the composer per composer-placement + canvas-fit', async () => {
