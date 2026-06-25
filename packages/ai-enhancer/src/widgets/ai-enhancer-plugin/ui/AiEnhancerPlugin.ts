@@ -143,7 +143,7 @@ export function aspectRatiosFromCropPreset(cropPreset: string): AspectRatio[] | 
 export const AiEnhancerPlugin: UploaderPlugin = {
   id: AI_ENHANCER_ID,
   setup: ({ pluginApi, uploaderApi }) => {
-    const { registry, config, files } = pluginApi;
+    const { registry, config } = pluginApi;
 
     ensureActivityModalSize();
 
@@ -317,9 +317,9 @@ export const AiEnhancerPlugin: UploaderPlugin = {
             try {
               // The edited result already carries the source file's name (the
               // editor names it after the source's `fileInfo` by default), so a
-              // plain replace preserves it. `files.replace` removes the source
+              // plain replace preserves it. `replaceFile` removes the source
               // entry and adds the result in its place (a NEW internalId).
-              files.replace(params.sourceInternalId, file, { source: AI_ENHANCER_ID });
+              uploaderApi.replaceFile(params.sourceInternalId, file, { source: AI_ENHANCER_ID });
             } catch {
               // The source entry is gone (e.g. removed while editing) — fall back to adding.
               uploaderApi.addFileFromUploadcareFile(file, { source: AI_ENHANCER_ID });

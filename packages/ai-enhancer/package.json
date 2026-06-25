@@ -40,7 +40,7 @@
     "lit": "^3.2.1"
   },
   "peerDependencies": {
-    "@uploadcare/file-uploader": ">=1.32.0-alpha.1"
+    "@uploadcare/file-uploader": ">=1.32.0-alpha.2"
   },
   "peerDependenciesMeta": {
     "@uploadcare/file-uploader": {
@@ -50,7 +50,7 @@
   "devDependencies": {
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@custom-elements-manifest/to-markdown": "^0.1.0",
-    "@uploadcare/file-uploader": "1.32.0-alpha.1",
+    "@uploadcare/file-uploader": "1.32.0-alpha.2",
     "@vitest/browser": "^3.0.9",
     "playwright": "^1.49.0",
     "typedoc": "^0.28.19",
