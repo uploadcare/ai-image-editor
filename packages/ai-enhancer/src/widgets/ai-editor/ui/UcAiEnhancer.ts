@@ -17,7 +17,7 @@ import {
 } from '../../../entities/aspect-ratio';
 import { type AiEditorMode, type AiPresets, MODES } from '../../../entities/mode';
 import { type AiProvider, UploadcareDerivativeApi } from '../../../entities/provider';
-import { GenerationController } from '../../../features/generation';
+import { GenerationController, type HistoryEntry } from '../../../features/generation';
 import {
   type AiEnhancerLocale,
   type AiEnhancerLocaleKey,
@@ -502,6 +502,30 @@ export class UcAiEnhancer extends LitElement {
   }
 
   /**
+   * The original source image as a strip entry, so editing always shows what you
+   * started from and lets you revert to it. Display-only — it's not a generation,
+   * so it's never persisted. `null` until the source's url and file info are
+   * known, or in generate mode (no source).
+   */
+  private get _sourceEntry(): HistoryEntry | null {
+    const uuid = this._sourceUuid;
+    const file = this._effectiveSourceFileInfo;
+    const url = this._inputUrl;
+    if (!uuid || !url || !file) return null;
+    return { id: uuid, prompt: '', mode: 'edit', url, file, ratio: ORIGINAL_RATIO };
+  }
+
+  /** Strip entries: the generated results (newest-first) plus the original source
+   *  appended as the base (oldest) when editing. */
+  private get _historyEntries(): HistoryEntry[] {
+    const src = this._sourceEntry;
+    if (!src || this._gen.history.some((e) => e.file.uuid === src.file.uuid)) {
+      return this._gen.history;
+    }
+    return [...this._gen.history, src];
+  }
+
+  /**
    * Intrinsic ratio of the image currently on the canvas, from metadata when
    * known — the displayed result's file info, else the source's. Lets the canvas
    * frame correctly before the image decodes. `null` when unknown.
@@ -787,12 +811,13 @@ export class UcAiEnhancer extends LitElement {
 
     // Only mount the strip when it has something to show (results, or the
     // "Start over" affordance); avoids a dead gap otherwise.
-    const showHistory = this._gen.history.length > 0 || showStartOver;
+    const historyEntries = this._historyEntries;
+    const showHistory = historyEntries.length > 0 || showStartOver;
     const historyTpl = showHistory
       ? html`
           <uc-ai-history
-            .entries=${this._gen.history}
-            .selectedUuid=${this._gen.result?.uuid ?? null}
+            .entries=${historyEntries}
+            .selectedUuid=${this._gen.result?.uuid ?? this._sourceUuid}
             ?show-start-over=${showStartOver}
             start-over-label="${this._l('ai-enhancer-start-over')}"
             list-label="${this._l('ai-enhancer-history-title')}"

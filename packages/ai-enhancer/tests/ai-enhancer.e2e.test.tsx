@@ -229,6 +229,22 @@ describe('<uc-ai-enhancer>', () => {
     expect(startOver).toBeNull();
   });
 
+  it('shows the original image in the history strip when editing (plugin path)', async () => {
+    const el = mount(STAGING);
+    // The plugin hands the editor the source's file info directly.
+    el.sourceFileInfo = { uuid: SAMPLE_UUID } as UploadcareFile;
+    await el.updateComplete;
+    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
+
+    // The strip mounts with the original as its base entry — the starting point
+    // you can revert to — once the source's display url has resolved.
+    await vi.waitFor(() => {
+      const strip = historyEl(el) as (HTMLElement & { entries: Array<{ file: { uuid: string } }> }) | null;
+      expect(strip).not.toBeNull();
+      expect(strip!.entries.some((entry) => entry.file.uuid === SAMPLE_UUID)).toBe(true);
+    });
+  });
+
   it('places the composer per composer-placement + canvas-fit', async () => {
     const el = mount(STAGING);
     el.canvasFit = 'full';
