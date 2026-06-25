@@ -292,6 +292,11 @@ export class DotGridController implements ReactiveController {
 
   /** Notify the painter that the result image finished loading. */
   public onImageLoad(): void {
+    // The canvas reuses one <img> and swaps its `src`, so the element identity
+    // doesn't change between images. Invalidate the GL texture here so the next
+    // frame re-uploads the newly-loaded image — otherwise WebGL keeps sampling
+    // the previously-uploaded one (e.g. the original behind a result's shimmer).
+    this._glImageReady = false;
     this._tryStartExit();
     this._ensureLoop();
   }
@@ -631,7 +636,7 @@ export class DotGridController implements ReactiveController {
       if (d >= this._epiRadius) continue;
       const t = 1 - d / this._epiRadius;
       let f = t * t * (3 - 2 * t); // smoothstep
-      if (falloff !== 1) f = Math.pow(f, falloff);
+      if (falloff !== 1) f = f ** falloff;
       if (f > best) best = f;
     }
     return best;
