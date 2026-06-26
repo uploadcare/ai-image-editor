@@ -122,12 +122,30 @@ export class UcAiCanvas extends LitElement {
   /** The pending swap is instant (no dot transition), so double-buffer it. */
   private _instantSwap = false;
 
+  public override connectedCallback(): void {
+    super.connectedCallback();
+    document.addEventListener('visibilitychange', this._onVisibilityChange);
+  }
+
   public override disconnectedCallback(): void {
     super.disconnectedCallback();
     this._resizeObserver?.disconnect();
     this._clearCoverTimer();
     document.removeEventListener('keydown', this._onFullscreenKeydown, true);
+    document.removeEventListener('visibilitychange', this._onVisibilityChange);
   }
+
+  /**
+   * Returning to a backgrounded tab can leave a cover/reveal pending or frozen
+   * mid-play (RAF/timer throttling). With no generation running, snap straight to
+   * the settled image so it doesn't surface as a spurious shimmer on return.
+   */
+  private _onVisibilityChange = (): void => {
+    if (document.visibilityState !== 'visible' || this.busy || !this._displayedUrl) return;
+    this._clearCoverTimer();
+    this._switchCovering = false;
+    this._dotGrid.settle();
+  };
 
   protected override firstUpdated(): void {
     const surface = this._dotGridEl;
