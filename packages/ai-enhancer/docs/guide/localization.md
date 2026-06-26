@@ -109,6 +109,7 @@ editor.localeDefinitionOverride = {
 | `ai-enhancer-error-provider_unavailable` | The upstream image service is overloaded. |
 | `ai-enhancer-error-generation_timeout` | The job took too long and timed out. |
 | `ai-enhancer-error-invalid_input` | The model rejected the inputs or settings. |
+| `ai-enhancer-error-RequestThrottledError` | Too many requests — rate limited. |
 
 **Upload pipeline** — the result couldn't be saved:
 

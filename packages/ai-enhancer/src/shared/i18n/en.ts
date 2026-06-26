@@ -51,6 +51,7 @@ const errorLocale = {
   'ai-enhancer-error-provider_unavailable': 'The image service is busy right now. Please try again in a moment.',
   'ai-enhancer-error-generation_timeout': 'Generation took too long and timed out. Please try again.',
   'ai-enhancer-error-invalid_input': 'Some settings are invalid. Please adjust them and try again.',
+  'ai-enhancer-error-RequestThrottledError': 'Too many requests right now. Please wait a moment and try again.',
   // Upload pipeline (job status)
   'ai-enhancer-error-DownloadFileHTTPClientError': "Couldn't retrieve the generated image. Please try again.",
   'ai-enhancer-error-DownloadFileNotFoundError': "The generated image couldn't be found. Please try again.",
