@@ -217,10 +217,19 @@ export class UcAiCanvas extends LitElement {
       this._switchCovering = false;
       return;
     }
-    // A generation (busy, or busy just toggled) owns the cover; don't gate it.
-    if (this.busy || busyChanged) {
+    // While a generation runs, the busy flag owns the cover.
+    if (this.busy) {
       this._clearCoverTimer();
       this._instantSwap = false;
+      return;
+    }
+    // A generation just finished but its result is still loading — keep covering
+    // (ungated) so the reveal materialises the NEW image, instead of dropping the
+    // cover, briefly flashing the old image, then snapping the new one in.
+    if (busyChanged) {
+      this._clearCoverTimer();
+      this._instantSwap = false;
+      this._switchCovering = true;
       return;
     }
     // Switching back to an already-displayed (cached) image: swap directly, no
