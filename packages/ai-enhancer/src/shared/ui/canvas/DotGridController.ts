@@ -308,6 +308,30 @@ export class DotGridController implements ReactiveController {
   }
 
   /**
+   * Cancel any in-flight or pending cover/reveal and snap to the settled state —
+   * the revealed image (or the idle grid when empty). Used when the tab regains
+   * visibility: background-tab RAF/timer throttling can otherwise leave a reveal
+   * envelope frozen mid-play (or a cover armed), which would surface as a
+   * spurious shimmer on return even though nothing is generating.
+   */
+  public settle(): void {
+    if (!this._canDraw) return;
+    if (this._rafId !== null) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+      this._lastTime = 0;
+    }
+    this._exitPending = false;
+    this._envAnimating = false;
+    this._shimAnimating = false;
+    this._env = 0; // fully revealed (image shown)
+    this._shimMix = 0;
+    this._prevShim = false;
+    this._showHiddenImage();
+    this._draw();
+  }
+
+  /**
    * Reconcile to a new visual state. Drives the enter/exit envelopes off the
    * shimmer transition, mirroring the prototype's `syncProgress`.
    */
