@@ -377,7 +377,7 @@ export class UcAiCanvas extends LitElement {
   public override render(): TemplateResult {
     const preloading = this.url != null && this.url !== this._displayedUrl && !this._failed;
     const isEmpty = this._displayedUrl == null;
-    const showFullscreenBtn = !isEmpty && !this._failed && this._fullscreenSupported;
+    const showFullscreenBtn = !isEmpty && !this._failed && !this.busy && this._fullscreenSupported;
 
     const canvasClasses = {
       canvas: true,
