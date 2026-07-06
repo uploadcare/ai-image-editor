@@ -43,6 +43,9 @@ export class UcAiHistory extends LitElement {
   @property({ attribute: 'list-label' })
   public listLabel = 'Generation history';
 
+  @property({ type: Boolean })
+  public busy = false;
+
   @property({ attribute: false })
   public secureResolver?: SecureDeliveryProxyUrlResolver;
 
@@ -91,15 +94,15 @@ export class UcAiHistory extends LitElement {
 
     return html`
       <div class=${classMap(stripClasses)} role="toolbar" aria-label="${this.listLabel}">
-        ${
-          this.showStartOver
-            ? html`
+        ${this.showStartOver
+          ? html`
               <div class="startover">
-                <button type="button" class="startover__btn" @click=${this._startOver}>${this.startOverLabel}</button>
+                <button type="button" ?disabled="${this.busy}" class="startover__btn" @click=${this._startOver}>
+                  ${this.startOverLabel}
+                </button>
               </div>
             `
-            : nothing
-        }
+          : nothing}
         ${repeat(
           ordered,
           (entry) => entry.id,
@@ -110,6 +113,7 @@ export class UcAiHistory extends LitElement {
             return html`
               <button
                 type="button"
+                ?disabled=${this.busy}
                 class=${classMap({ chip: true, 'chip--selected': selected })}
                 aria-pressed="${selected ? 'true' : 'false'}"
                 aria-label=${entry.prompt || 'Result'}

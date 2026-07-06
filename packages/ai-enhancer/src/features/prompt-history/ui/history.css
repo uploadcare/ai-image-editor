@@ -32,21 +32,25 @@
     opacity 330ms var(--uc-ai-ease-out, ease);
 }
 
+.chip:disabled {
+  cursor: not-allowed;
+}
+
 .chip:last-child {
   margin-right: 0;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .chip:hover {
+  .chip:hover:not(:disabled) {
     transform: scale(1.1);
   }
 
   /* On hover, spread the chips apart instead of overlapping. */
-  .strip:hover .chip {
+  .strip:hover .chip:not(:disabled) {
     margin-right: 7px;
   }
 
-  .strip:hover .chip:last-child {
+  .strip:hover .chip:not(:disabled):last-child {
     margin-right: 0;
   }
 }
@@ -160,6 +164,10 @@
   font: inherit;
   font-size: 13px;
   cursor: pointer;
+}
+
+.startover__btn:disabled {
+  cursor: not-allowed;
 }
 
 .startover__btn:hover {

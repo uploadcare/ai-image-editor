@@ -102,9 +102,6 @@
       <input id="custom-presets" type="checkbox" /> Custom presets
     </label>
     <label slot="controls">
-      <input id="composer-auto-hide" type="checkbox" /> Composer auto-hide
-    </label>
-    <label slot="controls">
       <input id="branded" type="checkbox" /> Brand-themed
     </label>
 
@@ -234,10 +231,6 @@
           }
         : {};
       shell.log(`custom-presets: ${e.target.checked}`);
-    });
-    document.getElementById('composer-auto-hide').addEventListener('change', (e) => {
-      editor.composerAutoHide = e.target.checked;
-      shell.log(`composer-auto-hide: ${e.target.checked}`);
     });
 
     const localeSelect = document.getElementById('locale');
