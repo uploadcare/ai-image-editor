@@ -7,7 +7,6 @@ const opts = reactive({
   canvasFit: 'available',
   historyPlacement: 'composer-above',
   toolbarPlacement: 'bottom',
-  composerAutoHide: false,
   presetsOnly: false,
   localeName: 'en',
   aspectRatios: '',
@@ -29,7 +28,6 @@ const SELECTS: { key: keyof typeof opts; label: string; options: string[] }[] = 
   },
 ];
 const TOGGLES: { key: keyof typeof opts; label: string }[] = [
-  { key: 'composerAutoHide', label: 'Composer auto-hide' },
   { key: 'presetsOnly', label: 'Presets only' },
 ];
 
@@ -43,7 +41,6 @@ function apply(): void {
   editor.canvasFit = opts.canvasFit;
   editor.historyPlacement = opts.historyPlacement;
   editor.toolbarPlacement = opts.toolbarPlacement;
-  editor.composerAutoHide = opts.composerAutoHide;
   editor.presetsOnly = opts.presetsOnly;
   editor.localeName = opts.localeName;
   const ar = opts.aspectRatios.trim();

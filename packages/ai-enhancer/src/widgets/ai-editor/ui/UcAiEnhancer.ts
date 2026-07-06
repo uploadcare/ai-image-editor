@@ -850,6 +850,7 @@ export class UcAiEnhancer extends LitElement {
     const historyTpl = showHistory
       ? html`
           <uc-ai-history
+            .busy=${this._gen.busy}
             .entries=${historyEntries}
             .selectedUuid=${this._gen.result?.uuid ?? this._sourceUuid}
             ?show-start-over=${showStartOver}
