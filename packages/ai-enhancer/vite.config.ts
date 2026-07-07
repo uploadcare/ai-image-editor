@@ -39,6 +39,9 @@ export default defineConfig(({ command, mode }) => {
         },
         name: '@uploadcare/ai-enhancer',
         formats: ['es', 'cjs'],
+        // Pin output names to match package.json `exports`
+        // (dist/<entry>.js for ESM, dist/<entry>.cjs for CommonJS).
+        fileName: (format, entryName) => `${entryName}.${format === 'es' ? 'js' : 'cjs'}`,
       },
       rollupOptions: {
         external: ['lit', /^lit\//, '@uploadcare/file-uploader'],

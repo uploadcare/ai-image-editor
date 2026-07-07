@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { aspectRatiosFromCropPreset } from './AiEnhancerPlugin';
 
 describe('aspectRatiosFromCropPreset', () => {
@@ -14,11 +14,14 @@ describe('aspectRatiosFromCropPreset', () => {
     ]);
   });
 
-  it('drops invalid ratios silently', () => {
+  it('drops invalid ratios, warning on each', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(aspectRatiosFromCropPreset('16:9, 0:1, 1:1')).toEqual([
       [16, 9],
       [1, 1],
     ]);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('falls back to the popular set when only "free" is configured', () => {

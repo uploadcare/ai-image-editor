@@ -40,7 +40,7 @@ Two entry points, imported independently so you only pull in what you use:
 | `@uploadcare/ai-enhancer/plugin` | Just the `AiEnhancerPlugin` for the File Uploader — no eager component registration. |
 
 ::: tip Plugin peer dependency
-The plugin entry needs `@uploadcare/file-uploader` **≥ 1.32.0-alpha.2** as a peer
+The plugin entry needs `@uploadcare/file-uploader` **≥ 1.31.2** as a peer
 dependency (it relies on `uploaderApi.replaceFile`). The standalone editor has no
 peer dependency.
 :::

@@ -21,7 +21,7 @@ Two entry points, imported independently so you only pull in what you use:
 | `@uploadcare/ai-enhancer` | Registers the `<uc-ai-enhancer>` element and exports its public types, the provider, and the localization helpers. |
 | `@uploadcare/ai-enhancer/plugin` | Just the `AiEnhancerPlugin` for the File Uploader — no eager component registration. |
 
-> The plugin entry needs `@uploadcare/file-uploader` **≥ 1.32.0-alpha.2** as a
+> The plugin entry needs `@uploadcare/file-uploader` **≥ 1.31.2** as a
 > peer dependency (it relies on `uploaderApi.replaceFile`). The standalone editor
 > has no peer dependency.
 
