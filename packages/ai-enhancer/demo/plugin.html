@@ -39,7 +39,7 @@
     <uc-file-uploader-regular ctx-name="my-uploader"></uc-file-uploader-regular>
     <uc-config
       ctx-name="my-uploader"
-      pubkey="YOUR_PUBLIC_KEY"
+      pubkey=""
       debug
       test-mode
       source-list="local, url, camera, ai-enhancer"
@@ -73,13 +73,18 @@
     const config = document.querySelector('uc-config');
     config.plugins = [AiEnhancerPlugin];
 
+    // Supply your Uploadcare public key at runtime — `?pubkey=…` in the URL or the
+    // `uc-ai-demo-pubkey` localStorage entry — so no account key is committed to the repo.
+    const PUBKEY =
+      new URLSearchParams(location.search).get('pubkey') || localStorage.getItem('uc-ai-demo-pubkey') || '';
+
     const ENVIRONMENTS = {
       // Production is the SDK default — no need to set URLs explicitly.
       production: {
-        pubkey: 'YOUR_PUBLIC_KEY',
+        pubkey: PUBKEY,
       },
       staging: {
-        pubkey: 'YOUR_PUBLIC_KEY',
+        pubkey: PUBKEY,
         baseUrl: 'https://upload.example.com',
         cdnCnamePrefixed: 'https://cdn.example.com',
       },

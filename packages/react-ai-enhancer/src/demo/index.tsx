@@ -5,6 +5,13 @@ import { AiEnhancer } from '../AiEnhancer';
 // Workaround for tsconfig "jsx": "react": ensure React is in scope at runtime.
 void React;
 
+// Supply your Uploadcare public key at runtime — `?pubkey=…` in the URL or the
+// `uc-ai-demo-pubkey` localStorage entry — so no account key is committed.
+const PUBKEY =
+  new URLSearchParams(window.location.search).get('pubkey') ||
+  window.localStorage.getItem('uc-ai-demo-pubkey') ||
+  '';
+
 type Theme = 'auto' | 'light' | 'dark';
 
 function App() {
@@ -29,7 +36,7 @@ function App() {
         </select>
       </label>
       <AiEnhancer
-        pubkey="YOUR_PUBLIC_KEY"
+        pubkey={PUBKEY}
         baseUrl="https://upload.example.com"
         cdnCnamePrefixed="https://cdn.example.com"
         onDone={(detail) => append(`done: ${JSON.stringify(detail)}`)}

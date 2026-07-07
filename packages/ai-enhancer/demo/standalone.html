@@ -113,13 +113,20 @@
     import '../src/index.ts';
     import { SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
 
+    // Supply your Uploadcare public key at runtime — `?pubkey=…` in the URL or the
+    // `uc-ai-demo-pubkey` localStorage entry (the input below persists it) — so no
+    // account key is committed to the repo.
+    const PUBKEY_STORAGE_KEY = 'uc-ai-demo-pubkey';
+    const PUBKEY =
+      new URLSearchParams(location.search).get('pubkey') || localStorage.getItem(PUBKEY_STORAGE_KEY) || '';
+
     const ENVIRONMENTS = {
       // Production is the SDK default — no need to set URLs explicitly.
       production: {
-        pubkey: 'YOUR_PUBLIC_KEY',
+        pubkey: PUBKEY,
       },
       staging: {
-        pubkey: 'YOUR_PUBLIC_KEY',
+        pubkey: PUBKEY,
         baseUrl: 'https://upload.example.com',
         cdnCnamePrefixed: 'https://cdn.example.com',
       },
@@ -162,6 +169,7 @@
       const key = e.target.value.trim() || ENVIRONMENTS[currentEnv].pubkey;
       editor.pubkey = key;
       pubkeyInput.value = key;
+      localStorage.setItem(PUBKEY_STORAGE_KEY, key);
       shell.log(`pubkey → ${key}`);
     });
     document.getElementById('source').addEventListener('change', (e) => {
