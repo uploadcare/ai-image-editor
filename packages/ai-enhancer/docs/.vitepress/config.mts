@@ -3,6 +3,9 @@ import { defineConfig } from 'vitepress';
 export default defineConfig({
   title: '@uploadcare/ai-enhancer',
   description: 'AI image generation & editing web component for Uploadcare.',
+  // Served as a GitHub Pages project site at https://uploadcare.github.io/ai-enhancer/.
+  // Overridable via DOCS_BASE for other hosts (e.g. '/' for a root/custom domain).
+  base: process.env.DOCS_BASE ?? '/ai-enhancer/',
   cleanUrls: true,
   // The editor is a custom element we mount imperatively in the demo, but guard
   // any `uc-*` tags in markdown so Vue treats them as custom elements, not components.
