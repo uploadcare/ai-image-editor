@@ -1,5 +1,5 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
-import { page } from '@vitest/browser/context';
+import { page } from 'vitest/browser';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { UcAiEnhancer as UcAiEnhancerType } from '../src/index';
 import { MODES } from '../src/internal';
