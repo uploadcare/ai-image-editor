@@ -1,0 +1,47 @@
+/* ---- API reference pages (pageClass: api-wide) ---------------------------- *
+ * The generated API tables (especially the Components page) have a wide, prose-
+ * heavy Description column. Give those pages the full content width and a
+ * compact, top-aligned, horizontally-scrollable table so rows don't balloon.   */
+
+.api-wide .VPDoc .container {
+  max-width: 100%;
+}
+.api-wide .VPDoc .content {
+  max-width: 100%;
+}
+.api-wide .VPDoc .content-container {
+  max-width: 100%;
+}
+.api-wide .vp-doc {
+  max-width: 100%;
+}
+
+/* Compact, readable API tables. Wrapped so wide tables scroll instead of
+ * cramming the Description column into a tall, narrow block. */
+.api-wide .vp-doc table {
+  display: table;
+  width: 100%;
+  table-layout: auto;
+  margin: 16px 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.api-wide .vp-doc th,
+.api-wide .vp-doc td {
+  vertical-align: top;
+  padding: 8px 12px;
+}
+/* Don't break short identifiers (`sourceUuid`) mid-token; let the Description
+ * column absorb the slack instead. Type unions wrap at their ` | ` separators. */
+.api-wide .vp-doc table code {
+  white-space: nowrap;
+}
+.api-wide .vp-doc td:nth-child(1),
+.api-wide .vp-doc td:nth-child(2) {
+  white-space: nowrap;
+}
+/* The Description column gets whatever width is left and wraps normally. */
+.api-wide .vp-doc td:last-child {
+  width: 42%;
+  min-width: 280px;
+}

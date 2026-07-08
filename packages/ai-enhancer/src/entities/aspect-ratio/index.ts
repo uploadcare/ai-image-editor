@@ -1,0 +1,18 @@
+export {
+  type AspectRatio,
+  type AspectRatioLabelKey,
+  type AspectRatioOption,
+  aspectRatioEquals,
+  aspectRatioKey,
+  aspectRatioSvg,
+  type AspectRatioValue,
+  aspectRatioValueEquals,
+  DEFAULT_GENERATE_RATIO,
+  isConcreteRatio,
+  isValidAspectRatio,
+  labelKeyForRatio,
+  ORIGINAL_RATIO,
+  POPULAR_ASPECT_RATIOS,
+  parseAspectRatioList,
+  toAspectRatioOption,
+} from './model/aspect-ratio';

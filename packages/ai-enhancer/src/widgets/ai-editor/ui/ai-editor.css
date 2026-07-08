@@ -1,0 +1,405 @@
+:host {
+  /*
+   * Theming tokens exposed under the --uc-ai-* namespace so consumers can
+   * override them via CSS custom properties. Values track the Uploadcare
+   * widget-common design system (theme.css).
+   */
+  --uc-ai-foreground: light-dark(#181818, #e1e1e1);
+  --uc-ai-background: light-dark(#ffffff, #1b1b1b);
+  /* The uploader has no `--uc-floating(-border)` token, so these keep a real
+     default; mapping them blindly to an undefined token would make every
+     floating panel (prompt row, history, error card) transparent. */
+  --uc-ai-floating: var(--uc-floating, light-dark(#ffffff, #242424));
+  --uc-ai-floating-border: var(--uc-floating-border, light-dark(transparent, rgba(255, 255, 255, 0.05)));
+  --uc-ai-muted: light-dark(#f5f5f5, #242424);
+  --uc-ai-muted-foreground: light-dark(#717171, #989898);
+  --uc-ai-primary: light-dark(#174bd7, #579aff);
+  --uc-ai-primary-hover: light-dark(#1141c0, #4a8aef);
+  --uc-ai-primary-foreground: light-dark(#ffffff, #000000);
+  --uc-ai-primary-transparent: light-dark(rgba(23, 75, 215, 0.07), rgba(87, 154, 255, 0.07));
+  --uc-ai-secondary: light-dark(rgba(24, 24, 24, 0.05), rgba(225, 225, 225, 0.07));
+  --uc-ai-secondary-hover: light-dark(rgba(24, 24, 24, 0.08), rgba(225, 225, 225, 0.1));
+  --uc-ai-secondary-foreground: light-dark(#181818, #e1e1e1);
+  --uc-ai-border: light-dark(#e4e4e8, #3d3d3d);
+  --uc-ai-shadow-color: light-dark(rgba(24, 24, 24, 0.18), rgba(0, 0, 0, 0.5));
+  /* light-dark() is only valid inside a <color>, so wrap just the shadow colour
+     (wrapping the whole box-shadow shorthand makes it invalid → no shadow). */
+  --uc-ai-dialog-shadow: 0 6px 20px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.25));
+  /* Lift for the floating composer card. Two layers — a small contact drop plus
+     a zero-offset ambient glow so it reads on ALL edges (a purely downward shadow
+     leaves only a faint tail above the card, which vanishes against a light
+     image). Shared so the card and the collapsing docked composer match. */
+  --uc-ai-composer-shadow:
+    0 4px 14px light-dark(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.34)), 0 0 26px
+    light-dark(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.42));
+  /* Softer shadow for the auto-hidden peek: drops the wide ambient glow (which
+     would detach into a band over the canvas above the thin peek) for a subtle
+     contact shadow. Swapped in only while hidden — see the auto-hide rules. */
+  --uc-ai-composer-shadow-peek: 0 2px 10px light-dark(rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.34));
+  /* Composer card corner radius — the frame radius (it's a large frame, like the
+     editor shell). Split top/bottom so auto-hide can flatten only the edge that
+     tucks away (a sharp strip slides off cleanly) while the peek edge stays round. */
+  --uc-ai-composer-radius: var(--uc-ai-radius-frame);
+  --uc-ai-composer-radius-top: var(--uc-ai-composer-radius);
+  --uc-ai-composer-radius-bottom: var(--uc-ai-composer-radius);
+  --uc-ai-destructive: #d8473e;
+  /* High-contrast error text: dark red on light, light red on dark. */
+  --uc-ai-destructive-foreground: light-dark(#b3261e, #ff9d96);
+  /* Base radius — the single source of truth. Every other radius is a multiple
+     of it, so theming `--uc-ai-radius` cascades to all of them. */
+  --uc-ai-radius: 8px;
+  --uc-ai-radius-button: var(--uc-ai-radius); /* ×1   = 8 */
+  --uc-ai-radius-input: calc(var(--uc-ai-radius) * 1.5); /* = 12 */
+  --uc-ai-radius-card: calc(var(--uc-ai-radius) * 2); /*    = 16 */
+  /* Frame radius — large containers (the composer card, the editor shell). */
+  --uc-ai-radius-frame: calc(var(--uc-ai-radius) * 2.25); /* = 18 */
+  --uc-ai-padding: 10px;
+  --uc-ai-button-size: 32px;
+  --uc-ai-font-family: system-ui, -apple-system, sans-serif;
+  --uc-ai-font-size: 14px;
+  --uc-ai-transition: 0.2s ease;
+  /* Strong custom easings — the built-in CSS easings lack punch. */
+  --uc-ai-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --uc-ai-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  /* Empty/loading dot-grid overlay — calibrated per theme (white on dark, black
+     on light) at the tuned alphas. */
+  --uc-ai-dot-grid-color: light-dark(rgba(0, 0, 0, 0.21), rgba(255, 255, 255, 0.1));
+  /* Prompt textarea growth cap: N lines of text plus its vertical padding. */
+  --uc-ai-prompt-max-lines: 6;
+  --uc-ai-prompt-max-height: calc(var(--uc-ai-prompt-max-lines) * 1.5em + 10px);
+
+  display: block;
+  width: 100%;
+  height: 100%;
+  font-family: var(--uc-ai-font-family);
+  font-size: var(--uc-ai-font-size);
+  color: var(--uc-ai-foreground);
+  color-scheme: light dark;
+  container-type: inline-size;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/*
+ * Theme overrides. Mirrors the file-uploader's pattern: place `.uc-light` or
+ * `.uc-dark` on any ancestor (or the editor itself) to force a theme.
+ */
+:host(.uc-light),
+:host-context(.uc-light) {
+  color-scheme: light;
+}
+
+:host(.uc-dark),
+:host-context(.uc-dark) {
+  color-scheme: dark;
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  background: var(--uc-ai-background);
+  border-radius: var(--uc-ai-radius-card);
+  overflow: hidden;
+  box-shadow: var(--uc-ai-dialog-shadow);
+  /* Fill the host when it's given an explicit height (e.g. the plugin's
+     maximized modal). Standalone hosts are content-height, so this is a no-op. */
+  height: 100%;
+}
+
+/* The canvas stage: the image fills it; the composer floats over the bottom. */
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 360px;
+  overflow: hidden;
+  background: var(--uc-ai-background);
+}
+
+uc-ai-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.composer {
+  width: 700px;
+  max-width: calc(100% - 40px);
+}
+/* Inner wrapper holding the history strip + prompt. Separated from `.composer`
+   so docked auto-hide can slide the whole group (history + prompt together) to a
+   peek via one transform, while `.composer` stays the fixed reserved slot. */
+.composer__content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+
+/* Overlay placements float over the canvas at the chosen edge. */
+.composer--overlay {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  transition: transform 0.48s var(--uc-ai-ease-out);
+}
+/* A roomy edge gap so the composer floats clear of the canvas edge (doesn't
+   stick to it) and its drop shadow has room before the stage clips. */
+.composer--overlay-bottom {
+  bottom: 32px;
+}
+.composer--overlay-top {
+  top: 32px;
+}
+
+/* Docked placements sit outside the image in normal flow, so the canvas
+   (`.stage`, flex: 1) shrinks to make room. `docked-top` / `docked-bottom`
+   are positioned by their DOM order (before / after the stage). */
+.composer--docked {
+  margin-inline: auto;
+  padding: 14px 20px;
+  /* The canvas image inside `.stage` is absolutely positioned and opaque, so it
+     could occlude a static composer's drop shadow where the shadow bleeds up over
+     the canvas. Lifting the composer into its own paint layer keeps the shadow on
+     top of the image. (The shadow itself is defined on the card — see the
+     two-layer ambient shadow in prompt-row.css.) */
+  position: relative;
+  z-index: 1;
+}
+/* Trim the padding on the canvas-facing edge so the pinned history sits a
+   proto-like ~14px from the composer (the rest of that gap is the history's
+   own inset — see `.history-pinned--docked`). */
+.composer--docked-bottom {
+  padding-top: 8px;
+}
+.composer--docked-top {
+  padding-bottom: 8px;
+}
+
+/* History pinned to a canvas edge — an absolute strip independent of the composer. */
+.history-pinned {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  max-width: calc(100% - 40px);
+  z-index: 5;
+}
+.history-pinned--canvas-top {
+  top: 20px;
+}
+.history-pinned--canvas-bottom {
+  bottom: 20px;
+}
+/* When the composer is docked the strip hugs it (proto gap), rather than the
+   larger floating inset used for canvas-edge placements with an overlay composer. */
+.history-pinned--docked.history-pinned--canvas-top {
+  top: 6px;
+}
+.history-pinned--docked.history-pinned--canvas-bottom {
+  bottom: 6px;
+}
+
+/* Auto-hide ("dock"): when `composer-auto-hide` is on and an image exists, the
+   overlay composer drops to a small peek at its edge; the pointer approaching
+   that edge (a `.dock-hotzone` catch-strip), hovering the composer, or focusing
+   it raises it back. Pure CSS — no timers. `translateY(±(100% - 20px))` keeps a
+   ~40px peek (its own height minus 20px, plus the 20px edge anchor). */
+.dock-hotzone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 100px;
+  z-index: 4;
+  pointer-events: none;
+}
+.dock-hotzone--bottom {
+  bottom: 0;
+}
+.dock-hotzone--top {
+  top: 0;
+}
+/* Only catch the pointer once there's an image (i.e. when the composer docks). */
+:host([composer-auto-hide]) .stage:not(.is-empty) .dock-hotzone {
+  pointer-events: auto;
+}
+
+/* Gradient that dissolves the docked composer's trailing edge into the
+   transparent toolbar (a soft fade to the background). An overlay, not a mask,
+   so the chips' shadows aren't clipped. Sits above the composer; the image is
+   reserved further up, so it's never touched. */
+.composer-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 26px;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s var(--uc-ai-ease-out);
+}
+.composer-fade--bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--uc-ai-background) 0, var(--uc-ai-background) 8px, transparent);
+}
+.composer-fade--top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--uc-ai-background) 0, var(--uc-ai-background) 8px, transparent);
+}
+/* Show the dissolve while docked; clear it (full composer) when raised. */
+:host([composer-auto-hide]) .stage:not(.is-empty) .composer-fade {
+  opacity: 1;
+}
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.dock-hotzone:hover) .composer-fade,
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.composer--overlay:hover) .composer-fade,
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.composer--overlay:focus-within) .composer-fade {
+  opacity: 0;
+}
+
+/* Docked: drop the composer almost entirely off its edge — only a small peek
+   remains, dissolving into the transparent toolbar via `.composer-fade`. It
+   slides its full height plus a little, so it tucks right under the toolbar
+   (the stage clips the overhang). */
+:host([composer-auto-hide]) .stage:not(.is-empty) .composer--overlay-bottom {
+  transform: translate(-50%, calc(100% + 4px));
+}
+:host([composer-auto-hide]) .stage:not(.is-empty) .composer--overlay-top {
+  transform: translate(-50%, calc(-100% - 4px));
+}
+/* While slid out (not raised), soften the shadow so the ambient up-glow doesn't
+   detach into a band over the canvas above the peek. Reverts to the full shadow
+   when raised (the :not(:has) chain stops matching). */
+:host([composer-auto-hide])
+  .stage:not(.is-empty):not(:has(.composer--overlay:hover)):not(:has(.composer--overlay:focus-within)):not(
+    :has(.dock-hotzone:hover)
+  )
+  .composer--overlay {
+  --uc-ai-composer-shadow: var(--uc-ai-composer-shadow-peek);
+}
+/* Sharpen only the edge that tucks off-screen (a clean strip slides off, not a
+   rounded card curving past the canvas edge); the visible peek edge stays round. */
+:host([composer-auto-hide])
+  .stage:not(.is-empty):not(:has(.composer--overlay:hover)):not(:has(.composer--overlay:focus-within)):not(
+    :has(.dock-hotzone:hover)
+  )
+  .composer--overlay-bottom {
+  --uc-ai-composer-radius-bottom: 0px;
+}
+:host([composer-auto-hide])
+  .stage:not(.is-empty):not(:has(.composer--overlay:hover)):not(:has(.composer--overlay:focus-within)):not(
+    :has(.dock-hotzone:hover)
+  )
+  .composer--overlay-top {
+  --uc-ai-composer-radius-top: 0px;
+}
+/* Raise the docked composer when the pointer nears its edge, hovers it, or it
+   gains focus. */
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.dock-hotzone--bottom:hover) .composer--overlay-bottom,
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.composer--overlay-bottom:hover) .composer--overlay-bottom,
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.composer--overlay-bottom:focus-within) .composer--overlay-bottom,
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.dock-hotzone--top:hover) .composer--overlay-top,
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.composer--overlay-top:hover) .composer--overlay-top,
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.composer--overlay-top:focus-within) .composer--overlay-top {
+  transform: translate(-50%, 0);
+}
+/* While raised, grow the catch-strip so moving up to the history row / chips
+   doesn't drop the hover and re-dock the composer. */
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.dock-hotzone:hover) .dock-hotzone,
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.composer--overlay:hover) .dock-hotzone,
+:host([composer-auto-hide]) .stage:not(.is-empty):has(.composer--overlay:focus-within) .dock-hotzone {
+  height: 320px;
+}
+
+/* Auto-hide for a DOCKED composer. The prompt reserves a fixed flex slot (sized
+   by the prompt only — the history overlays the canvas, see below), so the canvas
+   (flex: 1) NEVER resizes when the composer hides or shows. Hiding slides the
+   content to a peek WITHIN that slot via `transform` (layout untouched → canvas
+   stays put); the freed part of the slot shows empty until revealed. Clipping is
+   directional (clip-path on the tuck edge), so the prompt's peek is clipped past
+   the toolbar while the history overlay and the drop shadow extend over the
+   canvas. The card keeps its own shadow/radius (they move with the content). */
+:host([composer-auto-hide]) .shell--has-image .composer--docked {
+  margin-block: 8px 14px;
+  position: relative;
+}
+:host([composer-auto-hide]) .shell--has-image .composer--docked .composer__content {
+  position: relative; /* anchor for the absolute history overlay */
+  transition: transform 0.5s var(--uc-ai-ease-out);
+}
+/* The history overlays the canvas above the prompt instead of taking flow space,
+   so the reserved slot (and the canvas) is sized by the PROMPT only. It rides
+   inside `.composer__content`, so it still slides to the peek with the prompt. */
+:host([composer-auto-hide]) .shell--has-image .composer--docked .composer__content uc-ai-history {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+:host([composer-auto-hide]) .shell--has-image .composer--docked-bottom .composer__content uc-ai-history {
+  bottom: calc(100% + 14px);
+}
+:host([composer-auto-hide]) .shell--has-image .composer--docked-top .composer__content uc-ai-history {
+  top: calc(100% + 14px);
+}
+/* Clip only the tuck edge (directional). Unlike `overflow: hidden`, this clips
+   the prompt's peek as it tucks past the toolbar edge while letting the history
+   overlay and the drop shadow extend freely over the canvas. Constant (not
+   toggled per state) so revealing never flashes the sliding prompt. */
+:host([composer-auto-hide]) .shell--has-image .composer--docked-bottom {
+  clip-path: inset(-200px -200px 0 -200px);
+}
+:host([composer-auto-hide]) .shell--has-image .composer--docked-top {
+  clip-path: inset(0 -200px -200px -200px);
+}
+/* Hidden — unless the composer (incl. its history) is hovered/focused, so
+   approaching it reveals it. Soften the shadow (drop the ambient glow) and slide
+   the content (prompt + the history riding above it) to a peek. */
+:host([composer-auto-hide])
+  .shell--has-image:not(:has(.composer--docked:hover)):not(:has(.composer--docked:focus-within))
+  .composer--docked {
+  --uc-ai-composer-shadow: var(--uc-ai-composer-shadow-peek);
+}
+:host([composer-auto-hide])
+  .shell--has-image:not(:has(.composer--docked:hover)):not(:has(.composer--docked:focus-within))
+  .composer--docked-bottom
+  .composer__content {
+  /* ~36px peek: content height (100%) + the composer's top padding (14px) − the
+     peek (36px). */
+  transform: translateY(calc(100% - 22px));
+}
+:host([composer-auto-hide])
+  .shell--has-image:not(:has(.composer--docked:hover)):not(:has(.composer--docked:focus-within))
+  .composer--docked-top
+  .composer__content {
+  transform: translateY(calc(-100% + 22px));
+}
+
+uc-ai-history,
+uc-ai-prompt-row {
+  width: 100%;
+}
+
+/* Error message: a floating card centred in the canvas area (matches the proto). */
+.error-box {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  pointer-events: none;
+}
+
+.error-box__card {
+  pointer-events: auto;
+  max-width: 75%;
+  padding: 10px 15px;
+  background: var(--uc-ai-floating, var(--uc-ai-background));
+  border: 1px solid var(--uc-ai-floating-border, transparent);
+  border-radius: var(--uc-ai-radius-card);
+  box-shadow: var(--uc-ai-dialog-shadow);
+  color: var(--uc-ai-destructive-foreground);
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+}

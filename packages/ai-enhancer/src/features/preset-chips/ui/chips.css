@@ -1,0 +1,80 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.row::-webkit-scrollbar {
+  display: none;
+}
+
+/* 10px gradient fades at the scroll edges, toggled by scroll position. */
+.row.fade-left.fade-right {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+}
+
+.row.fade-left:not(.fade-right) {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10px);
+  mask-image: linear-gradient(to right, transparent 0, #000 10px);
+}
+
+.row.fade-right:not(.fade-left) {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 10px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 10px), transparent 100%);
+}
+
+.chip {
+  flex: none;
+  height: var(--uc-ai-button-size, 32px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  background: var(--uc-ai-secondary);
+  border: 0;
+  border-radius: var(--uc-ai-radius-button);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--uc-ai-secondary-foreground);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 150ms ease,
+    transform 140ms var(--uc-ai-ease-out, ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover {
+    background: var(--uc-ai-secondary-hover);
+  }
+}
+
+.chip:active {
+  background: var(--uc-ai-secondary-hover);
+  transform: scale(0.97);
+}
+
+.chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    transition-property: background;
+  }
+
+  .chip:active {
+    transform: none;
+  }
+}

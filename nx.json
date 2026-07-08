@@ -1,0 +1,20 @@
+{
+  "targetDefaults": {
+    "dev": {
+      "cache": true,
+      "dependsOn": ["^dev"]
+    },
+    "build": {
+      "cache": true,
+      "dependsOn": ["^build"]
+    },
+    "preview": {
+      "dependsOn": []
+    }
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "sharedGlobals": [],
+    "production": ["default"]
+  }
+}
