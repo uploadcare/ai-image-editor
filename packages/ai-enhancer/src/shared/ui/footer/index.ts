@@ -1,0 +1,1 @@
+export { UcAiFooter } from './UcAiFooter';

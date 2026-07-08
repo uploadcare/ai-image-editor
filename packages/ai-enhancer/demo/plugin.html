@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Enhancer — File Uploader Plugin</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    .uc-light { color-scheme: light; }
+    .uc-dark { color-scheme: dark; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 24px;
+      margin: 0;
+      background: light-dark(#ffffff, #121213);
+      color: light-dark(#181818, #ffffff);
+    }
+</style>
+</head>
+<body>
+  <demo-shell
+    heading="AI Enhancer — File Uploader Plugin"
+    description="Click Generate image as an upload source to create an image with AI."
+  >
+    <label slot="controls">
+      Environment
+      <select id="env">
+        <option value="production">production</option>
+        <option value="staging">staging</option>
+      </select>
+    </label>
+    <label slot="controls">
+      Locale
+      <select id="locale"></select>
+    </label>
+
+    <uc-file-uploader-regular ctx-name="my-uploader"></uc-file-uploader-regular>
+    <uc-config
+      ctx-name="my-uploader"
+      pubkey=""
+      debug
+      test-mode
+      source-list="local, url, camera, ai-enhancer"
+    ></uc-config>
+    <uc-upload-ctx-provider ctx-name="my-uploader"></uc-upload-ctx-provider>
+  </demo-shell>
+
+  <script type="module">
+    import './demo-shell.ts';
+    import '@uploadcare/file-uploader/web/uc-file-uploader-regular.min.css';
+    import * as UC from '@uploadcare/file-uploader';
+    import { AiEnhancerPlugin } from '../src/plugin.ts';
+    import { SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
+
+    UC.defineComponents(UC);
+
+    // The uploader ships only English eagerly; register a lazy resolver for every
+    // other locale so switching `localeName` actually re-languages the uploader UI.
+    // (The AI-enhancer editor strings are loaded separately by the plugin.)
+    // Vite globs the package's shipped locale definitions (a bare-specifier
+    // template `import()` can't be statically analyzed, so it never loads).
+    const uploaderLocales = import.meta.glob(
+      '../../../node_modules/@uploadcare/file-uploader/dist/locales/file-uploader/*.js',
+    );
+    for (const [path, load] of Object.entries(uploaderLocales)) {
+      const name = path.split('/').pop().replace(/\.js$/, '');
+      if (name === 'en') continue;
+      UC.defineLocale(name, () => load().then((m) => m.default));
+    }
+
+    const config = document.querySelector('uc-config');
+    config.plugins = [AiEnhancerPlugin];
+
+    // Supply your Uploadcare public key at runtime — `?pubkey=…` in the URL or the
+    // `uc-ai-demo-pubkey` localStorage entry — so no account key is committed to the repo.
+    const PUBKEY =
+      new URLSearchParams(location.search).get('pubkey') || localStorage.getItem('uc-ai-demo-pubkey') || '';
+
+    const ENVIRONMENTS = {
+      // Production is the SDK default — no need to set URLs explicitly.
+      production: {
+        pubkey: PUBKEY,
+      },
+      staging: {
+        pubkey: PUBKEY,
+        baseUrl: 'https://upload.staging0.uploadcare.com',
+        cdnCnamePrefixed: 'https://staging0.ucarecd.net',
+      },
+    };
+
+    const shell = document.querySelector('demo-shell');
+    const envSelect = document.getElementById('env');
+
+    // Persist the env choice across reloads (shared with the standalone demo).
+    const ENV_STORAGE_KEY = 'uc-ai-demo-env';
+
+    function applyEnv(name) {
+      const env = ENVIRONMENTS[name];
+      config.setAttribute('pubkey', env.pubkey);
+      if (env.baseUrl) {
+        config.setAttribute('base-url', env.baseUrl);
+        config.setAttribute('cdn-cname-prefixed', env.cdnCnamePrefixed);
+      } else {
+        config.removeAttribute('base-url');
+        config.removeAttribute('cdn-cname-prefixed');
+      }
+    }
+
+    const savedEnv = localStorage.getItem(ENV_STORAGE_KEY);
+    if (ENVIRONMENTS[savedEnv]) {
+      envSelect.value = savedEnv;
+      applyEnv(savedEnv);
+    }
+
+    envSelect.addEventListener('change', (e) => {
+      localStorage.setItem(ENV_STORAGE_KEY, e.target.value);
+      applyEnv(e.target.value);
+      shell.log(`env → ${e.target.value}`);
+    });
+
+    // The plugin syncs the editor's locale (and the uploader's labels) from the
+    // uploader config's `localeName`, so the chooser just drives that.
+    const localeSelect = document.getElementById('locale');
+    for (const name of SUPPORTED_LOCALES) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      localeSelect.append(opt);
+    }
+    localeSelect.value = 'en';
+    localeSelect.addEventListener('change', (e) => {
+      config.localeName = e.target.value;
+    });
+  </script>
+</body>
+</html>

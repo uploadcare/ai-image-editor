@@ -1,0 +1,168 @@
+:host {
+  display: inline-flex;
+  position: relative;
+}
+
+.trigger {
+  anchor-name: --ai-aspect-anchor;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--uc-ai-button-size);
+  padding: 0 10px;
+  background: var(--uc-ai-secondary);
+  border: 0;
+  border-radius: var(--uc-ai-radius-button);
+  color: var(--uc-ai-foreground);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    background var(--uc-ai-transition),
+    transform 140ms var(--uc-ai-ease-out, ease);
+}
+
+.trigger:hover,
+.trigger[aria-expanded="true"] {
+  background: var(--uc-ai-secondary-hover);
+}
+
+.trigger:active {
+  transform: scale(0.97);
+}
+
+.trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.trigger svg {
+  width: 14px;
+  height: 14px;
+  color: var(--uc-ai-foreground);
+}
+
+.trigger-label {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 20px;
+}
+
+/* Popover opens upward, anchored to the trigger's top-right. */
+.popover {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+  /* Size to the widest option so localized labels don't wrap; clamp so it stays
+     reasonable (very long labels then ellipsize — see `.option-label`). */
+  width: max-content;
+  min-width: 180px;
+  max-width: 320px;
+  position-anchor: --ai-aspect-anchor;
+  inset: auto;
+  bottom: anchor(top);
+  right: anchor(right);
+  margin-bottom: 6px;
+  /* Grow from the trigger (bottom edge) when opening. */
+  transform-origin: bottom right;
+  transition:
+    opacity 150ms var(--uc-ai-ease-out, ease),
+    transform 150ms var(--uc-ai-ease-out, ease),
+    display 150ms allow-discrete,
+    overlay 150ms allow-discrete;
+}
+
+.popover:not(:popover-open) {
+  display: none;
+  opacity: 0;
+  transform: scale(0.96) translateY(4px);
+}
+
+@starting-style {
+  .popover:popover-open {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+}
+
+.popover-inner {
+  background: var(--uc-ai-background);
+  border: 1px solid var(--uc-ai-border);
+  border-radius: var(--uc-ai-radius-input, 12px);
+  box-shadow: var(--uc-ai-dialog-shadow);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: 0;
+  /* Concentric with the menu: the menu radius minus the 5px the options are
+     inset by (the popover padding), so option corners parallel the menu's. */
+  border-radius: max(0px, calc(var(--uc-ai-radius-input) - 5px));
+  cursor: pointer;
+  color: var(--uc-ai-foreground);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  transition: background 120ms ease;
+}
+
+.option:hover {
+  background: var(--uc-ai-secondary);
+}
+
+.option[aria-selected="true"] {
+  background: var(--uc-ai-secondary-hover);
+}
+
+.option svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  color: var(--uc-ai-foreground);
+}
+
+.option-ratio {
+  flex: 0 0 36px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--uc-ai-foreground);
+}
+
+.option-label {
+  flex: 1;
+  min-width: 0;
+  color: var(--uc-ai-muted-foreground);
+  /* Keep each option on one line; ellipsize if it exceeds the clamped width. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger,
+  .popover {
+    transition-property: opacity, background, display, overlay;
+  }
+
+  .trigger:active {
+    transform: none;
+  }
+
+  .popover:not(:popover-open) {
+    transform: none;
+  }
+}
