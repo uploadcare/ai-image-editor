@@ -51,7 +51,7 @@
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@custom-elements-manifest/to-markdown": "^0.1.0",
     "@uploadcare/file-uploader": "1.31.2",
-    "@vitest/browser": "^3.0.9",
+    "@vitest/browser-playwright": "^4.1.10",
     "playwright": "^1.49.0",
     "typedoc": "^0.28.19",
     "typedoc-plugin-markdown": "^4.12.0",
