@@ -7,7 +7,7 @@ import { AiEnhancer } from '@uploadcare/react-ai-enhancer';
 
 <AiEnhancer
   pubkey="YOUR_PUBLIC_KEY"
-  onDone={({ cdnUrl }) => console.log(cdnUrl)}
+  onDone={({ url }) => console.log(url)}
   onCancel={() => {}}
   onError={(error) => console.error(error)}
 />;
