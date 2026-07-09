@@ -1,6 +1,9 @@
 'use client';
 
-import type { DoneDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
+import type { DoneDetail, ErrorDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
+// value import from the side-effect-free subpath: the main entry registers
+// custom elements at module scope and must never load during SSR
+import { AiEnhancerError } from '@uploadcare/ai-enhancer/errors';
 import React, { type FC, type ReactNode, type Ref, useEffect, useMemo, useRef } from 'react';
 
 import { useLazyAiEnhancer } from './internal/useLazyAiEnhancer';
@@ -43,7 +46,7 @@ export type AiEnhancerProps = {
   fallback?: ReactNode;
   onDone?: (detail: DoneDetail) => void;
   onCancel?: () => void;
-  onError?: (error: unknown) => void;
+  onError?: (error: AiEnhancerError) => void;
 };
 
 export const AiEnhancer: FC<AiEnhancerProps> = ({
@@ -62,7 +65,7 @@ export const AiEnhancer: FC<AiEnhancerProps> = ({
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
   useEffect(() => {
-    if (state.status === 'error') onErrorRef.current?.(state.error);
+    if (state.status === 'error') onErrorRef.current?.(normalizeLoadError(state.error));
   }, [state]);
 
   // the adapter registers schemaEvents listeners itself and calls these
@@ -71,7 +74,7 @@ export const AiEnhancer: FC<AiEnhancerProps> = ({
     () => ({
       'onUc:done': (detail: DoneDetail) => onDone?.(detail),
       'onUc:cancel': () => onCancel?.(),
-      'onUc:error': (detail: { error: unknown }) => onError?.(detail.error),
+      'onUc:error': (detail: ErrorDetail) => onError?.(detail.error),
     }),
     [onDone, onCancel, onError],
   );
@@ -90,3 +93,14 @@ export const AiEnhancer: FC<AiEnhancerProps> = ({
     />
   );
 };
+
+/**
+ * Wraps an engine lazy-load rejection into the same public error class the
+ * element uses for `uc:error`, under a frontend-only code (deliberately not in
+ * the shared platform code list).
+ */
+function normalizeLoadError(err: unknown): AiEnhancerError {
+  if (err instanceof AiEnhancerError) return err;
+  const message = err instanceof Error ? err.message : 'Failed to load the AI enhancer engine';
+  return new AiEnhancerError(message, { code: 'engine_load_failed', cause: err });
+}
