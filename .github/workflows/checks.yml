@@ -1,10 +1,27 @@
 name: checks
 
+# docs-only changes (site pages, READMEs) don't trigger tests; the full matrix
+# (React 18 + 19 + the Next.js fixture) runs only on release-please PRs — the
+# gate before publishing — while day-to-day PRs run the React 19 leg
 on:
   pull_request:
+    paths:
+      - 'packages/**'
+      - '!packages/ai-enhancer/docs/**'
+      - '!packages/*/README.md'
+      - '.github/workflows/**'
+      - 'package.json'
+      - 'package-lock.json'
   push:
     branches:
       - main
+    paths:
+      - 'packages/**'
+      - '!packages/ai-enhancer/docs/**'
+      - '!packages/*/README.md'
+      - '.github/workflows/**'
+      - 'package.json'
+      - 'package-lock.json'
 
 permissions:
   contents: read
@@ -15,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        react: [18, 19]
+        react: ${{ fromJSON(startsWith(github.head_ref, 'release-please--') && '[18, 19]' || '[19]') }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
@@ -39,6 +56,7 @@ jobs:
       - run: npm run test --workspaces --if-present
 
   next-fixture:
+    if: startsWith(github.head_ref, 'release-please--')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
