@@ -1,0 +1,62 @@
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.releases_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # npm stage requires npm >= 11.15.0; stay within the 11.x major
+      - name: Update npm
+        run: npm install -g npm@11
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Stage publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for dir in packages/ai-enhancer packages/react-ai-enhancer; do
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            if npm view "$name" version >/dev/null 2>&1; then
+              echo "Staging $name@$version — approve it in the Staged Packages tab on npmjs.com"
+              (cd "$dir" && npm stage publish)
+            else
+              # npm stage publish cannot create a brand-new package,
+              # so the very first release is published directly
+              echo "$name has never been published — bootstrapping with a direct publish"
+              (cd "$dir" && npm publish)
+            fi
+          done
