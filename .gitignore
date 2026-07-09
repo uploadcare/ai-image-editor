@@ -7,3 +7,7 @@ dist
 .vite/
 *.tsbuildinfo
 .DS_Store
+
+# next fixture build artifacts
+.next/
+next-env.d.ts

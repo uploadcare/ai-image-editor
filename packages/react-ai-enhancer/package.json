@@ -3,6 +3,7 @@
   "version": "0.1.1",
   "description": "React wrapper for @uploadcare/ai-enhancer",
   "type": "module",
+  "sideEffects": false,
   "files": [
     "dist"
   ],
@@ -20,7 +21,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:next": "node scripts/test-next-fixture.mjs"
   },
   "dependencies": {
     "@uploadcare/ai-enhancer": "^0.1.1",
