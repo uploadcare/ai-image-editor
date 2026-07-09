@@ -59,16 +59,6 @@
           }
         }
       }
-    },
-    {
-      "includes": ["packages/ai-enhancer/src/shared/ui/canvas/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noNonNullAssertion": "off"
-          }
-        }
-      }
     }
   ]
 }
