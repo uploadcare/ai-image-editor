@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.3](https://github.com/uploadcare/ai-enhancer/compare/react-ai-enhancer-v0.1.2...react-ai-enhancer-v0.1.3) (2026-07-09)
+
+
+### Features
+
+* typed uc:error event — normalized AiEnhancerError ([#33](https://github.com/uploadcare/ai-enhancer/issues/33)) ([2329615](https://github.com/uploadcare/ai-enhancer/commit/23296152d8938a59e438491424bb19671aa226d0))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @uploadcare/ai-enhancer bumped from ^0.1.2 to ^0.1.3
+
 ## [0.1.2](https://github.com/uploadcare/ai-enhancer/compare/react-ai-enhancer-v0.1.1...react-ai-enhancer-v0.1.2) (2026-07-09)
 
 
