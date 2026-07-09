@@ -26,15 +26,18 @@ jobs:
           # releases are cut from main
           target-branch: main
 
-      # for the commit-message amend below. fetch-depth 0 is load-bearing: in a
-      # shallow clone git grafts HEAD as parentless, so `commit --amend` would
-      # produce an orphan commit and force-pushing it severs the branch from
-      # main (the PR then shows conflicts against all of history)
+      # for the commit-message amend and stale-branch rebuild below.
+      # fetch-depth 0 is load-bearing: in a shallow clone git grafts HEAD as
+      # parentless, so `commit --amend` would produce an orphan commit and
+      # force-pushing it severs the branch from main (the PR then shows
+      # conflicts against all of history)
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr }}
         with:
-          ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
           fetch-depth: 0
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
 
       # linked-versions grouping leaves ${version} unresolved in the title
       # patterns, so the PR is retitled here with the actual version instead.
@@ -48,6 +51,8 @@ jobs:
         run: |
           number=$(jq -r .number <<< "$PR_JSON")
           branch=$(jq -r .headBranchName <<< "$PR_JSON")
+          git fetch -q origin "$branch"
+          git checkout -q -B release-branch "origin/$branch"
           version=$(jq -r '."packages/ai-enhancer"' .release-please-manifest.json)
           title="chore: release v$version 🚀"
           gh pr edit "$number" --repo "$GITHUB_REPOSITORY" \
@@ -66,6 +71,37 @@ jobs:
             fi
             git push --force-with-lease origin "HEAD:$branch"
           fi
+
+      # release-please only refreshes the release branch when its own content
+      # (changelog/versions) changes, so a changelog-hidden merge (refactor,
+      # ci, chore) touching package.json or the lockfile leaves the release PR
+      # conflicting against main. Rebuild the release commit on top of current
+      # main whenever the branch has gone stale.
+      - name: Rebuild stale release branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch='release-please--branches--main'
+          git fetch -q origin main "$branch" || { echo 'no release branch — nothing to rebuild'; exit 0; }
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then echo 'no open release PR — nothing to rebuild'; exit 0; fi
+          if git merge-base --is-ancestor origin/main "origin/$branch"; then
+            echo 'release branch already based on current main'; exit 0
+          fi
+          echo "release branch is stale — rebuilding onto $(git rev-parse --short origin/main)"
+          version=$(git show "origin/$branch:.release-please-manifest.json" | jq -r '."packages/ai-enhancer"')
+          git checkout -q -B release-rebuild origin/main
+          # changelogs + manifest are wholly release-please-generated: take them as-is
+          git checkout "origin/$branch" -- .release-please-manifest.json packages/ai-enhancer/CHANGELOG.md packages/react-ai-enhancer/CHANGELOG.md
+          # versions + inter-package range are surgical; the lockfile is regenerated
+          npm pkg set version="$version" -w packages/ai-enhancer -w packages/react-ai-enhancer
+          npm pkg set "dependencies.@uploadcare/ai-enhancer=^$version" -w packages/react-ai-enhancer
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          git add -A
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m "chore: release v$version 🚀"
+          git push --force-with-lease="refs/heads/$branch:$(git rev-parse "origin/$branch")" origin "HEAD:refs/heads/$branch"
 
       # release-please builds GitHub release notes from the release PR body,
       # not from CHANGELOG.md — mirror the changelog file (including any manual
