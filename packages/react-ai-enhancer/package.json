@@ -26,8 +26,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@uploadcare/ai-enhancer": "^0.1.2",
-    "@uploadcare/react-adapter": "^0.4.0"
+    "@lit/react": "^1.0.8",
+    "@uploadcare/ai-enhancer": "^0.1.2"
   },
   "peerDependencies": {
     "@types/react": ">= 17.0.0",

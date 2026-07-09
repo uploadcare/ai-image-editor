@@ -68,13 +68,12 @@ export const AiEnhancer: FC<AiEnhancerProps> = ({
     if (state.status === 'error') onErrorRef.current?.(normalizeLoadError(state.error));
   }, [state]);
 
-  // the adapter registers schemaEvents listeners itself and calls these
-  // handlers with the CustomEvent's `detail` (not the event object)
+  // @lit/react registers the event listeners; handlers receive the CustomEvent
   const handlers = useMemo(
     () => ({
-      'onUc:done': (detail: DoneDetail) => onDone?.(detail),
-      'onUc:cancel': () => onCancel?.(),
-      'onUc:error': (detail: ErrorDetail) => onError?.(detail.error),
+      onUcDone: (e: CustomEvent<DoneDetail>) => onDone?.(e.detail),
+      onUcCancel: () => onCancel?.(),
+      onUcError: (e: CustomEvent<ErrorDetail>) => onError?.(e.detail.error),
     }),
     [onDone, onCancel, onError],
   );
@@ -87,7 +86,7 @@ export const AiEnhancer: FC<AiEnhancerProps> = ({
   return (
     <AdapterAiEditor
       ref={apiRef as Ref<UcAiEnhancer>}
-      class={className}
+      className={className}
       {...props}
       {...handlers}
     />
