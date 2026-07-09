@@ -20,6 +20,9 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          # the action defaults to the repo default branch (feature/ai-enhancer);
+          # releases are cut from main
+          target-branch: main
 
   publish:
     needs: release-please
