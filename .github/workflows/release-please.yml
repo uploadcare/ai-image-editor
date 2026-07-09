@@ -24,6 +24,22 @@ jobs:
           # releases are cut from main
           target-branch: main
 
+      # linked-versions grouping leaves ${version} unresolved in the title
+      # patterns, so the PR is retitled here with the actual version instead
+      - name: Retitle release PR and request reviewers
+        if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_JSON: ${{ steps.release.outputs.pr }}
+        run: |
+          number=$(jq -r .number <<< "$PR_JSON")
+          branch=$(jq -r .headBranchName <<< "$PR_JSON")
+          version=$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$branch" \
+            --jq .content | base64 -d | jq -r '."packages/ai-enhancer"')
+          gh pr edit "$number" --repo "$GITHUB_REPOSITORY" \
+            --title "chore: release v$version 🚀" \
+            --add-reviewer nd0ut,egordidenko
+
   publish:
     needs: release-please
     if: needs.release-please.outputs.releases_created == 'true'
