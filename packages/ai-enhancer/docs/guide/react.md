@@ -36,7 +36,8 @@ depending on the core package directly.
 
 Props mirror the element's public API — `sourceUuid`, `sourceFileInfo`,
 `aspectRatios`, `presets`, `metadata`, the [layout options](/guide/layout), and
-so on — plus a few React-specific ones:
+so on; see the [components reference](/api/components) for the full list. On
+top of those, a few React-specific ones:
 
 - **`className`** — applied to the `<uc-ai-enhancer>` element.
 - **`fallback`** — rendered during SSR and while the editor engine loads on the
@@ -54,15 +55,18 @@ const api = useRef<UcAiEnhancer>(null)
 <AiEnhancer pubkey="YOUR_PUBLIC_KEY" apiRef={api} />
 ```
 
-`apiRef.current` is `null` until the editor mounts — the engine loads lazily
-(see below).
+`apiRef.current` is `null` until the lazily-loaded engine finishes loading and
+the element is in the DOM — not just until the React component mounts (see
+[Preloading](#preloading)).
 
 ## Events
 
 The element's `uc:*` events map to callbacks, and handlers receive the event's
 `detail` directly:
 
-- **`onDone(detail: DoneDetail)`** — the user committed a result.
+- **`onDone(detail: DoneDetail)`** — the user committed a result. The detail
+  carries `url`, `uuid`, `prompt`, `mode`, the chosen `aspectRatio`, and the
+  committed `file` (an `UploadcareFile`).
 - **`onCancel()`** — the editor was closed without committing.
 - **`onError(error: unknown)`** — a generation/editor error, unwrapped from the
   event detail. Also called if the editor engine itself fails to load (e.g. a
@@ -112,5 +116,7 @@ import { preloadAiEnhancer } from '@uploadcare/react-ai-enhancer'
 preloadAiEnhancer()
 ```
 
-The engine is loaded once per page and shared by every `<AiEnhancer>` instance;
-calling `preloadAiEnhancer()` on the server is a safe no-op.
+The engine is loaded once per page and shared by every `<AiEnhancer>` instance.
+`preloadAiEnhancer()` is fire-and-forget (returns nothing; load errors surface
+via `onError` when the component mounts), and calling it on the server is a
+safe no-op.
