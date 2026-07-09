@@ -106,6 +106,26 @@ it('delivers uc:done, uc:cancel and uc:error events to callbacks', async () => {
   expect(onError).toHaveBeenCalledWith(error);
 });
 
+it('delivers uc:change results to onChange', async () => {
+  const onChange = vi.fn();
+  const container = render(<AiEnhancer pubkey="test-pubkey" onChange={onChange} />);
+
+  await vi.waitFor(
+    () => {
+      expect(container.querySelector('uc-ai-enhancer')).not.toBeNull();
+    },
+    { timeout: 10_000 },
+  );
+
+  const el = container.querySelector('uc-ai-enhancer') as UcAiEnhancer;
+  const result = { url: 'https://ucarecdn.com/x/', uuid: 'x' };
+  el.dispatchEvent(new CustomEvent('uc:change', { detail: { result } }));
+  expect(onChange).toHaveBeenCalledWith(result);
+
+  el.dispatchEvent(new CustomEvent('uc:change', { detail: { result: null } }));
+  expect(onChange).toHaveBeenLastCalledWith(null);
+});
+
 it('updated callback props receive events (no stale handlers)', async () => {
   const first = vi.fn();
   const second = vi.fn();

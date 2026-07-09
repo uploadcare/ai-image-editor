@@ -1,6 +1,6 @@
 'use client';
 
-import type { DoneDetail, ErrorDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
+import type { ChangeDetail, DoneDetail, ErrorDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
 // value import from the side-effect-free subpath: the main entry registers
 // custom elements at module scope and must never load during SSR
 import { AiEnhancerError } from '@uploadcare/ai-enhancer/errors';
@@ -45,6 +45,12 @@ export type AiEnhancerProps = {
    */
   fallback?: ReactNode;
   onDone?: (detail: DoneDetail) => void;
+  /**
+   * The current generation result changed (finished generation, history
+   * selection, or reset — then `null`). The way to drive your own chrome with
+   * `toolbarPlacement="none"`.
+   */
+  onChange?: (result: DoneDetail | null) => void;
   onCancel?: () => void;
   onError?: (error: AiEnhancerError) => void;
 };
@@ -53,6 +59,7 @@ export const AiEnhancer: FC<AiEnhancerProps> = ({
   apiRef,
   className,
   fallback = null,
+  onChange,
   onDone,
   onCancel,
   onError,
@@ -74,8 +81,9 @@ export const AiEnhancer: FC<AiEnhancerProps> = ({
       onUcDone: (e: CustomEvent<DoneDetail>) => onDone?.(e.detail),
       onUcCancel: () => onCancel?.(),
       onUcError: (e: CustomEvent<ErrorDetail>) => onError?.(e.detail.error),
+      onUcChange: (e: CustomEvent<ChangeDetail>) => onChange?.(e.detail.result),
     }),
-    [onDone, onCancel, onError],
+    [onDone, onCancel, onError, onChange],
   );
 
   if (state.status !== 'ready') {

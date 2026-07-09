@@ -1,5 +1,5 @@
 import { createComponent, type EventName } from '@lit/react';
-import type { DoneDetail, ErrorDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
+import type { ChangeDetail, DoneDetail, ErrorDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
 import React from 'react';
 
 /** Event props of the adapter component; handlers receive the CustomEvent. */
@@ -7,6 +7,7 @@ export type AdapterEvents = {
   onUcDone: EventName<CustomEvent<DoneDetail>>;
   onUcCancel: EventName<CustomEvent<void>>;
   onUcError: EventName<CustomEvent<ErrorDetail>>;
+  onUcChange: EventName<CustomEvent<ChangeDetail>>;
 };
 
 export type AdapterComponent = ReturnType<typeof createComponent<UcAiEnhancer, AdapterEvents>>;
@@ -33,6 +34,7 @@ export function loadUcAiEnhancer(): Promise<AdapterComponent> {
             onUcDone: 'uc:done' as EventName<CustomEvent<DoneDetail>>,
             onUcCancel: 'uc:cancel' as EventName<CustomEvent<void>>,
             onUcError: 'uc:error' as EventName<CustomEvent<ErrorDetail>>,
+            onUcChange: 'uc:change' as EventName<CustomEvent<ChangeDetail>>,
           },
         }),
       )
