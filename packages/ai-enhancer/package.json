@@ -1,6 +1,6 @@
 {
   "name": "@uploadcare/ai-enhancer",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "AI image generation and editing web component for Uploadcare",
   "type": "module",
   "files": [
