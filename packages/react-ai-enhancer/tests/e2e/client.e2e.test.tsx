@@ -139,6 +139,13 @@ it('preloadAiEnhancer warms the engine cache', async () => {
   );
 });
 
+it('shares one AiEnhancerError class identity across package entries', async () => {
+  // both imports resolve to built dist files here, so this guards the
+  // bundling contract: instanceof must work across the main and /errors entries
+  const main = await import('@uploadcare/ai-enhancer');
+  expect(main.AiEnhancerError).toBe(AiEnhancerError);
+});
+
 it('unmount removes the element cleanly', async () => {
   const container = render(<AiEnhancer pubkey="test-pubkey" />);
   await vi.waitFor(

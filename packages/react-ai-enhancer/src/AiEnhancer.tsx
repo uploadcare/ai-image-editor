@@ -1,6 +1,6 @@
 'use client';
 
-import type { DoneDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
+import type { DoneDetail, ErrorDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
 // value import from the side-effect-free subpath: the main entry registers
 // custom elements at module scope and must never load during SSR
 import { AiEnhancerError } from '@uploadcare/ai-enhancer/errors';
@@ -74,7 +74,7 @@ export const AiEnhancer: FC<AiEnhancerProps> = ({
     () => ({
       'onUc:done': (detail: DoneDetail) => onDone?.(detail),
       'onUc:cancel': () => onCancel?.(),
-      'onUc:error': (detail: { error: AiEnhancerError }) => onError?.(detail.error),
+      'onUc:error': (detail: ErrorDetail) => onError?.(detail.error),
     }),
     [onDone, onCancel, onError],
   );
