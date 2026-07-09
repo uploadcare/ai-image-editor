@@ -22,7 +22,8 @@
 
 React wrapper for the [Uploadcare AI Enhancer][docs] — an AI image editor:
 generate images from a prompt or edit existing ones, with the result stored
-on Uploadcare. Typed props, callback events, and SSR support out of the box.
+on Uploadcare. Typed [props][docs-react-props], callback [events][docs-react-events],
+and [SSR support][docs-react-ssr] out of the box.
 
 ## Quick start
 
@@ -43,8 +44,10 @@ import { AiEnhancer } from '@uploadcare/react-ai-enhancer';
 />;
 ```
 
-Works with React 17, 18, and 19. Props, events, and the underlying element API
-(`apiRef`) are covered in the [React guide][docs-react].
+Works with React 17, 18, and 19. [Props][docs-react-props] mirror the
+[element API][docs-api] — including the [layout options][docs-layout] — and
+[events][docs-react-events] arrive as typed callbacks; `apiRef` exposes the
+underlying element. See the [React guide][docs-react].
 
 ## SSR & Next.js
 
@@ -61,8 +64,8 @@ export default function Page() {
 ```
 
 The server renders the `fallback` prop; the editor engine loads in the browser
-after mount. Call `preloadAiEnhancer()` ahead of time to skip the loading
-window. Details in the [SSR & Next.js docs][docs-react-ssr].
+after mount. Call [`preloadAiEnhancer()`][docs-react-preloading] ahead of time
+to skip the loading window. Details in the [SSR & Next.js docs][docs-react-ssr].
 
 ## Security issues
 
@@ -80,7 +83,12 @@ request at [hello@uploadcare.com][uc-email-hello].
 
 [docs]: https://uploadcare.github.io/ai-enhancer/
 [docs-react]: https://uploadcare.github.io/ai-enhancer/guide/react
+[docs-react-props]: https://uploadcare.github.io/ai-enhancer/guide/react#props
+[docs-react-events]: https://uploadcare.github.io/ai-enhancer/guide/react#events
 [docs-react-ssr]: https://uploadcare.github.io/ai-enhancer/guide/react#ssr-next-js
+[docs-react-preloading]: https://uploadcare.github.io/ai-enhancer/guide/react#preloading
+[docs-api]: https://uploadcare.github.io/ai-enhancer/api/components
+[docs-layout]: https://uploadcare.github.io/ai-enhancer/guide/layout
 [uc-email-bounty]: mailto:bugbounty@uploadcare.com
 [uc-email-hello]: mailto:hello@uploadcare.com
 [npm-img]: https://img.shields.io/npm/v/@uploadcare/react-ai-enhancer.svg

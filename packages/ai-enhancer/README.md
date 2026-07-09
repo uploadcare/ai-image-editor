@@ -35,7 +35,9 @@ back as an already-uploaded Uploadcare file.
 npm install @uploadcare/ai-enhancer
 ```
 
-2. Use the standalone editor — importing the package registers the element:
+2. Use the [standalone editor][docs-getting-started] — importing the package
+registers the element; configure it via [properties][docs-api] and pick a
+[layout][docs-layout], [theme][docs-theming], and [locale][docs-l10n]:
 
 ```js
 import '@uploadcare/ai-enhancer';
@@ -49,6 +51,8 @@ import '@uploadcare/ai-enhancer';
 const editor = document.querySelector('uc-ai-enhancer');
 editor.addEventListener('uc:done', (e) => console.log(e.detail.url));
 ```
+
+All `uc:*` events and their payloads are listed in the [API reference][docs-api].
 
 Or as a [File Uploader plugin][docs-plugin], assuming a working
 [File Uploader](https://uploadcare.com/docs/file-uploader/) setup — the plugin

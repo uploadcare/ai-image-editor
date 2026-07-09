@@ -27,8 +27,8 @@ documentation: **[uploadcare.github.io/ai-enhancer][docs]**.
 
 | Package | | Description |
 |---|---|---|
-| [`@uploadcare/ai-enhancer`](packages/ai-enhancer) | [![npm][npm-core-img]][npm-core-url] | The `<uc-ai-enhancer>` web component + `/plugin` sub-export for the [File Uploader](https://uploadcare.com/docs/file-uploader/). |
-| [`@uploadcare/react-ai-enhancer`](packages/react-ai-enhancer) | [![npm][npm-react-img]][npm-react-url] | React wrapper — typed props, callbacks, SSR & Next.js support. |
+| [`@uploadcare/ai-enhancer`](packages/ai-enhancer) | [![npm][npm-core-img]][npm-core-url] | The [`<uc-ai-enhancer>`][docs-getting-started] web component + [`/plugin`][docs-plugin] sub-export for the [File Uploader](https://uploadcare.com/docs/file-uploader/). |
+| [`@uploadcare/react-ai-enhancer`](packages/react-ai-enhancer) | [![npm][npm-react-img]][npm-react-url] | [React wrapper][docs-react] — typed props, callbacks, [SSR & Next.js][docs-react-ssr] support. |
 
 ## Security issues
 
@@ -49,6 +49,10 @@ request at [hello@uploadcare.com][uc-email-hello].
 MIT
 
 [docs]: https://uploadcare.github.io/ai-enhancer/
+[docs-getting-started]: https://uploadcare.github.io/ai-enhancer/guide/getting-started
+[docs-plugin]: https://uploadcare.github.io/ai-enhancer/guide/plugin
+[docs-react]: https://uploadcare.github.io/ai-enhancer/guide/react
+[docs-react-ssr]: https://uploadcare.github.io/ai-enhancer/guide/react#ssr-next-js
 [uc-email-bounty]: mailto:bugbounty@uploadcare.com
 [uc-email-hello]: mailto:hello@uploadcare.com
 [npm-core-img]: https://img.shields.io/npm/v/@uploadcare/ai-enhancer.svg
