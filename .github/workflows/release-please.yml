@@ -42,6 +42,29 @@ jobs:
             --title "chore: release v$version 🚀" \
             --add-reviewer nd0ut,egordidenko
 
+      # release-please builds GitHub release notes from the release PR body,
+      # not from CHANGELOG.md — mirror the changelog file (including any manual
+      # edits made in the release PR) into the release notes
+      - name: Mirror CHANGELOG into GitHub release notes
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTPUTS: ${{ toJSON(steps.release.outputs) }}
+        run: |
+          for path in $(jq -r '.paths_released | fromjson | .[]' <<< "$OUTPUTS"); do
+            tag=$(jq -r --arg k "$path--tag_name" '.[$k]' <<< "$OUTPUTS")
+            if [ -z "$tag" ] || [ "$tag" = "null" ]; then
+              echo "::warning::No tag_name output for $path, skipping"
+              continue
+            fi
+            gh api "repos/$GITHUB_REPOSITORY/contents/$path/CHANGELOG.md?ref=$tag" \
+              --jq .content | base64 -d > changelog.md
+            # newest release section: from the first '## ' heading to the next one
+            awk '/^## /{n++} n==1' changelog.md > notes.md
+            echo "Updating release notes of $tag from $path/CHANGELOG.md"
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
+          done
+
   publish:
     needs: release-please
     if: needs.release-please.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch'
