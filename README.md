@@ -30,21 +30,6 @@ documentation: **[uploadcare.github.io/ai-enhancer][docs]**.
 | [`@uploadcare/ai-enhancer`](packages/ai-enhancer) | [![npm][npm-core-img]][npm-core-url] | The `<uc-ai-enhancer>` web component + `/plugin` sub-export for the [File Uploader](https://uploadcare.com/docs/file-uploader/). |
 | [`@uploadcare/react-ai-enhancer`](packages/react-ai-enhancer) | [![npm][npm-react-img]][npm-react-url] | React wrapper — typed props, callbacks, SSR & Next.js support. |
 
-## Development
-
-npm workspaces monorepo (nx task caching, Biome lint/format):
-
-```bash
-npm install
-npm run dev      # vite dev server on the standalone demo
-npm run build    # build all packages
-npm test         # unit + browser + SSR tests
-npm run lint     # biome lint
-```
-
-Releases are automated with release-please: conventional commits on `main`
-maintain a release PR; merging it publishes to npm (staged, 2FA-approved).
-
 ## Security issues
 
 If you think you ran into something in Uploadcare libraries that might have
