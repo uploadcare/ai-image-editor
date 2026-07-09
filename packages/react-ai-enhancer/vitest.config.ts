@@ -14,6 +14,9 @@ export default defineConfig({
       },
       {
         extends: true,
+        // @lit/react ships an inert node-condition build (NODE_MODE strips the
+        // property/listener application for SSR); the DOM tests need the real one
+        resolve: { conditions: ['browser'] },
         test: {
           name: 'hydration',
           include: ['tests/hydration/**/*.test.{ts,tsx}'],

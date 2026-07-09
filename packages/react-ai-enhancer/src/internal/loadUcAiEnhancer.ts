@@ -1,20 +1,15 @@
-import type { UcAiEnhancer } from '@uploadcare/ai-enhancer';
-import { customElementToReactComponent } from '@uploadcare/react-adapter';
+import { createComponent, type EventName } from '@lit/react';
+import type { DoneDetail, ErrorDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
 import React from 'react';
 
-/**
- * The adapter turns each schemaEvents value 'x' into an `onX`-style prop
- * (`uc:done` → `onUc:done`) whose handler receives the event's `detail`.
- */
-export const SCHEMA_EVENTS = {
-  done: 'uc:done',
-  cancel: 'uc:cancel',
-  error: 'uc:error',
-} as const;
+/** Event props of the adapter component; handlers receive the CustomEvent. */
+export type AdapterEvents = {
+  onUcDone: EventName<CustomEvent<DoneDetail>>;
+  onUcCancel: EventName<CustomEvent<void>>;
+  onUcError: EventName<CustomEvent<ErrorDetail>>;
+};
 
-export type AdapterComponent = React.ForwardRefExoticComponent<
-  Record<string, unknown> & React.RefAttributes<UcAiEnhancer>
->;
+export type AdapterComponent = ReturnType<typeof createComponent<UcAiEnhancer, AdapterEvents>>;
 
 let adapterPromise: Promise<AdapterComponent> | null = null;
 
@@ -23,19 +18,23 @@ let adapterPromise: Promise<AdapterComponent> | null = null;
  * React adapter, once per page — every `<AiEnhancer>` instance shares the
  * cache. Client-only: `@uploadcare/ai-enhancer` touches DOM globals at module
  * scope, so this must never run during SSR. The dynamic import is the SSR
- * boundary — do not replace it with a static import.
+ * boundary — do not replace it with a static import. (`@lit/react` itself is
+ * pure — no `lit` import, no side effects — so its static import is fine.)
  */
 export function loadUcAiEnhancer(): Promise<AdapterComponent> {
   if (!adapterPromise) {
     adapterPromise = import('@uploadcare/ai-enhancer')
-      .then(
-        ({ UcAiEnhancer }) =>
-          customElementToReactComponent({
-            react: React,
-            tag: 'uc-ai-enhancer',
-            elClass: UcAiEnhancer,
-            schemaEvents: SCHEMA_EVENTS,
-          }) as unknown as AdapterComponent,
+      .then(({ UcAiEnhancer }) =>
+        createComponent({
+          react: React,
+          tagName: 'uc-ai-enhancer',
+          elementClass: UcAiEnhancer,
+          events: {
+            onUcDone: 'uc:done' as EventName<CustomEvent<DoneDetail>>,
+            onUcCancel: 'uc:cancel' as EventName<CustomEvent<void>>,
+            onUcError: 'uc:error' as EventName<CustomEvent<ErrorDetail>>,
+          },
+        }),
       )
       .catch((error) => {
         // allow the next mount to retry instead of caching the rejection
