@@ -27,7 +27,7 @@ if (!existsSync(join(pkgDir, 'dist', 'react-ai-enhancer.js'))) {
   process.exit(1);
 }
 
-run('npm', ['install', '--no-audit', '--no-fund'], fixtureDir);
+run('npm', ['ci', '--no-audit', '--no-fund'], fixtureDir);
 run('npx', ['next', 'build'], fixtureDir);
 
 const prerendered = join(fixtureDir, '.next', 'server', 'app', 'index.html');
