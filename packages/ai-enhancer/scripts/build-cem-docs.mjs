@@ -11,7 +11,9 @@ const OUT = new URL('../docs/api/components.md', import.meta.url);
 
 // Types we link from the Type column.
 const TYPE_LINKS = {
+  AiEnhancerError: '/api/typescript/classes/AiEnhancerError',
   AspectRatio: '/api/typescript/type-aliases/AspectRatio',
+  ErrorDetail: '/api/typescript/type-aliases/ErrorDetail',
   MetadataCallback: '/api/typescript/type-aliases/MetadataCallback',
   OutputFilenameResolver: '/api/typescript/type-aliases/OutputFilenameResolver',
   SecureDeliveryProxyUrlResolver: '/api/typescript/type-aliases/SecureDeliveryProxyUrlResolver',

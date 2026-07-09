@@ -1,3 +1,5 @@
+import type { KnownErrorCode } from '../lib/errorCodes';
+
 /** Core UI strings — every locale must provide all of these. */
 const coreLocale = {
   'ai-enhancer-source-label': 'Generate image',
@@ -32,7 +34,7 @@ const coreLocale = {
  * to the generic `ai-enhancer-error`. They're optional per locale (English here
  * is the default) and overridable via the `l10n` property like any other string.
  */
-const errorLocale = {
+const errorLocale: Record<`ai-enhancer-error-${KnownErrorCode}`, string> = {
   // Platform validation (POST generate/edit/outpaint, GET status)
   'ai-enhancer-error-invalid_request': 'Something went wrong with the request. Please try again.',
   'ai-enhancer-error-invalid_source': "The source image couldn't be read. Please try a different image.",

@@ -32,12 +32,13 @@ You'll also need an Uploadcare **public key** to enable generate/edit. Grab one
 from the [Uploadcare dashboard](https://app.uploadcare.com/) — see
 [API keys](https://uploadcare.com/docs/start/settings/#api-keys) in the docs.
 
-Two entry points, imported independently so you only pull in what you use:
+Three entry points, imported independently so you only pull in what you use:
 
 | Import | What it gives you |
 |---|---|
 | `@uploadcare/ai-enhancer` | Registers the `<uc-ai-enhancer>` element and exports its public types, the provider, and the localization helpers. |
 | `@uploadcare/ai-enhancer/plugin` | Just the `AiEnhancerPlugin` for the File Uploader — no eager component registration. |
+| `@uploadcare/ai-enhancer/errors` | Just `AiEnhancerError` and its types — side-effect-free, safe to import in server code (no element registration). |
 
 ::: tip Plugin peer dependency
 The plugin entry needs `@uploadcare/file-uploader` **≥ 1.31.2** as a peer
@@ -66,11 +67,12 @@ editor.addEventListener('uc:done', (e) => {
   // persist / display the committed result…
 })
 editor.addEventListener('uc:cancel', () => {/* closed without committing */})
-editor.addEventListener('uc:error', (e) => console.warn(e.detail.error))
+editor.addEventListener('uc:error', (e) => console.warn(e.detail.error.code, e.detail.error)) // see the error handling guide
 ```
 
 See the [Components API](/api/components) for the full list of attributes,
-properties, events, and CSS custom properties.
+properties, events, and CSS custom properties, and [Error handling](/guide/errors)
+for what `uc:error` carries.
 
 ## Edit an existing image
 

@@ -36,6 +36,7 @@ export default defineConfig(({ command, mode }) => {
         entry: {
           'ai-enhancer': resolve(__dirname, 'src/index.ts'),
           plugin: resolve(__dirname, 'src/plugin.ts'),
+          errors: resolve(__dirname, 'src/errors.ts'),
         },
         name: '@uploadcare/ai-enhancer',
         formats: ['es', 'cjs'],

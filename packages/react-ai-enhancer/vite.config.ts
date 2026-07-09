@@ -17,7 +17,7 @@ export default defineConfig(({ command }) => {
         fileName: 'react-ai-enhancer',
       },
       rollupOptions: {
-        external: ['react', '@uploadcare/ai-enhancer', '@uploadcare/react-adapter'],
+        external: ['react', '@uploadcare/ai-enhancer', '@uploadcare/ai-enhancer/errors', '@uploadcare/react-adapter'],
         output: {
           // Rollup strips module-level directives when bundling; Next.js needs
           // 'use client' at the top of the shipped files to mark the client

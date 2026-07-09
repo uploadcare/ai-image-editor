@@ -7,12 +7,16 @@ export {
   type CanvasFit,
   type ComposerPlacement,
   type DoneDetail,
+  type ErrorDetail,
   type HistoryPlacement,
   type MetadataCallback,
   type OutputFilenameResolver,
   type ToolbarPlacement,
   UcAiEnhancer,
 } from './widgets/ai-editor';
+// The `uc:error` detail's error class (value export — consumers `instanceof`-
+// narrow and read `.code` / `.cause`) and its code union.
+export { AiEnhancerError, type AiEnhancerErrorCode, type AiEnhancerErrorOptions } from './entities/error';
 // Aspect ratios offered by the `aspectRatios` property.
 export type { AspectRatio } from './entities/aspect-ratio';
 // Modes and quick-prompt presets (`presets` property).

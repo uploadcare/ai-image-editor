@@ -68,10 +68,13 @@ The element's `uc:*` events map to callbacks, and handlers receive the event's
   carries `url`, `uuid`, `prompt`, `mode`, the chosen `aspectRatio`, and the
   committed `file` (an `UploadcareFile`).
 - **`onCancel()`** — the editor was closed without committing.
-- **`onError(error: unknown)`** — a generation/editor error, unwrapped from the
-  event detail. Also called if the editor engine itself fails to load (e.g. a
-  chunk fails on a flaky connection); the `fallback` stays rendered in that
-  case.
+- **`onError(error: AiEnhancerError)`** — a generation/editor error. Always an
+  `AiEnhancerError`: `code` identifies the failure (`'content_moderated'`,
+  `'provider_unavailable'`, …) and `cause` holds the original thrown value.
+  Also called if the editor engine itself fails to load (e.g. a chunk fails on
+  a flaky connection) with `code: 'engine_load_failed'`; the `fallback` stays
+  rendered in that case. See [Error handling](/guide/errors) for the code
+  families and patterns.
 
 ## SSR & Next.js
 
