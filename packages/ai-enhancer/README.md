@@ -54,9 +54,15 @@ editor.addEventListener('uc:done', (e) => console.log(e.detail.url));
 
 All `uc:*` events and their payloads are listed in the [API reference][docs-api].
 
+> **Client-only:** importing the package registers custom elements, so it must
+> run in the browser — in SSR apps load it behind a client boundary (see
+> [Bundlers & SSR][docs-ssr]), or use the SSR-safe
+> [React wrapper][docs-react].
+
 Or as a [File Uploader plugin][docs-plugin], assuming a working
-[File Uploader](https://uploadcare.com/docs/file-uploader/) setup — the plugin
-reads its settings from the uploader config:
+[File Uploader](https://uploadcare.com/docs/file-uploader/) setup
+(`@uploadcare/file-uploader` **≥ 1.31.2**) — the plugin reads its settings
+from the uploader config:
 
 ```bash
 npm install @uploadcare/ai-enhancer @uploadcare/file-uploader
@@ -107,6 +113,7 @@ request at [hello@uploadcare.com][uc-email-hello].
 [docs-integrating]: https://uploadcare.github.io/ai-enhancer/guide/integrating
 [docs-react]: https://uploadcare.github.io/ai-enhancer/guide/react
 [docs-plugin]: https://uploadcare.github.io/ai-enhancer/guide/plugin
+[docs-ssr]: https://uploadcare.github.io/ai-enhancer/guide/integrating#bundlers-ssr
 [docs-layout]: https://uploadcare.github.io/ai-enhancer/guide/layout
 [docs-theming]: https://uploadcare.github.io/ai-enhancer/guide/theming
 [docs-l10n]: https://uploadcare.github.io/ai-enhancer/guide/localization

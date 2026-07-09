@@ -64,8 +64,16 @@ export default function Page() {
 ```
 
 The server renders the `fallback` prop; the editor engine loads in the browser
-after mount. Call [`preloadAiEnhancer()`][docs-react-preloading] ahead of time
-to skip the loading window. Details in the [SSR & Next.js docs][docs-react-ssr].
+after mount. To skip the loading window, warm the engine cache ahead of time —
+on hover, idle, or route prefetch ([details][docs-react-preloading]):
+
+```js
+import { preloadAiEnhancer } from '@uploadcare/react-ai-enhancer';
+
+preloadAiEnhancer();
+```
+
+More in the [SSR & Next.js docs][docs-react-ssr].
 
 ## Security issues
 
