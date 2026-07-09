@@ -1,19 +1,14 @@
-import { type DoneDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
-import { customElementToReactComponent } from '@uploadcare/react-adapter';
-import React, { type FC, type Ref, useMemo } from 'react';
+'use client';
 
-import '@uploadcare/ai-enhancer';
+import type { DoneDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
+import React, { type FC, type ReactNode, type Ref, useEffect, useMemo, useRef } from 'react';
 
-const AdapterAiEditor = customElementToReactComponent({
-  react: React,
-  tag: 'uc-ai-enhancer',
-  elClass: UcAiEnhancer,
-});
+import { useLazyAiEnhancer } from './internal/useLazyAiEnhancer';
 
 /**
  * Props mirror the public `<uc-ai-enhancer>` API via indexed-access types, so they
  * track the element automatically. Keep this in sync when the element's public
- * properties change — see AGENTS.md.
+ * properties change.
  */
 export type AiEnhancerProps = {
   pubkey: string;
@@ -39,25 +34,55 @@ export type AiEnhancerProps = {
   secureDeliveryProxyUrlResolver?: UcAiEnhancer['secureDeliveryProxyUrlResolver'];
   className?: string;
   apiRef?: Ref<UcAiEnhancer>;
+  /**
+   * Rendered during SSR and on the client until the editor engine loads.
+   * Defaults to `null`. Size it to the editor's final dimensions to avoid
+   * layout shift; call `preloadAiEnhancer()` to shrink the loading window.
+   */
+  fallback?: ReactNode;
   onDone?: (detail: DoneDetail) => void;
   onCancel?: () => void;
   onError?: (error: unknown) => void;
 };
 
-export const AiEnhancer: FC<AiEnhancerProps> = ({ apiRef, className, onDone, onCancel, onError, ...props }) => {
+export const AiEnhancer: FC<AiEnhancerProps> = ({
+  apiRef,
+  className,
+  fallback = null,
+  onDone,
+  onCancel,
+  onError,
+  ...props
+}) => {
+  const state = useLazyAiEnhancer();
+
+  // ref keeps callback identity out of the deps: report each load failure
+  // once, not on every parent re-render
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+  useEffect(() => {
+    if (state.status === 'error') onErrorRef.current?.(state.error);
+  }, [state]);
+
+  // the adapter registers schemaEvents listeners itself and calls these
+  // handlers with the CustomEvent's `detail` (not the event object)
   const handlers = useMemo(
     () => ({
-      'uc:done': (e: CustomEvent<DoneDetail>) => onDone?.(e.detail),
-      'uc:cancel': () => onCancel?.(),
-      'uc:error': (e: CustomEvent<{ error: unknown }>) => onError?.(e.detail.error),
+      'onUc:done': (detail: DoneDetail) => onDone?.(detail),
+      'onUc:cancel': () => onCancel?.(),
+      'onUc:error': (detail: { error: unknown }) => onError?.(detail.error),
     }),
     [onDone, onCancel, onError],
   );
 
+  if (state.status !== 'ready') {
+    return <>{fallback}</>;
+  }
+
+  const AdapterAiEditor = state.Adapter;
   return (
     <AdapterAiEditor
       ref={apiRef as Ref<UcAiEnhancer>}
-      // @ts-expect-error className passes through to the custom element
       class={className}
       {...props}
       {...handlers}
