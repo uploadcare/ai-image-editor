@@ -1,0 +1,107 @@
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+  # manual recovery path: re-publish current versions if a publish failed
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          # the action defaults to the repo default branch (feature/ai-enhancer);
+          # releases are cut from main
+          target-branch: main
+
+      # linked-versions grouping leaves ${version} unresolved in the title
+      # patterns, so the PR is retitled here with the actual version instead
+      - name: Retitle release PR and request reviewers
+        if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_JSON: ${{ steps.release.outputs.pr }}
+        run: |
+          number=$(jq -r .number <<< "$PR_JSON")
+          branch=$(jq -r .headBranchName <<< "$PR_JSON")
+          version=$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$branch" \
+            --jq .content | base64 -d | jq -r '."packages/ai-enhancer"')
+          gh pr edit "$number" --repo "$GITHUB_REPOSITORY" \
+            --title "chore: release v$version 🚀" \
+            --add-reviewer nd0ut,egordidenko
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # npm stage requires npm >= 11.15.0; stay within the 11.x major
+      - name: Update npm
+        run: npm install -g npm@11
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Stage publish to npm
+        id: publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+        run: |
+          message=""
+          for dir in packages/ai-enhancer packages/react-ai-enhancer; do
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            if [ -n "$(npm view "$name@$version" version 2>/dev/null)" ]; then
+              echo "$name@$version is already on npm — skipping"
+            elif npm view "$name" version >/dev/null 2>&1; then
+              echo "Staging $name@$version — approve it in the Staged Packages tab on npmjs.com"
+              (cd "$dir" && npm stage publish)
+              message+=":package: *$name@$version* staged for review"$'\n'
+              message+="Review & approve (2FA required): https://www.npmjs.com/package/$name?activeTab=staged"$'\n\n'
+            else
+              # npm stage publish cannot create a brand-new package,
+              # so the very first release is published directly
+              echo "$name has never been published — bootstrapping with a direct publish"
+              (cd "$dir" && npm publish)
+              message+=":package: *$name@$version* published (bootstrap): https://www.npmjs.com/package/$name"$'\n\n'
+            fi
+          done
+          if [ -n "$message" ]; then
+            {
+              echo "message<<SLACK_EOF"
+              echo "$message"
+              echo "SLACK_EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Notify Slack about staged release
+        if: steps.publish.outputs.message != ''
+        uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0 # v1.27.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        with:
+          channel-id: ${{ secrets.SLACK_NPM_RELEASE_CHANNEL }}
+          slack-message: ${{ steps.publish.outputs.message }}
