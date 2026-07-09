@@ -1,6 +1,6 @@
 {
   "name": "@uploadcare/react-ai-enhancer",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "React wrapper for @uploadcare/ai-enhancer",
   "type": "module",
   "sideEffects": false,
@@ -26,7 +26,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@uploadcare/ai-enhancer": "^0.1.1",
+    "@uploadcare/ai-enhancer": "^0.1.2",
     "@uploadcare/react-adapter": "^0.4.0"
   },
   "peerDependencies": {
