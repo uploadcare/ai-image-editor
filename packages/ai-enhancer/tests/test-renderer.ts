@@ -1,4 +1,4 @@
-import { page } from '@vitest/browser/context';
+import { page } from 'vitest/browser';
 import { beforeEach } from 'vitest';
 
 const containers = new Set<HTMLElement>();
@@ -31,7 +31,7 @@ beforeEach(() => {
   cleanup();
 });
 
-declare module '@vitest/browser/context' {
+declare module 'vitest/browser' {
   interface BrowserPage {
     render: typeof render;
   }
