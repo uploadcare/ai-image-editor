@@ -26,11 +26,15 @@ jobs:
           # releases are cut from main
           target-branch: main
 
-      # for the commit-message amend below
+      # for the commit-message amend below. fetch-depth 0 is load-bearing: in a
+      # shallow clone git grafts HEAD as parentless, so `commit --amend` would
+      # produce an orphan commit and force-pushing it severs the branch from
+      # main (the PR then shows conflicts against all of history)
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr }}
         with:
           ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          fetch-depth: 0
 
       # linked-versions grouping leaves ${version} unresolved in the title
       # patterns, so the PR is retitled here with the actual version instead.
@@ -53,6 +57,13 @@ jobs:
             git -c user.name='github-actions[bot]' \
                 -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
                 commit --amend -m "$title"
+            # invariant: the amended commit must keep its parent — an orphan
+            # here means a shallow/grafted checkout, and pushing it would
+            # disconnect the release branch from main
+            if [ -z "$(git log -1 --format=%P)" ]; then
+              echo "::error::amended commit has no parent (shallow checkout?) — refusing to push"
+              exit 1
+            fi
             git push --force-with-lease origin "HEAD:$branch"
           fi
 
