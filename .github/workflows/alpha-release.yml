@@ -1,0 +1,55 @@
+name: alpha-release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  alpha:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch is allowed for alpha releases
+        run: |
+          # add allowed branch patterns here
+          case "$GITHUB_REF_NAME" in
+            alpha/* | next/*)
+              echo "Branch $GITHUB_REF_NAME is allowed"
+              ;;
+            *)
+              echo "::error::Alpha releases are only allowed from alpha/* or next/* branches, got $GITHUB_REF_NAME"
+              exit 1
+              ;;
+          esac
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      - name: Set alpha version
+        run: |
+          base=$(node -p "require('./packages/ai-enhancer/package.json').version")
+          slug=$(echo "$GITHUB_REF_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
+          version="$base-alpha.$slug.$GITHUB_RUN_NUMBER"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          # npm pkg set instead of npm version: the latter re-resolves the
+          # workspace dependency range against the registry and fails
+          npm pkg set "version=$version" -w packages/ai-enhancer -w packages/react-ai-enhancer
+          npm pkg set "dependencies.@uploadcare/ai-enhancer=$version" -w packages/react-ai-enhancer
+
+      - run: npm run build
+
+      - name: Publish alpha to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --tag alpha -w packages/ai-enhancer -w packages/react-ai-enhancer
+
+      - name: Summary
+        run: |
+          echo "Published \`@uploadcare/ai-enhancer@$VERSION\` and \`@uploadcare/react-ai-enhancer@$VERSION\` under the \`alpha\` dist-tag" >> "$GITHUB_STEP_SUMMARY"
