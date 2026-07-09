@@ -10,7 +10,8 @@
     "test": "npm run test --workspaces --if-present",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "workspaces": [
     "packages/ai-enhancer",

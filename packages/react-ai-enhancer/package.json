@@ -22,7 +22,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:next": "node scripts/test-next-fixture.mjs"
+    "test:next": "node scripts/test-next-fixture.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@uploadcare/ai-enhancer": "^0.1.1",

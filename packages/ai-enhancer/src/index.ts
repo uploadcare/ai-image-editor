@@ -14,10 +14,10 @@ export {
   UcAiEnhancer,
 } from './widgets/ai-editor';
 // Aspect ratios offered by the `aspectRatios` property.
-export { type AspectRatio } from './entities/aspect-ratio';
+export type { AspectRatio } from './entities/aspect-ratio';
 // Modes and quick-prompt presets (`presets` property).
-export { type AiEditorMode, type AiPreset, type AiPresets } from './entities/mode';
+export type { AiEditorMode, AiPreset, AiPresets } from './entities/mode';
 // Secure (signed) CDN delivery (`secureDeliveryProxyUrlResolver` property).
-export { type SecureDeliveryProxyUrlResolver, type SecureDeliveryUrlParts } from './shared/lib/secureDelivery';
+export type { SecureDeliveryProxyUrlResolver, SecureDeliveryUrlParts } from './shared/lib/secureDelivery';
 // Localization helpers.
 export { type AiEnhancerLocale, enLocale } from './shared/i18n';

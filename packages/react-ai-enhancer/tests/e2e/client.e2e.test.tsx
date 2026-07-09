@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
 import { AiEnhancer, preloadAiEnhancer } from '../../src';
-import { useContainers } from '../support/containers';
+import { setupContainers } from '../support/containers';
 
 // The real element talks to Uploadcare APIs once connected; stub the network
 // so tests are hermetic (same approach as packages/ai-enhancer e2e tests).
@@ -20,7 +20,7 @@ beforeAll(() => {
   };
 });
 
-const makeContainer = useContainers();
+const makeContainer = setupContainers();
 
 const roots: Root[] = [];
 function render(ui: React.ReactElement): HTMLElement {
