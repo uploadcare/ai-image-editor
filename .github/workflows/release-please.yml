@@ -26,9 +26,17 @@ jobs:
           # releases are cut from main
           target-branch: main
 
+      # for the commit-message amend below
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr }}
+        with:
+          ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+
       # linked-versions grouping leaves ${version} unresolved in the title
-      # patterns, so the PR is retitled here with the actual version instead
-      - name: Retitle release PR and request reviewers
+      # patterns, so the PR is retitled here with the actual version instead.
+      # The branch commit gets the same message: GitHub prefills a
+      # single-commit squash merge from the commit message, not the PR title.
+      - name: Retitle release PR, its commit, and request reviewers
         if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -36,11 +44,17 @@ jobs:
         run: |
           number=$(jq -r .number <<< "$PR_JSON")
           branch=$(jq -r .headBranchName <<< "$PR_JSON")
-          version=$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$branch" \
-            --jq .content | base64 -d | jq -r '."packages/ai-enhancer"')
+          version=$(jq -r '."packages/ai-enhancer"' .release-please-manifest.json)
+          title="chore: release v$version 🚀"
           gh pr edit "$number" --repo "$GITHUB_REPOSITORY" \
-            --title "chore: release v$version 🚀" \
+            --title "$title" \
             --add-reviewer nd0ut,egordidenko
+          if [ "$(git log -1 --format=%s)" != "$title" ]; then
+            git -c user.name='github-actions[bot]' \
+                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                commit --amend -m "$title"
+            git push --force-with-lease origin "HEAD:$branch"
+          fi
 
       # release-please builds GitHub release notes from the release PR body,
       # not from CHANGELOG.md — mirror the changelog file (including any manual
