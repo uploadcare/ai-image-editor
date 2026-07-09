@@ -110,10 +110,12 @@ Works natively — attributes/properties bind directly and custom events use
 
 ## Bundlers & SSR
 
-- **Two entry points**, imported independently so you only ship what you use:
-  `@uploadcare/ai-enhancer` (the element) and `@uploadcare/ai-enhancer/plugin`
-  (the [File Uploader plugin](/guide/plugin)). The editor's styles live in its
-  shadow DOM — there's no separate CSS import.
+- **Three entry points**, imported independently so you only ship what you use:
+  `@uploadcare/ai-enhancer` (the element), `@uploadcare/ai-enhancer/plugin`
+  (the [File Uploader plugin](/guide/plugin)), and
+  `@uploadcare/ai-enhancer/errors` (the `AiEnhancerError` class — side-effect-
+  free, safe in server code). The editor's styles live in its shadow DOM —
+  there's no separate CSS import.
 - **SSR (Next.js, Nuxt, …):** the editor is a browser web component. When using
   the raw element (vanilla, Vue, Angular, Svelte), register it **client-side
   only** — a dynamic `import('@uploadcare/ai-enhancer')` inside an effect or a

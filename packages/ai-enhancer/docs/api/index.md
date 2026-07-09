@@ -18,3 +18,4 @@ Two complementary references, both generated from the source:
 |---|---|
 | `@uploadcare/ai-enhancer` | `<uc-ai-enhancer>` registration, the editor types, the aspect-ratio helpers, and the localization helpers. |
 | `@uploadcare/ai-enhancer/plugin` | `AiEnhancerPlugin`, `AiEditorActivityParams`, `aspectRatiosFromCropPreset`. |
+| `@uploadcare/ai-enhancer/errors` | `AiEnhancerError`, `AiEnhancerErrorCode`, `AiEnhancerErrorOptions` — side-effect-free (safe in server code). |
