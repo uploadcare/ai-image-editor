@@ -50,8 +50,13 @@ const editor = document.querySelector('uc-ai-enhancer');
 editor.addEventListener('uc:done', (e) => console.log(e.detail.url));
 ```
 
-Or as a [File Uploader plugin][docs-plugin] — no extra wiring, the plugin reads
-the uploader config:
+Or as a [File Uploader plugin][docs-plugin], assuming a working
+[File Uploader](https://uploadcare.com/docs/file-uploader/) setup — the plugin
+reads its settings from the uploader config:
+
+```bash
+npm install @uploadcare/ai-enhancer @uploadcare/file-uploader
+```
 
 ```js
 import * as UC from '@uploadcare/file-uploader';
@@ -60,6 +65,10 @@ import { AiEnhancerPlugin } from '@uploadcare/ai-enhancer/plugin';
 UC.defineComponents(UC);
 document.querySelector('uc-config').plugins = [AiEnhancerPlugin];
 ```
+
+Add `ai-enhancer` to the config's `source-list` to expose the **Generate
+image** source; the **AI Edit** action appears on uploaded images
+automatically. Full setup in the [plugin guide][docs-plugin].
 
 You need an Uploadcare **public key** from the
 [dashboard](https://app.uploadcare.com/). Using React? See

@@ -20,8 +20,8 @@
 [![GitHub release][badge-release-img]][badge-release-url]
 
 AI image generation and editing for Uploadcare: a framework-agnostic web
-component, a File Uploader plugin, and a React wrapper. Full documentation:
-**[uploadcare.github.io/ai-enhancer][docs]**.
+component (with a File Uploader plugin sub-export) and a React wrapper. Full
+documentation: **[uploadcare.github.io/ai-enhancer][docs]**.
 
 ## Packages
 

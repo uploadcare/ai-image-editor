@@ -21,7 +21,7 @@
 [![GitHub release][badge-release-img]][badge-release-url]
 
 React wrapper for the [Uploadcare AI Enhancer][docs] — an AI image editor:
-generate images from a prompt or enhance existing ones, with the result stored
+generate images from a prompt or edit existing ones, with the result stored
 on Uploadcare. Typed props, callback events, and SSR support out of the box.
 
 ## Quick start
