@@ -17,7 +17,9 @@ export default defineConfig(({ command }) => {
         fileName: 'react-ai-enhancer',
       },
       rollupOptions: {
-        external: ['react', '@lit/react', '@uploadcare/ai-enhancer', '@uploadcare/ai-enhancer/errors'],
+        // @lit/react is ESM-only (no require condition) — bundle it so the CJS
+        // build doesn't require() an ESM module (breaks on Node < 22.12)
+        external: ['react', '@uploadcare/ai-enhancer', '@uploadcare/ai-enhancer/errors'],
         output: {
           // Rollup strips module-level directives when bundling; Next.js needs
           // 'use client' at the top of the shipped files to mark the client
