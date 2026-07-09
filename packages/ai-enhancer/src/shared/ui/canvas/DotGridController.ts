@@ -438,7 +438,8 @@ export class DotGridController implements ReactiveController {
     ctx.fillStyle = c; // an unparseable value leaves the previous (#000)
     ctx.fillRect(0, 0, 1, 1);
     const d = ctx.getImageData(0, 0, 1, 1).data;
-    return [d[0]! / 255, d[1]! / 255, d[2]! / 255, d[3]! / 255];
+    // getImageData always yields 4 bytes; ?? keeps the indexing type-safe
+    return [(d[0] ?? 0) / 255, (d[1] ?? 0) / 255, (d[2] ?? 0) / 255, (d[3] ?? 0) / 255];
   }
 
   private _hasImage(): boolean {

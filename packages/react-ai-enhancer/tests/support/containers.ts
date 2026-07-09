@@ -4,7 +4,7 @@ import { afterEach } from 'vitest';
  * Per-file DOM container factory with automatic afterEach cleanup. Call at
  * module scope, then use the returned factory inside tests.
  */
-export function useContainers(): () => HTMLElement {
+export function setupContainers(): () => HTMLElement {
   const containers: HTMLElement[] = [];
 
   afterEach(() => {

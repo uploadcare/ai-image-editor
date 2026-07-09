@@ -21,7 +21,7 @@ describe('resolveSecureDeliveryUrl', () => {
 
   it('hands the resolver empty parts for a non-CDN url', () => {
     const resolver = vi.fn((u: string) => u);
-    resolveSecureDeliveryUrl('https://example.com/image.png', resolver);
+    void resolveSecureDeliveryUrl('https://example.com/image.png', resolver);
     expect(resolver).toHaveBeenCalledWith('https://example.com/image.png', {
       uuid: '',
       cdnUrlModifiers: '',

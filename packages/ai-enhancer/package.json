@@ -30,7 +30,9 @@
     "docs:api": "cem analyze && node scripts/build-cem-docs.mjs && typedoc && node scripts/clean-typedoc-class.mjs",
     "docs:dev": "npm run docs:api && vitepress dev docs",
     "docs:build": "npm run docs:api && vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "typecheck": "tsc --noEmit",
+    "lint:lit": "lit-analyzer './src/**/*.ts' --strict --rules.no-unknown-attribute off"
   },
   "dependencies": {
     "@lit-labs/motion": "^1.1.0",
@@ -52,6 +54,7 @@
     "@custom-elements-manifest/to-markdown": "^0.1.0",
     "@uploadcare/file-uploader": "1.31.2",
     "@vitest/browser-playwright": "^4.1.10",
+    "lit-analyzer": "^2.0.3",
     "playwright": "^1.49.0",
     "typedoc": "^0.28.19",
     "typedoc-plugin-markdown": "^4.12.0",

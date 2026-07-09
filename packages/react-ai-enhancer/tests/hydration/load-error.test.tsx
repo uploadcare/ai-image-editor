@@ -3,13 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
 
 import { AiEnhancer } from '../../src';
-import { useContainers } from '../support/containers';
+import { setupContainers } from '../support/containers';
 
 vi.mock('@uploadcare/ai-enhancer', () => {
   throw new Error('engine chunk failed to load');
 });
 
-const makeContainer = useContainers();
+const makeContainer = setupContainers();
 
 it('reports engine load failures through onError and keeps the fallback', async () => {
   const container = makeContainer();

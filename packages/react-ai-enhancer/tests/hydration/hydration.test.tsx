@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { expect, it, vi } from 'vitest';
 
 import { AiEnhancer } from '../../src';
-import { useContainers } from '../support/containers';
+import { setupContainers } from '../support/containers';
 
 // Deterministic stand-in for the real Lit element: accessors live on the
 // prototype (like Lit's @property) so the adapter's prop-splitting treats them
@@ -30,7 +30,7 @@ vi.mock('@uploadcare/ai-enhancer', async () => {
   return { UcAiEnhancer };
 });
 
-const makeContainer = useContainers();
+const makeContainer = setupContainers();
 
 it('shows the fallback until the engine loads, then swaps in the element with wired props and events', async () => {
   const container = makeContainer();
