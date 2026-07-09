@@ -50,6 +50,7 @@ export default defineConfig({
             { text: 'UI & layout', link: '/guide/layout' },
             { text: 'Theming', link: '/guide/theming' },
             { text: 'Localization', link: '/guide/localization' },
+            { text: 'Error handling', link: '/guide/errors' },
           ],
         },
       ],

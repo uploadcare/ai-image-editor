@@ -73,7 +73,8 @@ The element's `uc:*` events map to callbacks, and handlers receive the event's
   `'provider_unavailable'`, …) and `cause` holds the original thrown value.
   Also called if the editor engine itself fails to load (e.g. a chunk fails on
   a flaky connection) with `code: 'engine_load_failed'`; the `fallback` stays
-  rendered in that case.
+  rendered in that case. See [Error handling](/guide/errors) for the code
+  families and patterns.
 
 ## SSR & Next.js
 

@@ -12,8 +12,7 @@ no framework at all. Two rules apply everywhere:
   **DOM properties**, not string attributes.
 - **`uc:*` events** (`uc:done`, `uc:cancel`, `uc:error`) are plain DOM
   `CustomEvent`s; `detail` carries the payload. `uc:error`'s detail is always
-  `{ error: AiEnhancerError }` — check `error.code` and find the original
-  thrown value on `error.cause`.
+  `{ error: AiEnhancerError }` — see [Error handling](/guide/errors).
 
 Importing the package registers the element as a side effect:
 
