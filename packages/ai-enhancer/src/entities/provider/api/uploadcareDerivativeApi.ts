@@ -1,6 +1,6 @@
 import { serializeCdnUrl } from '@uploadcare/cdn-url';
 import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-prefix/async';
-import { type FileInfo, info, Metadata, UploadcareFile } from '@uploadcare/upload-client';
+import { type FileInfo, info, type Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import { camelizeKeys } from '../../../shared/lib/camelizeKeys';
 import { isValidAspectRatio } from '../../aspect-ratio';
 import { AiProviderError, type AiProvider, type AiProviderRequest, type AiProviderResult } from '../model/types';

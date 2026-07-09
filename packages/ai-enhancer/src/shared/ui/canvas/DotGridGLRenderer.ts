@@ -17,6 +17,12 @@
  * the image survives — the GL equivalent of the 2D `source-in` reveal.
  */
 
+/** WebGL `create*` calls return null only when the context is lost. */
+function mustCreate<T>(value: T | null, what: string): T {
+  if (value === null) throw new Error(`DotGrid GL: failed to create ${what} (context lost?)`);
+  return value;
+}
+
 /** Per-frame snapshot the controller hands to {@link DotGridGLRenderer.render}. */
 export type GLFrame = {
   /** Viewport size in CSS px and the device-pixel scale to render at. */
@@ -239,10 +245,10 @@ export class DotGridGLRenderer {
     // Static unit-quad corners (triangle strip) for dots and the image.
     this._cornerBuf = this._staticBuffer([-0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5]);
     this._quadBuf = this._staticBuffer([0, 0, 1, 0, 0, 1, 1, 1]);
-    this._clipBuf = gl.createBuffer()!;
+    this._clipBuf = mustCreate(gl.createBuffer(), 'buffer');
 
     // Dot VAO: per-vertex corner + per-instance clip.
-    this._dotVao = gl.createVertexArray()!;
+    this._dotVao = mustCreate(gl.createVertexArray(), 'vertex array');
     gl.bindVertexArray(this._dotVao);
     const aCorner = gl.getAttribLocation(this._dotProgram, 'aCorner');
     gl.bindBuffer(gl.ARRAY_BUFFER, this._cornerBuf);
@@ -256,7 +262,7 @@ export class DotGridGLRenderer {
     gl.bindVertexArray(null);
 
     // Image VAO: just the quad.
-    this._imgVao = gl.createVertexArray()!;
+    this._imgVao = mustCreate(gl.createVertexArray(), 'vertex array');
     gl.bindVertexArray(this._imgVao);
     const aQuad = gl.getAttribLocation(this._imgProgram, 'aQuad');
     gl.bindBuffer(gl.ARRAY_BUFFER, this._quadBuf);
@@ -293,7 +299,7 @@ export class DotGridGLRenderer {
       this._imgUniforms[name] = gl.getUniformLocation(this._imgProgram, name);
     }
 
-    this._texture = gl.createTexture()!;
+    this._texture = mustCreate(gl.createTexture(), 'texture');
     gl.bindTexture(gl.TEXTURE_2D, this._texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -462,7 +468,7 @@ export class DotGridGLRenderer {
 
   private _staticBuffer(data: number[]): WebGLBuffer {
     const gl = this._gl;
-    const buf = gl.createBuffer()!;
+    const buf = mustCreate(gl.createBuffer(), 'buffer');
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
     return buf;
@@ -472,7 +478,7 @@ export class DotGridGLRenderer {
     const gl = this._gl;
     const vs = this._compile(gl.VERTEX_SHADER, vertSrc);
     const fs = this._compile(gl.FRAGMENT_SHADER, fragSrc);
-    const program = gl.createProgram()!;
+    const program = mustCreate(gl.createProgram(), 'program');
     gl.attachShader(program, vs);
     gl.attachShader(program, fs);
     gl.linkProgram(program);
@@ -488,7 +494,7 @@ export class DotGridGLRenderer {
 
   private _compile(type: number, src: string): WebGLShader {
     const gl = this._gl;
-    const shader = gl.createShader(type)!;
+    const shader = mustCreate(gl.createShader(type), 'shader');
     gl.shaderSource(shader, src);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {

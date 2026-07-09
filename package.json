@@ -8,9 +8,10 @@
     "build": "npm run build --workspaces --if-present",
     "dev": "npm run dev --workspace @uploadcare/ai-enhancer",
     "test": "npm run test --workspaces --if-present",
-    "lint": "biome lint .",
+    "lint": "biome lint . && npm run lint:lit -w @uploadcare/ai-enhancer",
     "format": "biome format --write .",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "workspaces": [
     "packages/ai-enhancer",

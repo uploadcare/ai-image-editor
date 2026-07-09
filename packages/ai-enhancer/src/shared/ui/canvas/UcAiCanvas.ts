@@ -1,6 +1,7 @@
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
 import { ICON_FULLSCREEN, ICON_FULLSCREEN_EXIT } from '../icons';
@@ -426,7 +427,7 @@ export class UcAiCanvas extends LitElement {
           preloading
             ? html`<img
                 class="preload"
-                src="${this.url}"
+                src="${ifDefined(this.url ?? undefined)}"
                 alt=""
                 aria-hidden="true"
                 decoding="async"

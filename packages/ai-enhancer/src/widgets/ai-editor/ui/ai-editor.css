@@ -374,6 +374,7 @@ uc-ai-canvas {
   transform: translateY(calc(-100% + 22px));
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: element-selector base rule intentionally follows the stateful :host blocks */
 uc-ai-history,
 uc-ai-prompt-row {
   width: 100%;
