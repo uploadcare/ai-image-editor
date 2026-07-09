@@ -29,7 +29,8 @@ export type AiEnhancerProps = {
   composerPlacement?: UcAiEnhancer['composerPlacement'];
   canvasFit?: UcAiEnhancer['canvasFit'];
   historyPlacement?: UcAiEnhancer['historyPlacement'];
-  composerAutoHide?: UcAiEnhancer['composerAutoHide'];
+  /** @internal Not part of the public API yet (typed locally: the element strips `@internal` members from its published types). */
+  composerAutoHide?: boolean;
   toolbarPlacement?: UcAiEnhancer['toolbarPlacement'];
   secureDeliveryProxyUrlResolver?: UcAiEnhancer['secureDeliveryProxyUrlResolver'];
   className?: string;
