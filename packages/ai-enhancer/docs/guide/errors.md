@@ -19,6 +19,9 @@ editor.addEventListener('uc:error', (e) => {
 });
 ```
 
+The event bubbles and crosses shadow DOM boundaries (`composed`), so a
+listener on a container — or `document` — works too.
+
 ## The error object
 
 `detail.error` is always an **`AiEnhancerError`** — whatever actually went
@@ -27,9 +30,9 @@ a string) is normalized into it:
 
 | Field | Type | What it tells you |
 |---|---|---|
-| `code` | `AiEnhancerErrorCode` | What failed — one of the [known codes](#error-codes), or any string the backend sends. `'unknown'` when the failure carried no code (e.g. a network error). |
+| `code` | `AiEnhancerErrorCode` | What failed — one of the [known codes](#error-codes), or any other string (backend-minted, or frontend-originated like the React wrapper's `engine_load_failed`). `'unknown'` when the failure carried no code (e.g. a network error). |
 | `message` | `string` | The raw, untranslated failure text — for logs, not for users (show [localized messages](/guide/localization#error-messages) instead). |
-| `source` | `string \| undefined` | Which stage of a job reported the failure, when the backend says. |
+| `source` | `string \| undefined` | Which stage of a job reported the failure, when the backend says (e.g. `'ai_gateway'`). Values are backend-defined — treat as log enrichment, not something to branch on. |
 | `cause` | `unknown` | The original thrown value, untouched — the underlying `Error`, or whatever a custom provider threw. |
 
 ## Error codes
@@ -54,11 +57,13 @@ function report(error: AiEnhancerError) {
 }
 ```
 
-The known codes come in three families — **platform validation** (bad input:
-`invalid_source`, `canvas_too_large`, …), **AI gateway** (generation itself:
-`content_moderated`, `provider_unavailable`, `generation_timeout`, …), and
-**upload pipeline** (persisting the result: `DownloadFile*`). The full list
-with their user-facing messages lives in the
+The known codes come in three families — **platform validation** (bad input or
+setup: `invalid_source`, `canvas_too_large`, `derivative_disabled`, …),
+**AI gateway** (generation itself: `content_moderated`,
+`provider_unavailable`, `generation_timeout`, …), and **upload pipeline**
+(persisting the result: `DownloadFileHTTPClientError` and friends — yes,
+PascalCase: the backend passes those through as literal upload-service class
+names). The full list with their user-facing messages lives in the
 [localization guide](/guide/localization#error-messages).
 
 `AiEnhancerErrorCode` is deliberately open: the known codes are typed as
@@ -95,8 +100,10 @@ editor.localeDefinitionOverride = {
 };
 ```
 
-See [Localization](/guide/localization#error-messages) for the mechanics and
-the full key list.
+A code with no matching key (unknown or untranslated) falls back to the
+generic `ai-enhancer-error` message. See
+[Localization](/guide/localization#error-messages) for the mechanics and the
+full key list.
 
 ## Server-side code
 
