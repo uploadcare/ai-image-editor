@@ -66,7 +66,7 @@ editor.addEventListener('uc:done', (e) => {
   // persist / display the committed result…
 })
 editor.addEventListener('uc:cancel', () => {/* closed without committing */})
-editor.addEventListener('uc:error', (e) => console.warn(e.detail.error))
+editor.addEventListener('uc:error', (e) => console.warn(e.detail.error.code, e.detail.error))
 ```
 
 See the [Components API](/api/components) for the full list of attributes,

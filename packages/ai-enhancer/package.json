@@ -19,6 +19,11 @@
       "types": "./dist/plugin.d.ts",
       "import": "./dist/plugin.js",
       "require": "./dist/plugin.cjs"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js",
+      "require": "./dist/errors.cjs"
     }
   },
   "scripts": {

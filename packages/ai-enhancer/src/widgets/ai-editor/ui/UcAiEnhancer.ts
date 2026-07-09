@@ -15,6 +15,7 @@ import {
   parseAspectRatioList,
   toAspectRatioOption,
 } from '../../../entities/aspect-ratio';
+import { type AiEnhancerError, normalizeError } from '../../../entities/error';
 import { type AiEditorMode, type AiPresets, MODES } from '../../../entities/mode';
 import { type AiProvider, UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController, type HistoryEntry } from '../../../features/generation';
@@ -53,6 +54,11 @@ export type DoneDetail = {
   aspectRatio?: AspectRatio;
   /** The committed result as an Uploadcare file object. */
   file: UploadcareFile;
+};
+
+/** Detail of the `uc:error` event: the normalized {@link AiEnhancerError}. */
+export type ErrorDetail = {
+  error: AiEnhancerError;
 };
 
 /**
@@ -115,8 +121,9 @@ const HISTORY_PLACEMENTS: readonly HistoryPlacement[] = [
  *   result (the Done button). `detail` carries the result `url`, `uuid`,
  *   `prompt`, `mode`, optional `aspectRatio`, and the `file` object.
  * @fires uc:cancel - Fired when the user cancels (the Cancel button). No detail.
- * @fires uc:error - A `CustomEvent<{ error: unknown }>` fired when a generation
- *   throws.
+ * @fires uc:error - A `CustomEvent<ErrorDetail>` fired when a generation
+ *   throws. `detail.error` is always an `AiEnhancerError` — its `code` maps to
+ *   a localized message and the original thrown value is on `.cause`.
  *
  * @cssprop [--uc-ai-background] - Editor surface background.
  * @cssprop [--uc-ai-foreground] - Primary text/icon colour.
@@ -713,7 +720,8 @@ export class UcAiEnhancer extends LitElement {
         });
       }
     } catch (err) {
-      this.dispatchEvent(new CustomEvent('uc:error', { detail: { error: err }, bubbles: true, composed: true }));
+      const detail: ErrorDetail = { error: normalizeError(err) };
+      this.dispatchEvent(new CustomEvent('uc:error', { detail, bubbles: true, composed: true }));
     }
   }
 

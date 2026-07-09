@@ -3,6 +3,7 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
+import { AiEnhancerError } from '@uploadcare/ai-enhancer/errors';
 import { AiEnhancer, preloadAiEnhancer } from '../../src';
 import { setupContainers } from '../support/containers';
 
@@ -100,7 +101,7 @@ it('delivers uc:done, uc:cancel and uc:error events to callbacks', async () => {
   el.dispatchEvent(new CustomEvent('uc:cancel'));
   expect(onCancel).toHaveBeenCalledTimes(1);
 
-  const error = new Error('boom');
+  const error = new AiEnhancerError('boom', { code: 'invalid_request' });
   el.dispatchEvent(new CustomEvent('uc:error', { detail: { error } }));
   expect(onError).toHaveBeenCalledWith(error);
 });
