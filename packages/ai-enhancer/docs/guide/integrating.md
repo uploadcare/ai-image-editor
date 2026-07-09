@@ -63,30 +63,14 @@ different version.
 ## React
 
 Use the **`@uploadcare/react-ai-enhancer`** wrapper — typed props plus `onDone` /
-`onCancel` / `onError` callbacks, so you don't manage refs or event listeners:
-
-```sh
-npm install @uploadcare/react-ai-enhancer
-```
+`onCancel` / `onError` callbacks, SSR support out of the box, and direct usage
+from Next.js Server Components. See the dedicated [React guide](/guide/react):
 
 ```tsx
 import { AiEnhancer } from '@uploadcare/react-ai-enhancer'
-import type { DoneDetail } from '@uploadcare/ai-enhancer'
 
-export function Editor() {
-  return (
-    <AiEnhancer
-      pubkey="YOUR_PUBLIC_KEY"
-      onDone={(detail: DoneDetail) => console.log(detail.url)}
-      onError={(error) => console.warn(error)}
-    />
-  )
-}
+<AiEnhancer pubkey="YOUR_PUBLIC_KEY" onDone={({ url }) => console.log(url)} />
 ```
-
-Props mirror the element — `sourceUuid`, `sourceFileInfo`, `aspectRatios`,
-`presets`, `metadata`, the [layout options](/guide/layout), and so on. `apiRef`
-exposes the underlying `<uc-ai-enhancer>` for imperative access.
 
 ## Vue 3
 
@@ -128,10 +112,12 @@ Works natively — attributes/properties bind directly and custom events use
   `@uploadcare/ai-enhancer` (the element) and `@uploadcare/ai-enhancer/plugin`
   (the [File Uploader plugin](/guide/plugin)). The editor's styles live in its
   shadow DOM — there's no separate CSS import.
-- **SSR (Next.js, Nuxt, …):** the editor is a browser web component. Register it
-  **client-side only** — a dynamic `import('@uploadcare/ai-enhancer')` inside an
-  effect, or behind a `'use client'` / client-only boundary — never during the
-  server render.
+- **SSR (Next.js, Nuxt, …):** the editor is a browser web component. When using
+  the raw element (vanilla, Vue, Angular, Svelte), register it **client-side
+  only** — a dynamic `import('@uploadcare/ai-enhancer')` inside an effect or a
+  client-only boundary — never during the server render. The
+  [React wrapper](/guide/react) handles this internally and is SSR-safe out of
+  the box.
 
 ## TypeScript
 

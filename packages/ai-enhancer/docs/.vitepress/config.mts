@@ -45,6 +45,7 @@ export default defineConfig({
           items: [
             { text: 'Getting started', link: '/guide/getting-started' },
             { text: 'Integrating into your app', link: '/guide/integrating' },
+            { text: 'React', link: '/guide/react' },
             { text: 'File Uploader plugin', link: '/guide/plugin' },
             { text: 'UI & layout', link: '/guide/layout' },
             { text: 'Theming', link: '/guide/theming' },
