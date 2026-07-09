@@ -256,8 +256,7 @@ export class UcAiEnhancer extends LitElement {
    * How the canvas sizes relative to the composer. `available` (default) shrinks
    * the canvas to the space left by the composer, which is docked outside the
    * image (history chips still overlay the canvas). `full` lets the canvas fill
-   * the whole area with the composer floating over it. Auto-hide always floats,
-   * so {@link composerAutoHide} implies `full`.
+   * the whole area with the composer floating over it.
    */
   @property({ attribute: 'canvas-fit' })
   public canvasFit: CanvasFit = 'available';
@@ -271,10 +270,12 @@ export class UcAiEnhancer extends LitElement {
   public historyPlacement: HistoryPlacement = 'composer-above';
 
   /**
-   * Auto-hide ("dock") the floating composer once an image exists: it drops to a
-   * small peek at the edge and raises when the pointer approaches its edge or it
-   * gains focus. Always floats the composer (implies {@link canvasFit} `full`);
-   * off by default.
+   * Auto-hide the composer once an image exists. An overlay composer (`canvas-fit:
+   * full`) docks down to a small peek at the edge and raises when the pointer
+   * approaches or it gains focus; a docked composer collapses in place. Off by
+   * default.
+   *
+   * @internal Not part of the public API yet — excluded from the docs.
    */
   @property({ type: Boolean, attribute: 'composer-auto-hide', reflect: true })
   public composerAutoHide = false;

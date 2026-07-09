@@ -44,18 +44,6 @@ over** it:
 <uc-ai-enhancer canvas-fit="full"></uc-ai-enhancer>
 ```
 
-## Auto-hide the composer
-
-`composer-auto-hide` docks the floating composer down to a small peek once an
-image exists; it rises again when the pointer approaches its edge or it gains
-focus. Because the composer must float for this to work, it forces full-canvas
-behavior regardless of `canvas-fit` — an explicit `canvas-fit="available"` is
-overridden.
-
-```html
-<uc-ai-enhancer composer-auto-hide></uc-ai-enhancer>
-```
-
 ## History strip position
 
 `historyPlacement` places the result-thumbnail strip either relative to the
@@ -89,14 +77,13 @@ separate send step). Pair it with custom [`presets`](/api/components) per mode.
 
 ## Putting it together
 
-These axes are orthogonal — mix them freely. For example, a floating composer that
-docks away, pinned to the top, with the history along the bottom of the canvas:
+These axes are orthogonal — mix them freely. For example, a floating composer
+pinned to the top, with the history along the bottom of the canvas:
 
 ```html
 <uc-ai-enhancer
   composer-placement="top"
   canvas-fit="full"
-  composer-auto-hide
   history-placement="canvas-bottom"
   toolbar-placement="top"
 ></uc-ai-enhancer>
