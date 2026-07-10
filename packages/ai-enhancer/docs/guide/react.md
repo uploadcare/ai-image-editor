@@ -68,6 +68,10 @@ The element's `uc:*` events map to callbacks, and handlers receive the event's
   carries `url`, `uuid`, `prompt`, `mode`, the chosen `aspectRatio`, and the
   committed `file` (an `UploadcareFile`).
 - **`onCancel()`** — the editor was closed without committing.
+- **`onChange(result: DoneDetail | null)`** — the current result changed: a
+  finished generation, a history selection, or a reset (`null`). Use it to
+  drive your own chrome with
+  [`toolbarPlacement="none"`](/guide/layout#bring-your-own-toolbar).
 - **`onError(error: AiEnhancerError)`** — a generation/editor error. Always an
   `AiEnhancerError`: `code` identifies the failure (`'content_moderated'`,
   `'provider_unavailable'`, …) and `cause` holds the original thrown value.

@@ -10,7 +10,7 @@ no framework at all. Two rules apply everywhere:
 - **Object/function values** — `metadata`, `presets`, `sourceFileInfo`,
   `outputFilename`, `localeDefinitionOverride`, `aspectRatios` — must be set as
   **DOM properties**, not string attributes.
-- **`uc:*` events** (`uc:done`, `uc:cancel`, `uc:error`) are plain DOM
+- **`uc:*` events** (`uc:done`, `uc:cancel`, `uc:change`, `uc:error`) are plain DOM
   `CustomEvent`s; `detail` carries the payload. `uc:error`'s detail is always
   `{ error: AiEnhancerError }` — see [Error handling](/guide/errors).
 

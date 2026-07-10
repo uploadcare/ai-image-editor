@@ -1,4 +1,4 @@
-import type { UcAiEnhancer } from '@uploadcare/ai-enhancer';
+import type { DoneDetail, UcAiEnhancer } from '@uploadcare/ai-enhancer';
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
@@ -104,6 +104,34 @@ it('delivers uc:done, uc:cancel and uc:error events to callbacks', async () => {
   const error = new AiEnhancerError('boom', { code: 'invalid_request' });
   el.dispatchEvent(new CustomEvent('uc:error', { detail: { error } }));
   expect(onError).toHaveBeenCalledWith(error);
+});
+
+it('delivers uc:change results to onChange', async () => {
+  const onChange = vi.fn();
+  const container = render(<AiEnhancer pubkey="test-pubkey" onChange={onChange} />);
+
+  await vi.waitFor(
+    () => {
+      expect(container.querySelector('uc-ai-enhancer')).not.toBeNull();
+    },
+    { timeout: 10_000 },
+  );
+
+  const el = container.querySelector('uc-ai-enhancer') as UcAiEnhancer;
+  // full DoneDetail shape so wiring regressions that drop fields would surface
+  const result: DoneDetail = {
+    url: 'https://ucarecdn.com/x/',
+    uuid: 'x',
+    prompt: 'a tiger',
+    mode: 'generate',
+    aspectRatio: [1, 1],
+    file: { uuid: 'x', cdnUrl: 'https://ucarecdn.com/x/' } as DoneDetail['file'],
+  };
+  el.dispatchEvent(new CustomEvent('uc:change', { detail: { result } }));
+  expect(onChange).toHaveBeenCalledWith(result);
+
+  el.dispatchEvent(new CustomEvent('uc:change', { detail: { result: null } }));
+  expect(onChange).toHaveBeenLastCalledWith(null);
 });
 
 it('updated callback props receive events (no stale handlers)', async () => {
