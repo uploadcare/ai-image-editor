@@ -1,7 +1,7 @@
 {
   "name": "@uploadcare/ai-enhancer",
   "version": "0.1.4",
-  "description": "AI image generation and editing web component for Uploadcare",
+  "description": "AI image generation and editing web component for Uploadcare: create images from text prompts, enhance and edit existing ones, and plug into the Uploadcare File Uploader.",
   "type": "module",
   "files": [
     "dist"
@@ -69,21 +69,35 @@
   "keywords": [
     "uploadcare",
     "ai",
+    "ai-image-generator",
+    "ai-image-editor",
     "image-generation",
     "image-editing",
+    "image-enhancement",
+    "text-to-image",
     "web-component",
+    "custom-element",
     "lit",
-    "uploader-plugin"
+    "shadow-dom",
+    "file-uploader",
+    "uploader-plugin",
+    "image-upload",
+    "typescript"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/uploadcare/ai-enhancer.git",
     "directory": "packages/ai-enhancer"
   },
-  "author": "Uploadcare",
+  "author": {
+    "name": "Uploadcare",
+    "url": "https://uploadcare.com"
+  },
   "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
-  "customElements": "docs/api/custom-elements.json"
+  "customElements": "docs/api/custom-elements.json",
+  "homepage": "https://uploadcare.github.io/ai-enhancer/",
+  "bugs": "https://github.com/uploadcare/ai-enhancer/issues"
 }

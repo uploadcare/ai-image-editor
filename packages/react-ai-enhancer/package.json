@@ -1,7 +1,7 @@
 {
   "name": "@uploadcare/react-ai-enhancer",
   "version": "0.1.4",
-  "description": "React wrapper for @uploadcare/ai-enhancer",
+  "description": "React component for Uploadcare's AI image generation and editing \u2014 typed props and events, SSR-safe, works in Next.js Server Components out of the box.",
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -44,16 +44,29 @@
     "ai",
     "react",
     "react-component",
-    "image-generation"
+    "ai-image-generator",
+    "image-generation",
+    "image-editing",
+    "text-to-image",
+    "ssr",
+    "nextjs",
+    "server-components",
+    "web-component",
+    "typescript"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/uploadcare/ai-enhancer.git",
     "directory": "packages/react-ai-enhancer"
   },
-  "author": "Uploadcare",
+  "author": {
+    "name": "Uploadcare",
+    "url": "https://uploadcare.com"
+  },
   "license": "MIT",
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "homepage": "https://uploadcare.github.io/ai-enhancer/guide/react",
+  "bugs": "https://github.com/uploadcare/ai-enhancer/issues"
 }
