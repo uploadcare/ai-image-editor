@@ -59,11 +59,49 @@ composer or pinned to a canvas edge:
 ## Toolbar position
 
 `toolbarPlacement` sets the edge for the **Cancel** / **Done** toolbar — `bottom`
-(default) or `top`.
+(default) or `top` — or removes it entirely with `none`.
 
 ```html
 <uc-ai-enhancer toolbar-placement="top"></uc-ai-enhancer>
 ```
+
+### Bring your own toolbar
+
+With `toolbar-placement="none"` the editor renders no Cancel / Done buttons —
+the stage reclaims their space, and your app provides the controls. Track the
+current result via the `uc:change` event: it fires whenever the result changes —
+a finished generation, a history-strip selection, or *Start over* (then
+`detail.result` is `null`) — with the same payload shape as `uc:done` (`url`,
+`uuid`, `prompt`, `mode`, `aspectRatio`, `file`). Every result is already an
+uploaded Uploadcare file, so `result.file` and `result.url` are usable
+immediately — nothing about it waits for a "commit":
+
+```html
+<uc-ai-enhancer pubkey="YOUR_PUBLIC_KEY" toolbar-placement="none"></uc-ai-enhancer>
+<button id="use" disabled>Use this image</button>
+```
+
+```js
+const editor = document.querySelector('uc-ai-enhancer');
+const useBtn = document.querySelector('#use');
+
+let current = null;
+editor.addEventListener('uc:change', (e) => {
+  current = e.detail.result; // DoneDetail | null
+  useBtn.disabled = current === null;
+});
+useBtn.addEventListener('click', () => {
+  save(current.url); // then close/remove the editor yourself
+});
+```
+
+Closing is yours too: with no toolbar, `uc:done` and `uc:cancel` simply never
+fire (their buttons are the only triggers) — use `uc:change` as the source of
+truth and remove or hide the editor whenever your UI decides the session is
+over.
+
+In React the same pattern is the `onChange` prop; see the
+[React guide](/guide/react#events).
 
 ## Presets-only mode
 

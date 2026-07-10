@@ -405,6 +405,19 @@ describe('<uc-ai-enhancer>', () => {
     await el.updateComplete;
     kids = [...shell.children];
     expect(kids.indexOf(footer())).toBeLessThan(kids.indexOf(stage()));
+
+    // None: no toolbar at all; the stage still renders.
+    el.toolbarPlacement = 'none';
+    await el.updateComplete;
+    expect(shell.querySelector('uc-ai-footer')).toBeNull();
+    expect(stage()).not.toBeNull();
+
+    // An unknown value falls back to the default (bottom), like the other
+    // placement enums.
+    el.toolbarPlacement = 'junk' as never;
+    await el.updateComplete;
+    kids = [...shell.children];
+    expect(kids.indexOf(footer())).toBeGreaterThan(kids.indexOf(stage()));
   });
 
   it('docks the overlay composer (renders the dock-hotzone) when composer-auto-hide is on', async () => {
@@ -522,6 +535,34 @@ describe('<uc-ai-enhancer>', () => {
     expect(detail.url).toBe('https://cdn.example.com/result/');
     expect(detail.file.uuid).toBe('result');
     expect(detail.file.cdnUrl).toBe('https://cdn.example.com/result/');
+  });
+
+  it('fires uc:change as the current result appears and clears', async () => {
+    stubFetch({ uuid: 'result' });
+    const el = mount(STAGING);
+    await el.updateComplete;
+    const onChange = vi.fn();
+    el.addEventListener('uc:change', onChange);
+
+    typePrompt(el, 'a tiger');
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => {
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+    const first = onChange.mock.calls[0]![0].detail;
+    expect(first.result.url).toBe('https://cdn.example.com/result/');
+    expect(first.result.file.uuid).toBe('result');
+
+    // Start over clears the current result -> uc:change with null.
+    await el.updateComplete;
+    const history = el.shadowRoot!.querySelector('uc-ai-history')!;
+    const startOver = history.shadowRoot!.querySelector('.startover__btn') as HTMLButtonElement;
+    startOver.click();
+    await vi.waitFor(() => {
+      expect(onChange).toHaveBeenCalledTimes(2);
+    });
+    expect(onChange.mock.calls[1]![0].detail.result).toBeNull();
   });
 
   it('dispatches uc:cancel when the cancel button is clicked', async () => {

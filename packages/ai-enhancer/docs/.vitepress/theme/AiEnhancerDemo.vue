@@ -20,7 +20,7 @@ const SELECTS: { key: keyof typeof opts; label: string; options: string[] }[] = 
     label: 'History placement',
     options: ['composer-above', 'composer-below', 'canvas-top', 'canvas-bottom'],
   },
-  { key: 'toolbarPlacement', label: 'Toolbar placement', options: ['bottom', 'top'] },
+  { key: 'toolbarPlacement', label: 'Toolbar placement', options: ['bottom', 'top', 'none'] },
   {
     key: 'localeName',
     label: 'Locale',

@@ -17,7 +17,7 @@ import {
 } from '../../../entities/aspect-ratio';
 import { type AiEnhancerError, normalizeError } from '../../../entities/error';
 import { type AiEditorMode, type AiPresets, MODES } from '../../../entities/mode';
-import { type AiProvider, UploadcareDerivativeApi } from '../../../entities/provider';
+import { type AiProvider, type AiProviderResult, UploadcareDerivativeApi } from '../../../entities/provider';
 import { GenerationController, type HistoryEntry } from '../../../features/generation';
 import {
   type AiEnhancerLocale,
@@ -62,6 +62,17 @@ export type ErrorDetail = {
 };
 
 /**
+ * Detail of the `uc:change` event: the current generation result, or `null`
+ * when the editor no longer holds one (Start over). Fires whenever the
+ * current result changes — a finished generation, a history-strip selection,
+ * or a reset — so a host can drive its own chrome (see
+ * {@link UcAiEnhancer.toolbarPlacement} `none`).
+ */
+export type ChangeDetail = {
+  result: DoneDetail | null;
+};
+
+/**
  * Resolves the filename given to a generated/edited result. Receives the source
  * image's original filename (`undefined` when generating from scratch) and the
  * 1-based counter of this generation within the session's history (the first is
@@ -96,10 +107,15 @@ export type CanvasFit = 'full' | 'available';
  */
 export type HistoryPlacement = 'composer-above' | 'composer-below' | 'canvas-top' | 'canvas-bottom';
 
-/** Where the toolbar (Cancel / Done) sits within the editor. */
-export type ToolbarPlacement = 'bottom' | 'top';
+/**
+ * Where the toolbar (Cancel / Done) sits within the editor — or `none` to
+ * render no toolbar at all (host-driven chrome: observe `uc:change` and close
+ * the editor yourself).
+ */
+export type ToolbarPlacement = 'bottom' | 'top' | 'none';
 
 const COMPOSER_PLACEMENTS: readonly ComposerPlacement[] = ['top', 'bottom'];
+const TOOLBAR_PLACEMENTS: readonly ToolbarPlacement[] = ['bottom', 'top', 'none'];
 const CANVAS_FITS: readonly CanvasFit[] = ['full', 'available'];
 const HISTORY_PLACEMENTS: readonly HistoryPlacement[] = [
   'composer-above',
@@ -121,6 +137,10 @@ const HISTORY_PLACEMENTS: readonly HistoryPlacement[] = [
  *   result (the Done button). `detail` carries the result `url`, `uuid`,
  *   `prompt`, `mode`, optional `aspectRatio`, and the `file` object.
  * @fires uc:cancel - Fired when the user cancels (the Cancel button). No detail.
+ * @fires uc:change - A `CustomEvent<ChangeDetail>` fired whenever the current
+ *   generation result changes (finished generation, history selection, or
+ *   reset — then `detail.result` is `null`). Lets a host drive its own chrome
+ *   when the toolbar is hidden (`toolbar-placement="none"`).
  * @fires uc:error - A `CustomEvent<ErrorDetail>` fired when a generation
  *   throws. `detail.error` is always an `AiEnhancerError` — its `code` maps to
  *   a localized message and the original thrown value is on `.cause`.
@@ -287,7 +307,11 @@ export class UcAiEnhancer extends LitElement {
   @property({ type: Boolean, attribute: 'composer-auto-hide', reflect: true })
   public composerAutoHide = false;
 
-  /** Where the toolbar (Cancel / Done) sits: `bottom` (default) or `top`. */
+  /**
+   * Where the toolbar (Cancel / Done) sits: `bottom` (default) or `top`.
+   * `none` hides the toolbar entirely — the host provides its own chrome,
+   * tracking the current result via the `uc:change` event.
+   */
   @property({ attribute: 'toolbar-placement' })
   public toolbarPlacement: ToolbarPlacement = 'bottom';
 
@@ -777,12 +801,11 @@ export class UcAiEnhancer extends LitElement {
     queueMicrotask(() => this._promptRow?.focusInput());
   }
 
-  private _onPrimary(): void {
-    // The primary action commits the current generation result; it never
-    // triggers generation (that's the prompt row's send button).
+  /** Snapshot of the current generation result in the `uc:done` payload shape. */
+  private _resultDetail(): DoneDetail | null {
     const result = this._gen.result;
-    if (!result) return;
-    const detail: DoneDetail = {
+    if (!result) return null;
+    return {
       url: result.url,
       uuid: result.uuid,
       prompt: result.prompt,
@@ -790,12 +813,36 @@ export class UcAiEnhancer extends LitElement {
       aspectRatio: isConcreteRatio(this._selectedRatio) ? this._selectedRatio : undefined,
       file: result.file,
     };
+  }
+
+  private _onPrimary(): void {
+    // The primary action commits the current generation result; it never
+    // triggers generation (that's the prompt row's send button).
+    const detail = this._resultDetail();
+    if (!detail) return;
     this.dispatchEvent(new CustomEvent('uc:done', { detail, bubbles: true, composed: true }));
   }
 
   private _onCancel(e: Event): void {
     e.stopPropagation();
     this.dispatchEvent(new CustomEvent('uc:cancel', { bubbles: true, composed: true }));
+  }
+
+  private _lastResult: AiProviderResult | null = null;
+
+  /**
+   * Every result mutation (generation, history selection, reset) goes through
+   * the generation controller's requestUpdate, so comparing here catches them
+   * all with one code path.
+   * @internal
+   */
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this._gen.result !== this._lastResult) {
+      this._lastResult = this._gen.result;
+      const detail: ChangeDetail = { result: this._resultDetail() };
+      this.dispatchEvent(new CustomEvent('uc:change', { detail, bubbles: true, composed: true }));
+    }
   }
 
   /** @internal */
@@ -963,8 +1010,12 @@ export class UcAiEnhancer extends LitElement {
           `
         : nothing;
 
-    const toolbarTop = this.toolbarPlacement === 'top';
-    const footerTpl = html`
+    const toolbarPlacement = TOOLBAR_PLACEMENTS.includes(this.toolbarPlacement) ? this.toolbarPlacement : 'bottom';
+    const toolbarTop = toolbarPlacement === 'top';
+    const footerTpl =
+      toolbarPlacement === 'none'
+        ? nothing
+        : html`
       <uc-ai-footer
         cancel-label="${this._l('ai-enhancer-cancel')}"
         primary-label="${this._l('ai-enhancer-done-btn')}"
