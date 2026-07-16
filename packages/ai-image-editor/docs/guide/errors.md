@@ -67,10 +67,9 @@ names). The full list with their user-facing messages lives in the
 [localization guide](/guide/localization#error-messages).
 
 `AiImageEditorErrorCode` is deliberately open: the known codes are typed as
-literals (you get autocomplete and exhaustive `switch` support), but the
-backend can introduce new ones at any time, so any other string flows through
-rather than breaking. Don't treat the union as closed — keep a `default`
-branch.
+literals (you get autocomplete for them), but the backend can introduce new
+ones at any time, so any other string flows through rather than breaking.
+Don't treat the union as closed — keep a `default` branch.
 
 ## React
 
