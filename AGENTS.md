@@ -42,10 +42,11 @@ conversion notes).
 
 - Guide pages map to `fern/pages/ai-enhancer/*.mdx` (`getting-started` →
   `quickstart`); `guide/plugin.md` maps to
-  `fern/pages/file-uploader/ai-enhancer.mdx`; the `api/components.md` props
-  table feeds `fern/pages/ai-enhancer/options.mdx` (one heading per option,
-  config options only — so new/changed `@property` docs must be ported there
-  too).
+  `fern/pages/file-uploader/ai-enhancer.mdx`; the props table of the
+  *generated* `docs/api/components.md` (gitignored; produced from the
+  `@property` JSDoc by `npm run docs:api`) feeds
+  `fern/pages/ai-enhancer/options.mdx` (one heading per option, config
+  options only — so new/changed `@property` docs must be ported there too).
 - This site (GitHub Pages) remains the home of the API reference
   (typedoc + the components page's events/CSS custom properties) and the live
   demo; fern-docs links to them with

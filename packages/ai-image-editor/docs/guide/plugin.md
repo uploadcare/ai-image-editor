@@ -19,12 +19,12 @@ config.plugins = [AiImageEditorPlugin]
 ```
 
 ```html
-<uc-file-uploader-regular ctx-name="my-uploader"></uc-file-uploader-regular>
 <uc-config
   ctx-name="my-uploader"
   pubkey="YOUR_PUBLIC_KEY"
   source-list="local, url, camera, ai-image-editor"
 ></uc-config>
+<uc-file-uploader-regular ctx-name="my-uploader"></uc-file-uploader-regular>
 <uc-upload-ctx-provider ctx-name="my-uploader"></uc-upload-ctx-provider>
 ```
 
@@ -41,7 +41,9 @@ The plugin contributes two affordances:
 ## Configuration
 
 The plugin consumes these `<uc-config>` keys (all standard uploader config — set
-them as attributes or properties):
+them as attributes or properties). Keys are listed in their camelCase property
+form; as HTML attributes they're kebab-case (`base-url`, `cdn-cname`,
+`locale-name`, …):
 
 | Key | Required | Purpose |
 |---|---|---|
