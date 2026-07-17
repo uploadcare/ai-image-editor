@@ -1,6 +1,27 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitepress';
 
+const { version } = JSON.parse(
+  readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+);
+
 export default defineConfig({
+  vite: {
+    plugins: [
+      {
+        // Substitute %AI_IMAGE_EDITOR_VERSION% in markdown (works inside code
+        // fences too) with the current package version, so docs never pin a
+        // stale release.
+        name: 'ai-image-editor-version',
+        enforce: 'pre',
+        transform(code, id) {
+          if (id.endsWith('.md') && code.includes('%AI_IMAGE_EDITOR_VERSION%')) {
+            return code.replaceAll('%AI_IMAGE_EDITOR_VERSION%', version);
+          }
+        },
+      },
+    ],
+  },
   title: '@uploadcare/ai-image-editor',
   description: 'AI image generation & editing web component for Uploadcare.',
   // Served as a GitHub Pages project site at https://uploadcare.github.io/ai-image-editor/.

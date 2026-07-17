@@ -51,7 +51,9 @@ conversion notes).
   (typedoc + the components page's events/CSS custom properties) and the live
   demo; fern-docs links to them with
   `?utm_source=uploadcare-docs&utm_medium=docs&utm_campaign=ai-enhancer`.
-- **CDN examples use `@latest`**, not a pinned version (which goes stale), and
-  the accompanying warning tells readers to pin an exact version in
-  production. Don't replace `@latest` with a concrete version; version
-  strings in the warning prose are illustrative only.
+- **CDN examples use the `%AI_ENHANCER_VERSION%` placeholder**, substituted
+  with the current `package.json` version at docs build time (see the
+  `ai-enhancer-version` Vite plugin in `docs/.vitepress/config.mts`). Never
+  hardcode a version in the guides — it goes stale. When porting to
+  fern-docs (which has no such substitution), map the placeholder to
+  `@latest` and keep the pin-in-production warning.
