@@ -71,6 +71,14 @@ literals (you get autocomplete for them), but the backend can introduce new
 ones at any time, so any other string flows through rather than breaking.
 Don't treat the union as closed — keep a `default` branch.
 
+### Enabling AI Enhancer {#derivative-disabled}
+
+`derivative_disabled` means AI generation isn't enabled for your project.
+During the **public beta**, AI Enhancer is available on all **paid**
+Uploadcare plans — [upgrade your plan](https://uploadcare.com/pricing/) if
+you're on a free one, or contact support if you hit this code on a paid
+account.
+
 ## React
 
 The [React wrapper](/guide/react) delivers the same object to `onError`:

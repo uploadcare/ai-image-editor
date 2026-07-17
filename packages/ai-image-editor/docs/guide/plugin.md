@@ -8,6 +8,12 @@ Register the plugin on `<uc-config>` and add `ai-image-editor` to the source lis
 The plugin reads its settings (public key, CDN config, locale, …) straight from
 the uploader config — there's nothing extra to wire up.
 
+::: info Public beta
+AI Enhancer is in **public beta** and available on all **paid** Uploadcare
+plans — on a free project its requests fail with the
+[`derivative_disabled` error](/guide/errors#derivative-disabled).
+:::
+
 ```ts
 import * as UC from '@uploadcare/file-uploader'
 import { AiImageEditorPlugin } from '@uploadcare/ai-image-editor/plugin'

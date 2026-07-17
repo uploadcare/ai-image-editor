@@ -32,6 +32,12 @@ You'll also need an Uploadcare **public key** to enable generate/edit. Grab one
 from the [Uploadcare dashboard](https://app.uploadcare.com/) — see
 [API keys](https://uploadcare.com/docs/start/settings/#keys) in the docs.
 
+::: info Public beta
+AI Enhancer is in **public beta** and available on all **paid** Uploadcare
+plans. On a free project, generation and edit requests fail with the
+[`derivative_disabled` error](/guide/errors#derivative-disabled).
+:::
+
 Three entry points, imported independently so you only pull in what you use:
 
 | Import | What it gives you |
