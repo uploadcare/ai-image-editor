@@ -30,7 +30,7 @@ bun add @uploadcare/ai-image-editor
 
 You'll also need an Uploadcare **public key** to enable generate/edit. Grab one
 from the [Uploadcare dashboard](https://app.uploadcare.com/) — see
-[API keys](https://uploadcare.com/docs/start/settings/#api-keys) in the docs.
+[API keys](https://uploadcare.com/docs/start/settings/#keys) in the docs.
 
 Three entry points, imported independently so you only pull in what you use:
 

@@ -28,7 +28,7 @@ for you, so a single import registers `<uc-ai-image-editor>`:
 
 ```html
 <script type="module">
-  import 'https://esm.run/@uploadcare/ai-image-editor@0.1.0'
+  import 'https://esm.run/@uploadcare/ai-image-editor@0.1.4'
 </script>
 
 <uc-ai-image-editor pubkey="YOUR_PUBLIC_KEY"></uc-ai-image-editor>
@@ -38,7 +38,7 @@ Set object/function properties and listen for events from a module script:
 
 ```html
 <script type="module">
-  import 'https://esm.run/@uploadcare/ai-image-editor@0.1.0'
+  import 'https://esm.run/@uploadcare/ai-image-editor@0.1.4'
 
   const editor = document.querySelector('uc-ai-image-editor')
   editor.aspectRatios = [[1, 1], [16, 9]]
@@ -57,7 +57,7 @@ one (`de`, `ja`, …) from the same CDN when you set the language:
 <uc-ai-image-editor pubkey="YOUR_PUBLIC_KEY" locale-name="de"></uc-ai-image-editor>
 ```
 
-**Pin a version** (e.g. `@0.1.0`) in production. The lazy locale modules must come
+**Pin a version** (e.g. `@0.1.4`) in production. The lazy locale modules must come
 from the same build as the entry; an unpinned URL can otherwise resolve them to a
 different version.
 
