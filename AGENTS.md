@@ -51,3 +51,7 @@ conversion notes).
   (typedoc + the components page's events/CSS custom properties) and the live
   demo; fern-docs links to them with
   `?utm_source=uploadcare-docs&utm_medium=docs&utm_campaign=ai-enhancer`.
+- **CDN examples use `@latest`**, not a pinned version (which goes stale), and
+  the accompanying warning tells readers to pin an exact version in
+  production. Don't replace `@latest` with a concrete version; version
+  strings in the warning prose are illustrative only.
