@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Kuva täisekraanil',
   'ai-enhancer-exit-fullscreen': 'Välju täisekraanist',
   'ai-enhancer-aspect-ratio-aria': 'Vali kuvasuhe',
-  'ai-enhancer-aspect-original': 'Originaal',
+  'ai-enhancer-aspect-auto': 'Automaatne',
   'ai-enhancer-aspect-square': 'Ruut',
   'ai-enhancer-aspect-tall': 'Kõrge',
   'ai-enhancer-aspect-wide': 'Lai',

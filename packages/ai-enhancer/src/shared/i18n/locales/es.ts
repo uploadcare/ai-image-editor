@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Ver en pantalla completa',
   'ai-enhancer-exit-fullscreen': 'Salir de pantalla completa',
   'ai-enhancer-aspect-ratio-aria': 'Elegir relación de aspecto',
-  'ai-enhancer-aspect-original': 'Original',
+  'ai-enhancer-aspect-auto': 'Automático',
   'ai-enhancer-aspect-square': 'Cuadrado',
   'ai-enhancer-aspect-tall': 'Alto',
   'ai-enhancer-aspect-wide': 'Ancho',

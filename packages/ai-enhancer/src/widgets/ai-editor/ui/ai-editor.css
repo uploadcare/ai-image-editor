@@ -30,8 +30,7 @@
      leaves only a faint tail above the card, which vanishes against a light
      image). Shared so the card and the collapsing docked composer match. */
   --uc-ai-composer-shadow:
-    0 4px 14px light-dark(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.34)), 0 0 26px
-    light-dark(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.42));
+    0px 6px 20px oklch(0% 0 0 / 0.1);
   /* Softer shadow for the auto-hidden peek: drops the wide ambient glow (which
      would detach into a band over the canvas above the thin peek) for a subtle
      contact shadow. Swapped in only while hidden — see the auto-hide rules. */

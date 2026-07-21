@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import './UcAiAspectRatio';
-import { ORIGINAL_RATIO, POPULAR_ASPECT_RATIOS, toAspectRatioOption } from '../../../entities/aspect-ratio';
+import { AUTO_RATIO, POPULAR_ASPECT_RATIOS, toAspectRatioOption } from '../../../entities/aspect-ratio';
 import type { UcAiAspectRatio } from './UcAiAspectRatio';
 
 async function mount(overrides: Partial<UcAiAspectRatio> = {}): Promise<UcAiAspectRatio> {
@@ -39,16 +39,16 @@ describe('UcAiAspectRatio', () => {
     expect(trigger(el).disabled).toBe(true);
   });
 
-  it('renders an Original entry when one is provided (edit mode)', async () => {
+  it('renders an Auto entry when one is provided (edit mode)', async () => {
     const el = await mount({
       options: [
-        { value: ORIGINAL_RATIO, labelKey: 'ai-enhancer-aspect-original' },
+        { value: AUTO_RATIO, labelKey: 'ai-enhancer-aspect-auto' },
         ...POPULAR_ASPECT_RATIOS.map(toAspectRatioOption),
       ],
-      selected: ORIGINAL_RATIO,
-      labelFor: () => 'Original',
+      selected: AUTO_RATIO,
+      labelFor: () => 'Auto',
     });
     expect(options(el)).toHaveLength(POPULAR_ASPECT_RATIOS.length + 1);
-    expect(trigger(el).textContent).toContain('Original');
+    expect(trigger(el).textContent).toContain('Auto');
   });
 });

@@ -7,10 +7,10 @@ import {
   type AspectRatioOption,
   type AspectRatioValue,
   aspectRatioValueEquals,
+  AUTO_RATIO,
   DEFAULT_GENERATE_RATIO,
   isConcreteRatio,
   isValidAspectRatio,
-  ORIGINAL_RATIO,
   POPULAR_ASPECT_RATIOS,
   parseAspectRatioList,
   toAspectRatioOption,
@@ -429,7 +429,7 @@ export class UcAiEnhancer extends LitElement {
     const mode = this._mode;
     if (mode !== this._lastMode) {
       this._lastMode = mode;
-      this._selectedRatio = mode === 'edit' ? ORIGINAL_RATIO : this._defaultGenerateRatio();
+      this._selectedRatio = mode === 'edit' ? AUTO_RATIO : this._defaultGenerateRatio();
     } else if (changed.has('aspectRatios')) {
       const sel = this._selectedRatio;
       if (isConcreteRatio(sel) && !this._standardRatios().some((r) => aspectRatioValueEquals(r, sel))) {
@@ -578,7 +578,7 @@ export class UcAiEnhancer extends LitElement {
     const file = this._effectiveSourceFileInfo;
     const url = this._inputUrl;
     if (!uuid || !url || !file) return null;
-    return { id: uuid, prompt: '', mode: 'edit', url, file, ratio: ORIGINAL_RATIO };
+    return { id: uuid, prompt: '', mode: 'edit', url, file, ratio: AUTO_RATIO };
   }
 
   /** Strip entries: the generated results (newest-first) plus the original source
@@ -658,7 +658,7 @@ export class UcAiEnhancer extends LitElement {
     if (cached) return cached;
     const standard = this._standardRatios().map(toAspectRatioOption);
     const options: AspectRatioOption[] =
-      mode === 'edit' ? [{ value: ORIGINAL_RATIO, labelKey: 'ai-enhancer-aspect-original' }, ...standard] : standard;
+      mode === 'edit' ? [{ value: AUTO_RATIO, labelKey: 'ai-enhancer-aspect-auto' }, ...standard] : standard;
     this._ratioOptionsCache.set(mode, options);
     return options;
   }
