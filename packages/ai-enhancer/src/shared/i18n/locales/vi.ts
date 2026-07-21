@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Xem toàn màn hình',
   'ai-enhancer-exit-fullscreen': 'Thoát toàn màn hình',
   'ai-enhancer-aspect-ratio-aria': 'Chọn tỷ lệ khung hình',
-  'ai-enhancer-aspect-original': 'Gốc',
+  'ai-enhancer-aspect-auto': 'Tự động',
   'ai-enhancer-aspect-square': 'Vuông',
   'ai-enhancer-aspect-tall': 'Cao',
   'ai-enhancer-aspect-wide': 'Rộng',

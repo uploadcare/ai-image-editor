@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': '全画面表示',
   'ai-enhancer-exit-fullscreen': '全画面表示を終了',
   'ai-enhancer-aspect-ratio-aria': 'アスペクト比を選択',
-  'ai-enhancer-aspect-original': '元のまま',
+  'ai-enhancer-aspect-auto': '自動',
   'ai-enhancer-aspect-square': '正方形',
   'ai-enhancer-aspect-tall': '縦長',
   'ai-enhancer-aspect-wide': '横長',

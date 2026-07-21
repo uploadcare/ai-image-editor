@@ -627,7 +627,7 @@ describe('<uc-ai-enhancer>', () => {
     expect(history.shadowRoot!.querySelector('.chip--selected')).toBeTruthy();
   });
 
-  it('renders the aspect-ratio picker in generate mode (no Original) and sends the selected ratio', async () => {
+  it('renders the aspect-ratio picker in generate mode (no Auto) and sends the selected ratio', async () => {
     const stub = stubFetch();
     const el = mount({ ...STAGING, 'aspect-ratios': '16:9 1:1' });
     await el.updateComplete;
@@ -635,7 +635,7 @@ describe('<uc-ai-enhancer>', () => {
     const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
     expect(ratio).toBeTruthy();
 
-    // Generate mode offers only the standard ratios — no "Original".
+    // Generate mode offers only the standard ratios — no "Auto".
     (ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
     await el.updateComplete;
     const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
@@ -651,27 +651,27 @@ describe('<uc-ai-enhancer>', () => {
     expect(stub.generateBodies[0]!.aspect_ratio).toEqual([1, 1]);
   });
 
-  it('defaults edit mode to "Original" and omits aspect_ratio (preserving the source AR)', async () => {
+  it('defaults edit mode to "Auto" and omits aspect_ratio (preserving the source AR)', async () => {
     const stub = stubFetch({ uuid: 'edited' });
     const el = mount(STAGING);
     el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
     expect(editorMode(el)).toBe('edit');
 
-    // The picker leads with an "Original" entry (generic icon, no w:h numbers).
+    // The picker leads with an "Auto" entry (square icon, no w:h numbers).
     const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
     (ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
     await el.updateComplete;
     const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
-    expect(options[0]!.textContent).toContain('Original');
-    // "Original" reserves the ratio column but shows no "w:h" numbers.
+    expect(options[0]!.textContent).toContain('Auto');
+    // "Auto" reserves the ratio column but shows no "w:h" numbers.
     expect(options[0]!.querySelector('.option-ratio')?.textContent).toBe('');
 
     typePrompt(el, 'add a hat');
     await el.updateComplete;
     clickSend(el);
     await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
-    // Original is the default → no aspect_ratio on the wire; backend preserves it.
+    // Auto is the default → no aspect_ratio on the wire; backend preserves it.
     expect(stub.generateBodies[0]!.aspect_ratio).toBeUndefined();
     expect(stub.generateBodies[0]!.source).toBe(SAMPLE_UUID);
   });
@@ -704,7 +704,7 @@ describe('<uc-ai-enhancer>', () => {
     };
     expect(history.entries[0]!.ratio).toEqual([1, 1]);
 
-    // Change the ratio after the fact (edit options are [Original, 16:9, 1:1]).
+    // Change the ratio after the fact (edit options are [Auto, 16:9, 1:1]).
     await pickOption(1);
     expect(selected()).toEqual([16, 9]);
 
@@ -780,7 +780,7 @@ describe('<uc-ai-enhancer>', () => {
     const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
     (ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
     await el.updateComplete;
-    // [Original, 1:1] in edit mode — pick the concrete ratio to reshape.
+    // [Auto, 1:1] in edit mode — pick the concrete ratio to reshape.
     const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
     expect(options.length).toBe(2);
     options[1]!.click();

@@ -7,18 +7,18 @@ export type AspectRatio = readonly [number, number];
  * wire it maps to *omitting* `aspect_ratio` — the edit backend then preserves
  * the source's ratio. Only meaningful in edit mode.
  */
-export const ORIGINAL_RATIO = 'original';
+export const AUTO_RATIO = 'auto';
 
-/** A picker selection: a concrete ratio, or {@link ORIGINAL_RATIO}. */
-export type AspectRatioValue = AspectRatio | typeof ORIGINAL_RATIO;
+/** A picker selection: a concrete ratio, or {@link AUTO_RATIO}. */
+export type AspectRatioValue = AspectRatio | typeof AUTO_RATIO;
 
 export type AspectRatioLabelKey = Extract<keyof typeof enLocale, `ai-enhancer-aspect-${string}`>;
 
 export type AspectRatioOption = {
-  /** A concrete [w, h] ratio, or {@link ORIGINAL_RATIO}. */
+  /** A concrete [w, h] ratio, or {@link AUTO_RATIO}. */
   value: AspectRatioValue;
   /**
-   * Locale key for the human label ("Square", "Tall", "Original", …). `null`
+   * Locale key for the human label ("Square", "Tall", "Auto", …). `null`
    * when a concrete ratio is not in the known set — the picker then shows just
    * the "w:h" string.
    */
@@ -27,12 +27,12 @@ export type AspectRatioOption = {
 
 /** Narrow a selection to a concrete ratio (everything except the sentinel). */
 export function isConcreteRatio(value: AspectRatioValue | null): value is AspectRatio {
-  return value != null && value !== ORIGINAL_RATIO;
+  return value != null && value !== AUTO_RATIO;
 }
 
-/** Equality across selections, handling the {@link ORIGINAL_RATIO} sentinel. */
+/** Equality across selections, handling the {@link AUTO_RATIO} sentinel. */
 export function aspectRatioValueEquals(a: AspectRatioValue, b: AspectRatioValue): boolean {
-  if (a === ORIGINAL_RATIO || b === ORIGINAL_RATIO) return a === b;
+  if (a === AUTO_RATIO || b === AUTO_RATIO) return a === b;
   return aspectRatioEquals(a, b);
 }
 

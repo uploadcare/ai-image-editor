@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Vizualizare pe tot ecranul',
   'ai-enhancer-exit-fullscreen': 'Ieșire din ecran complet',
   'ai-enhancer-aspect-ratio-aria': 'Alege raportul de aspect',
-  'ai-enhancer-aspect-original': 'Original',
+  'ai-enhancer-aspect-auto': 'Automat',
   'ai-enhancer-aspect-square': 'Pătrat',
   'ai-enhancer-aspect-tall': 'Înalt',
   'ai-enhancer-aspect-wide': 'Lat',

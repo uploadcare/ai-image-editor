@@ -3,10 +3,10 @@ import {
   aspectRatioEquals,
   aspectRatioKey,
   aspectRatioValueEquals,
+  AUTO_RATIO,
   isConcreteRatio,
   isValidAspectRatio,
   labelKeyForRatio,
-  ORIGINAL_RATIO,
   POPULAR_ASPECT_RATIOS,
   parseAspectRatioList,
   toAspectRatioOption,
@@ -63,20 +63,20 @@ describe('toAspectRatioOption', () => {
 });
 
 describe('isConcreteRatio', () => {
-  it('is true for a ratio tuple, false for the Original sentinel and null', () => {
+  it('is true for a ratio tuple, false for the Auto sentinel and null', () => {
     expect(isConcreteRatio([16, 9])).toBe(true);
-    expect(isConcreteRatio(ORIGINAL_RATIO)).toBe(false);
+    expect(isConcreteRatio(AUTO_RATIO)).toBe(false);
     expect(isConcreteRatio(null)).toBe(false);
   });
 });
 
 describe('aspectRatioValueEquals', () => {
-  it('compares concrete ratios and the Original sentinel', () => {
+  it('compares concrete ratios and the Auto sentinel', () => {
     expect(aspectRatioValueEquals([1, 1], [1, 1])).toBe(true);
     expect(aspectRatioValueEquals([1, 1], [16, 9])).toBe(false);
-    expect(aspectRatioValueEquals(ORIGINAL_RATIO, ORIGINAL_RATIO)).toBe(true);
-    expect(aspectRatioValueEquals(ORIGINAL_RATIO, [1, 1])).toBe(false);
-    expect(aspectRatioValueEquals([1, 1], ORIGINAL_RATIO)).toBe(false);
+    expect(aspectRatioValueEquals(AUTO_RATIO, AUTO_RATIO)).toBe(true);
+    expect(aspectRatioValueEquals(AUTO_RATIO, [1, 1])).toBe(false);
+    expect(aspectRatioValueEquals([1, 1], AUTO_RATIO)).toBe(false);
   });
 });
 
