@@ -60,7 +60,7 @@
   /* Size to the widest option so localized labels don't wrap; clamp so it stays
      reasonable (very long labels then ellipsize — see `.option-label`). */
   width: max-content;
-  min-width: 110px;
+  min-width: 180px;
   max-width: 320px;
   position-anchor: --ai-aspect-anchor;
   inset: auto;
@@ -142,10 +142,6 @@
   color: var(--uc-ai-foreground);
 }
 
-.option-ratio.has-auto {
-  font-weight: 400;
-}
-
 .option-label {
   flex: 1;
   min-width: 0;
@@ -169,13 +165,4 @@
   .popover:not(:popover-open) {
     transform: none;
   }
-}
-
-.caption {
-  margin: 0;
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--uc-ai-secondary-foreground);
-  padding: 0 10px;
 }
