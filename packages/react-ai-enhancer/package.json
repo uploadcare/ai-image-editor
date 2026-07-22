@@ -1,7 +1,7 @@
 {
   "name": "@uploadcare/react-ai-enhancer",
-  "version": "0.1.4",
-  "description": "React component for Uploadcare's AI image generation and editing \u2014 typed props and events, SSR-safe, works in Next.js Server Components out of the box.",
+  "version": "0.1.5",
+  "description": "React component for Uploadcare's AI image generation and editing — typed props and events, SSR-safe, works in Next.js Server Components out of the box.",
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@lit/react": "^1.0.8",
-    "@uploadcare/ai-enhancer": "^0.1.4"
+    "@uploadcare/ai-enhancer": "^0.1.5"
   },
   "peerDependencies": {
     "@types/react": ">= 17.0.0",
