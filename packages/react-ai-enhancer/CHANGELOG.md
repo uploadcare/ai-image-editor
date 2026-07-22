@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.5](https://github.com/uploadcare/ai-enhancer/compare/react-ai-enhancer-v0.1.4...react-ai-enhancer-v0.1.5) (2026-07-22)
+
+
+### Miscellaneous Chores
+
+* **react-ai-enhancer:** Synchronize ai-enhancer versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @uploadcare/ai-enhancer bumped from ^0.1.4 to ^0.1.5
+
 ## [0.1.4](https://github.com/uploadcare/ai-enhancer/compare/react-ai-enhancer-v0.1.3...react-ai-enhancer-v0.1.4) (2026-07-10)
 
 
