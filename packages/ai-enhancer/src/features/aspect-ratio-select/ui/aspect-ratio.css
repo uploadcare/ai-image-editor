@@ -22,7 +22,7 @@
 }
 
 .trigger:hover,
-.trigger[aria-expanded="true"] {
+.trigger[aria-expanded='true'] {
   background: var(--uc-ai-secondary-hover);
 }
 
@@ -123,7 +123,7 @@
   background: var(--uc-ai-secondary);
 }
 
-.option[aria-selected="true"] {
+.option[aria-selected='true'] {
   background: var(--uc-ai-secondary-hover);
 }
 

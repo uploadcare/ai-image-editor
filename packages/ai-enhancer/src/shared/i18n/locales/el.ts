@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Προβολή σε πλήρη οθόνη',
   'ai-enhancer-exit-fullscreen': 'Έξοδος από πλήρη οθόνη',
   'ai-enhancer-aspect-ratio-aria': 'Επιλέξτε αναλογία εικόνας',
-  'ai-enhancer-aspect-original': 'Αρχικό',
+  'ai-enhancer-aspect-auto': 'Αυτόματο',
   'ai-enhancer-aspect-square': 'Τετράγωνο',
   'ai-enhancer-aspect-tall': 'Ψηλό',
   'ai-enhancer-aspect-wide': 'Πλατύ',

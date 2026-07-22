@@ -10,7 +10,7 @@ import {
   aspectRatioValueEquals,
   isConcreteRatio,
 } from '../../../entities/aspect-ratio';
-import { ICON_ASPECT_ORIGINAL } from '../../../shared/ui/icons';
+import { ICON_ASPECT_AUTO } from '../../../shared/ui/icons';
 import styles from './aspect-ratio.css?inline';
 
 export type AspectRatioSelectDetail = { value: AspectRatioValue };
@@ -77,16 +77,16 @@ export class UcAiAspectRatio extends LitElement {
     this._setOpen(false);
   }
 
-  /** Icon for a selection: the ratio's shape, or the generic "Original" glyph. */
+  /** Icon for a selection: the ratio's shape, or the generic "Auto" square glyph. */
   private _iconFor(value: AspectRatioValue): string {
-    return isConcreteRatio(value) ? aspectRatioSvg(value) : ICON_ASPECT_ORIGINAL;
+    return isConcreteRatio(value) ? aspectRatioSvg(value) : ICON_ASPECT_AUTO;
   }
 
   private _triggerLabel(): string {
     const sel = this.selected;
     if (!sel) return '';
     if (isConcreteRatio(sel)) return aspectRatioKey(sel);
-    // For "Original", reuse the matching option's human label.
+    // For "Auto", reuse the matching option's human label.
     const option = this.options.find((o) => o.value === sel);
     return option ? this.labelFor(option) : '';
   }

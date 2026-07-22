@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Vis i fullskjerm',
   'ai-enhancer-exit-fullscreen': 'Avslutt fullskjerm',
   'ai-enhancer-aspect-ratio-aria': 'Velg bildeformat',
-  'ai-enhancer-aspect-original': 'Original',
+  'ai-enhancer-aspect-auto': 'Automatisk',
   'ai-enhancer-aspect-square': 'Kvadratisk',
   'ai-enhancer-aspect-tall': 'Høyt',
   'ai-enhancer-aspect-wide': 'Bredt',

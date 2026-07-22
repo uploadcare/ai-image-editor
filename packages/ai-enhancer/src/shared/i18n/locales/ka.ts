@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'სრულ ეკრანზე ნახვა',
   'ai-enhancer-exit-fullscreen': 'სრული ეკრანიდან გასვლა',
   'ai-enhancer-aspect-ratio-aria': 'აირჩიეთ ფარდობა',
-  'ai-enhancer-aspect-original': 'ორიგინალი',
+  'ai-enhancer-aspect-auto': 'ავტომატური',
   'ai-enhancer-aspect-square': 'კვადრატი',
   'ai-enhancer-aspect-tall': 'მაღალი',
   'ai-enhancer-aspect-wide': 'განიერი',
