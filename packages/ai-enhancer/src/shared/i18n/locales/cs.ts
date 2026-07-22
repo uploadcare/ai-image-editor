@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Zobrazit na celou obrazovku',
   'ai-enhancer-exit-fullscreen': 'Ukončit celou obrazovku',
   'ai-enhancer-aspect-ratio-aria': 'Vyberte poměr stran',
-  'ai-enhancer-aspect-original': 'Původní',
+  'ai-enhancer-aspect-auto': 'Automaticky',
   'ai-enhancer-aspect-square': 'Čtverec',
   'ai-enhancer-aspect-tall': 'Vysoký',
   'ai-enhancer-aspect-wide': 'Široký',

@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': '全屏查看',
   'ai-enhancer-exit-fullscreen': '退出全屏',
   'ai-enhancer-aspect-ratio-aria': '选择宽高比',
-  'ai-enhancer-aspect-original': '原始',
+  'ai-enhancer-aspect-auto': '自动',
   'ai-enhancer-aspect-square': '正方形',
   'ai-enhancer-aspect-tall': '高',
   'ai-enhancer-aspect-wide': '宽',

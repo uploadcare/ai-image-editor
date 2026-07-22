@@ -17,7 +17,7 @@ const locale: AiEnhancerLocale = {
   'ai-enhancer-fullscreen': 'Skatīt pilnekrāna režīmā',
   'ai-enhancer-exit-fullscreen': 'Iziet no pilnekrāna',
   'ai-enhancer-aspect-ratio-aria': 'Izvēlieties malu attiecību',
-  'ai-enhancer-aspect-original': 'Oriģināls',
+  'ai-enhancer-aspect-auto': 'Automātiski',
   'ai-enhancer-aspect-square': 'Kvadrāts',
   'ai-enhancer-aspect-tall': 'Augsts',
   'ai-enhancer-aspect-wide': 'Plats',

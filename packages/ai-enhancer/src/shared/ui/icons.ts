@@ -20,11 +20,9 @@ export const ICON_ARROW_THICK = `<svg viewBox="0 0 16 16" fill="none" xmlns="htt
   <path d="M3 6.74251L8 2L13 6.74251M7.99961 14V2.10636" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
-/** Generic "source image" glyph for the edit picker's "Original" option. */
-export const ICON_ASPECT_ORIGINAL = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect x="2" y="3" width="12" height="10" rx="1.6" stroke="currentColor" stroke-width="1.4"/>
-  <circle cx="5.75" cy="6.25" r="1.05" stroke="currentColor" stroke-width="1.2"/>
-  <path d="M3 11.5l3-2.6 2.3 1.8L11 8l2 2.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+/** Square glyph for the edit picker's "Auto" option. */
+export const ICON_ASPECT_AUTO = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
 </svg>`;
 
 export const ICON_FULLSCREEN = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
