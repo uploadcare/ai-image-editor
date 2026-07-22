@@ -6,7 +6,6 @@
 ### Features
 
 * **ai-enhancer:** rename aspect-ratio "original" to "auto" ([8a4cec1](https://github.com/uploadcare/ai-enhancer/commit/8a4cec1434561fb7026c9700985a69b9fc1fc5e1))
-* **ai-enhancer:** rename aspect-ratio "original" to "auto" ([2646c62](https://github.com/uploadcare/ai-enhancer/commit/2646c62735ef7688f2e42d301b7acae6b2977f28))
 
 ## [0.1.4](https://github.com/uploadcare/ai-enhancer/compare/ai-enhancer-v0.1.3...ai-enhancer-v0.1.4) (2026-07-10)
 
