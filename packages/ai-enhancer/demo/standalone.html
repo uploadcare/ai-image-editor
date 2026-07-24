@@ -24,6 +24,15 @@
       height: min(82vh, 820px);
       margin: 0 auto;
     }
+    /* Content sizing: the editor derives its own height from the active ratio;
+       we only fix the width and bound the height (the attribute reflects the
+       `sizing` property, so plain CSS can key off it). */
+    uc-ai-enhancer[sizing='content'] {
+      height: auto;
+      width: min(100%, 720px);
+      min-height: 320px;
+      max-height: 85vh;
+    }
     uc-ai-enhancer.brand-overrides {
       --uc-ai-primary: oklch(0.6 0.18 25);
       --uc-ai-primary-hover: oklch(0.55 0.18 25);
@@ -69,6 +78,13 @@
       <select id="canvas-fit">
         <option value="available" selected>available (default)</option>
         <option value="full">full</option>
+      </select>
+    </label>
+    <label slot="controls">
+      Sizing
+      <select id="sizing">
+        <option value="fill" selected>fill (default)</option>
+        <option value="content">content</option>
       </select>
     </label>
     <label slot="controls">
@@ -206,6 +222,12 @@
     document.getElementById('canvas-fit').addEventListener('change', (e) => {
       editor.canvasFit = e.target.value;
       shell.log(`canvas-fit → ${e.target.value}`);
+    });
+    document.getElementById('sizing').addEventListener('change', (e) => {
+      // Width/min-height/max-height for content mode come from the demo's own
+      // CSS (`uc-ai-enhancer[sizing='content']` above) — plain consumer CSS.
+      editor.sizing = e.target.value;
+      shell.log(`sizing → ${e.target.value}`);
     });
     document.getElementById('history-placement').addEventListener('change', (e) => {
       editor.historyPlacement = e.target.value;

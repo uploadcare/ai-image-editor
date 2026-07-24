@@ -196,6 +196,10 @@
 @media (prefers-reduced-motion: reduce) {
   .canvas__viewport,
   .canvas__frame,
+  /* The frame's transition rule is `.canvas.is-ready .canvas__frame` — the
+     bare `.canvas__frame` above loses to it on specificity, so it must be
+     overridden at its own specificity. */
+  .canvas.is-ready .canvas__frame,
   .canvas__image,
   .fullscreen-btn {
     transition: none;

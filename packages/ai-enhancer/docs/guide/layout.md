@@ -17,6 +17,54 @@ you can set it in HTML or as a property — and you can try them all live on the
 - **History strip** — the row of result thumbnails from the current session.
 - **Toolbar** — the **Cancel** / **Done** actions.
 
+## Sizing
+
+`sizing` decides who owns the editor's height:
+
+| Value | Result |
+|---|---|
+| `fill` *(default)* | The editor fills the box you give it. Size the host element explicitly with CSS. |
+| `content` | You fix the width; the editor derives its **own** height from the active aspect ratio, within your `min-height` / `max-height`. |
+
+### Fill (default)
+
+Give the element a concrete box — the editor fills it, and the canvas
+letterboxes the image inside:
+
+```css
+uc-ai-enhancer {
+  max-width: 1200px;
+  height: min(82vh, 820px);
+}
+```
+
+An unsized host falls back to a 480px minimum height instead of collapsing;
+your own CSS on the element always wins over that fallback.
+
+### Content-driven height
+
+With `sizing="content"` the editor grows and shrinks with the image: at the
+width you set, its height follows the aspect ratio currently on canvas — the
+picker selection while composing, the result's own ratio once one exists —
+plus the composer/toolbar chrome. Constrain it with plain CSS on the host:
+
+```html
+<uc-ai-enhancer sizing="content"></uc-ai-enhancer>
+```
+
+```css
+uc-ai-enhancer {
+  width: 720px;
+  min-height: 360px;
+  max-height: 85vh;
+}
+```
+
+When a tall result would exceed your `max-height`, the editor stops growing
+and the canvas letterboxes the image inside — exactly like fill mode. Height
+changes (a new ratio pick, a differently-shaped result) animate in sync with
+the canvas frame.
+
 ## Composer position
 
 `composerPlacement` picks which edge the composer sits on:

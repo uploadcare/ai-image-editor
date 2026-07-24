@@ -5,6 +5,7 @@ import { onMounted, reactive, ref, watch } from 'vue';
 const opts = reactive({
   composerPlacement: 'bottom',
   canvasFit: 'available',
+  sizing: 'fill',
   historyPlacement: 'composer-above',
   toolbarPlacement: 'bottom',
   presetsOnly: false,
@@ -15,6 +16,7 @@ const opts = reactive({
 const SELECTS: { key: keyof typeof opts; label: string; options: string[] }[] = [
   { key: 'composerPlacement', label: 'Composer placement', options: ['bottom', 'top'] },
   { key: 'canvasFit', label: 'Canvas fit', options: ['available', 'full'] },
+  { key: 'sizing', label: 'Sizing', options: ['fill', 'content'] },
   {
     key: 'historyPlacement',
     label: 'History placement',
@@ -39,6 +41,7 @@ function apply(): void {
   if (!editor) return;
   editor.composerPlacement = opts.composerPlacement;
   editor.canvasFit = opts.canvasFit;
+  editor.sizing = opts.sizing;
   editor.historyPlacement = opts.historyPlacement;
   editor.toolbarPlacement = opts.toolbarPlacement;
   editor.presetsOnly = opts.presetsOnly;
@@ -46,6 +49,13 @@ function apply(): void {
   const ar = opts.aspectRatios.trim();
   if (ar) editor.setAttribute('aspect-ratios', ar);
   else editor.removeAttribute('aspect-ratios');
+  // Content sizing: the editor derives its own height, so the stage wraps it
+  // (see .demo-stage--content) and plain CSS on the host bounds the height.
+  // Fill keeps the fixed-height stage the editor fills.
+  const content = opts.sizing === 'content';
+  editor.style.height = content ? 'auto' : '100%';
+  editor.style.minHeight = content ? '320px' : '';
+  editor.style.maxHeight = content ? '80vh' : '';
 }
 
 // A small event/option log, like the standalone demo's shell.
@@ -123,7 +133,7 @@ onMounted(async () => {
       </label>
     </div>
 
-    <div ref="host" class="demo-stage"></div>
+    <div ref="host" :class="['demo-stage', { 'demo-stage--content': opts.sizing === 'content' }]"></div>
 
     <div class="demo-log" aria-label="Event log">
       <div v-if="!logLines.length" class="demo-log__empty">
@@ -187,6 +197,10 @@ onMounted(async () => {
   border-radius: 12px;
   overflow: hidden;
   background: var(--vp-c-bg-soft);
+}
+/* Content sizing: the editor owns its height — the stage wraps it. */
+.demo-stage--content {
+  height: auto;
 }
 .demo-log {
   margin-top: 12px;
