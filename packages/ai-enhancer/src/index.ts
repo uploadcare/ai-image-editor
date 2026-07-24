@@ -12,6 +12,7 @@ export {
   type HistoryPlacement,
   type MetadataCallback,
   type OutputFilenameResolver,
+  type Sizing,
   type ToolbarPlacement,
   UcAiEnhancer,
 } from './widgets/ai-editor';

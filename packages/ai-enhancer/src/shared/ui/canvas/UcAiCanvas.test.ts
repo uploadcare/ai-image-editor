@@ -111,6 +111,77 @@ describe('UcAiCanvas', () => {
     });
   });
 
+  describe('uc:frame-ratio', () => {
+    const frameEl = (el: UcAiCanvas) => el.shadowRoot!.querySelector('.canvas__frame') as HTMLElement;
+    const rafRaf = () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
+    it('publishes known ratios only — never the placeholder default', async () => {
+      const el = document.createElement('uc-ai-canvas') as UcAiCanvas;
+      const onRatio = vi.fn();
+      el.addEventListener('uc:frame-ratio', onRatio);
+      el.url = 'https://example.com/a.png';
+      document.body.append(el);
+      await el.updateComplete;
+      // Nothing real is known yet — the 3:2 placeholder is not published.
+      expect(onRatio).not.toHaveBeenCalled();
+
+      // The metadata hint is a known ratio: published.
+      el.naturalRatio = 2 / 3;
+      await el.updateComplete;
+      expect(onRatio).toHaveBeenCalledOnce();
+      expect((onRatio.mock.calls[0]![0] as CustomEvent).detail.ratio).toBe(2 / 3);
+
+      // A pinned ratio wins and is published as the new effective value.
+      el.ratio = 1;
+      await el.updateComplete;
+      expect(onRatio).toHaveBeenCalledTimes(2);
+      expect((onRatio.mock.calls[1]![0] as CustomEvent).detail.ratio).toBe(1);
+
+      // A lower-precedence change that doesn't alter the effective ratio is silent.
+      el.naturalRatio = 1 / 2;
+      await el.updateComplete;
+      expect(onRatio).toHaveBeenCalledTimes(2);
+    });
+
+    it('publishes the decoded image ratio when no hint was supplied', async () => {
+      const el = await mount('https://example.com/portrait.png');
+      const onRatio = vi.fn();
+      el.addEventListener('uc:frame-ratio', onRatio);
+
+      preloadImg(el)!.dispatchEvent(new Event('load'));
+      await el.updateComplete;
+      expect(onRatio).not.toHaveBeenCalled(); // dimensions unknown until decode
+
+      const shown = shownImg(el)!;
+      Object.defineProperty(shown, 'naturalWidth', { value: 800, configurable: true });
+      Object.defineProperty(shown, 'naturalHeight', { value: 1200, configurable: true });
+      shown.dispatchEvent(new Event('load'));
+      await el.updateComplete;
+      expect(onRatio).toHaveBeenCalledOnce();
+      expect((onRatio.mock.calls[0]![0] as CustomEvent).detail.ratio).toBe(800 / 1200);
+    });
+
+    it('applies the first known ratio as a snap and animates later changes', async () => {
+      const el = await mount('https://example.com/a.png');
+
+      // The first known ratio replaces the provisional guess — the frame's
+      // resize transition is suppressed for exactly that update…
+      el.naturalRatio = 2 / 3;
+      await el.updateComplete;
+      expect(frameEl(el).style.transition).toBe('none');
+
+      // …and restored right after paint.
+      await rafRaf();
+      expect(frameEl(el).style.transition).toBe('');
+
+      // Later ratio changes keep the transition (they animate).
+      el.ratio = 1;
+      await el.updateComplete;
+      expect(frameEl(el).style.transition).toBe('');
+    });
+  });
+
   it('shows an error state and emits uc:image-error when the image fails to load', async () => {
     const el = await mount('https://example.com/broken.png');
     const onError = vi.fn();

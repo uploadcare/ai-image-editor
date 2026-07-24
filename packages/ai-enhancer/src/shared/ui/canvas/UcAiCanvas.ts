@@ -4,12 +4,16 @@ import { classMap } from 'lit/directives/class-map.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
+import { afterNextPaint } from '../../lib/afterNextPaint';
 import { ICON_FULLSCREEN, ICON_FULLSCREEN_EXIT } from '../icons';
 import styles from './canvas.css?inline';
 import { DotGridController, type ShimmerConfig } from './DotGridController';
 
 /** Frame aspect ratio used until an image's natural ratio is known. */
-const DEFAULT_RATIO = 3 / 2;
+export const DEFAULT_FRAME_RATIO = 3 / 2;
+
+/** Detail of the `uc:frame-ratio` event: the resolved frame ratio (`width / height`). */
+export type FrameRatioDetail = { ratio: number };
 
 /** A switch that loads within this window is treated as instant — no dot
  *  transition — so cached/quick history swaps swap directly instead of flashing. */
@@ -120,6 +124,9 @@ export class UcAiCanvas extends LitElement {
   private _coverTimer?: number;
   /** URLs already displayed once — switching back to one is an instant swap. */
   private readonly _seenUrls = new Set<string>();
+  /** Last ratio reported via `uc:frame-ratio`; `null` while only the
+   *  placeholder default has been available. */
+  private _publishedRatio: number | null = null;
   /** The pending swap is instant (no dot transition), so double-buffer it. */
   private _instantSwap = false;
 
@@ -162,10 +169,8 @@ export class UcAiCanvas extends LitElement {
     this._updateFrame();
     // Enable the frame's resize transition only after the initial size is
     // painted, so it snaps in instead of animating from zero on load.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this._frameReady = true;
-      });
+    afterNextPaint(() => {
+      this._frameReady = true;
     });
   }
 
@@ -267,14 +272,43 @@ export class UcAiCanvas extends LitElement {
     this._dotGrid.reset();
   }
 
-  private _frameRatioValue(): number {
-    // Precedence: a pinned ratio, then the metadata hint (known before decode),
-    // then the decoded image's own dimensions, then the landscape default.
+  /** The known ratio, or `null` while only the placeholder default applies.
+   *  Precedence: a pinned ratio, then the metadata hint (known before decode),
+   *  then the decoded image's own dimensions. */
+  private _realRatioValue(): number | null {
     if (this.ratio && this.ratio > 0) return this.ratio;
     if (this.naturalRatio && this.naturalRatio > 0) return this.naturalRatio;
     const img = this._imageEl;
     if (img && img.naturalWidth > 0 && img.naturalHeight > 0) return img.naturalWidth / img.naturalHeight;
-    return DEFAULT_RATIO;
+    return null;
+  }
+
+  private _frameRatioValue(): number {
+    return this._realRatioValue() ?? DEFAULT_FRAME_RATIO;
+  }
+
+  /**
+   * Report the resolved ratio to the host (`uc:frame-ratio`) whenever it
+   * changes to a known value — the placeholder default is never published.
+   * The first known ratio replaces a provisional guess, so that correction is
+   * applied as a snap (no 460ms morph of a frame that was never right to begin
+   * with); later changes (a ratio pick, a differently-shaped result) animate.
+   */
+  private _publishRatio(frame: HTMLElement): void {
+    const ratio = this._realRatioValue();
+    if (ratio == null || ratio === this._publishedRatio) return;
+    if (this._publishedRatio == null) this._snapFrameOnce(frame);
+    this._publishedRatio = ratio;
+    const detail: FrameRatioDetail = { ratio };
+    this.dispatchEvent(new CustomEvent('uc:frame-ratio', { detail, bubbles: true, composed: true }));
+  }
+
+  /** Disable the frame's resize transition for the update happening now. */
+  private _snapFrameOnce(frame: HTMLElement): void {
+    frame.style.transition = 'none';
+    afterNextPaint(() => {
+      frame.style.transition = '';
+    });
   }
 
   /** Size the frame to the largest box of the chosen ratio that fits the viewport. */
@@ -282,6 +316,10 @@ export class UcAiCanvas extends LitElement {
     const viewport = this._viewportEl;
     const frame = this._frameEl;
     if (!viewport || !frame) return;
+    // Ratio knowledge is box-independent — publish even when the viewport has
+    // no measurable size yet (e.g. display:none), so the host isn't left on a
+    // stale provisional ratio.
+    this._publishRatio(frame);
     const aw = viewport.clientWidth;
     const ah = viewport.clientHeight;
     if (!aw || !ah) return;
