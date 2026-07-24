@@ -81,6 +81,15 @@
   display: none;
 }
 
+/* Keep an unsized fill host from silently collapsing towards the stage's
+   360px floor — a visibly broken sliver. Consumer CSS always beats :host
+   rules, so any explicit height/min-height on the element overrides this.
+   Keyed off :not([sizing="content"]) rather than [sizing="fill"] because Lit
+   doesn't reflect a property's default — the attribute is absent in fill mode. */
+:host(:not([sizing='content'])) {
+  min-height: 480px;
+}
+
 /*
  * Theme overrides. Mirrors the file-uploader's pattern: place `.uc-light` or
  * `.uc-dark` on any ancestor (or the editor itself) to force a theme.
@@ -174,6 +183,58 @@ uc-ai-canvas {
 }
 .composer--docked-top {
   padding-bottom: 8px;
+}
+
+/*
+ * Content sizing (`sizing="content"`): the consumer fixes the width (and
+ * optionally min-/max-height) on the host with plain CSS, and the editor
+ * derives its own height from the active frame ratio instead of filling a
+ * given box. Width flows in, height flows out, and nothing here observes the
+ * result — so there is no resize feedback loop. The stage's height expresses
+ * the frame's fit exactly: the canvas viewport pads 20px on every side
+ * (canvas.css), making the relationship affine — (width - 40px) / ratio + 40px
+ * — which `aspect-ratio` alone can't express. `--uc-ai-frame-ratio` is set
+ * inline by the editor; `100cqw` is the host's width (the :host is an
+ * inline-size container).
+ */
+:host([sizing='content']) {
+  height: auto;
+}
+:host([sizing='content']) .shell {
+  height: auto;
+  /* The host's own (consumer-set) height limits, re-applied where the flex
+     layout actually happens — a clamp then shrinks/grows the stage below
+     instead of overflowing the host. */
+  min-height: inherit;
+  max-height: inherit;
+}
+:host([sizing='content']) .stage {
+  /* Natural height from the ratio. It may shrink under a max-height clamp
+     (the canvas letterboxes inside — the same contain-fit as fill mode) or
+     grow to a min-height floor (the canvas centers with extra padding). */
+  flex: 1 1 auto;
+  min-height: 0;
+  height: calc((100cqw - 40px) / var(--uc-ai-frame-ratio, 1.5) + 40px);
+}
+/* Only the stage flexes under a clamp — chrome keeps its natural size. */
+:host([sizing='content']) .composer--docked,
+:host([sizing='content']) uc-ai-footer {
+  flex-shrink: 0;
+}
+/* Height changes (a ratio pick, a differently-shaped result) animate in sync
+   with the canvas frame's 460ms resize transition (canvas.css). Gated on
+   stage--ready so the initial size — and the first correction of a
+   provisional ratio (see `uc:frame-ratio`) — snap in without a morph. */
+:host([sizing='content']) .stage.stage--ready {
+  transition: height 460ms var(--uc-ai-ease-in-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Must repeat the animated rule's exact selector — a plain `.stage` here
+     would lose on specificity and the transition would still run. */
+  :host([sizing='content']) .stage.stage--ready {
+    transition: none;
+  }
 }
 
 /* History pinned to a canvas edge — an absolute strip independent of the composer. */

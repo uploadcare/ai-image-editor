@@ -2,6 +2,7 @@ import type { Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import {
   type AspectRatio,
   type AspectRatioOption,
@@ -26,6 +27,7 @@ import {
   LOCALE_LOADERS,
   translate,
 } from '../../../shared/i18n';
+import { afterNextPaint } from '../../../shared/lib/afterNextPaint';
 import { cdnPreviewUrl } from '../../../shared/lib/cdn';
 import { HistoryStorageController } from '../../../shared/lib/HistoryStorageController';
 import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
@@ -40,7 +42,8 @@ import type { AspectRatioSelectDetail } from '../../../features/aspect-ratio-sel
 import type { HistorySelectDetail } from '../../../features/prompt-history';
 import type { PromptInputDetail, UcAiPromptRow } from '../../../features/prompt-input';
 import type { PresetSelectDetail } from '../../../features/preset-chips';
-import type { ShimmerConfig, UcAiCanvas } from '../../../shared/ui/canvas';
+import { DEFAULT_FRAME_RATIO } from '../../../shared/ui/canvas';
+import type { FrameRatioDetail, ShimmerConfig, UcAiCanvas } from '../../../shared/ui/canvas';
 import styles from './ai-editor.css?inline';
 
 export type { HistoryEntry } from '../../../features/generation';
@@ -114,6 +117,17 @@ export type HistoryPlacement = 'composer-above' | 'composer-below' | 'canvas-top
  */
 export type ToolbarPlacement = 'bottom' | 'top' | 'none';
 
+/**
+ * How the editor's own box is sized.
+ * - `fill` (default): the host is `width/height: 100%` — the container you
+ *   give it drives everything.
+ * - `content`: fix the width (and optionally `min-height` / `max-height`)
+ *   with plain CSS on the host; the editor derives its own height from the
+ *   active aspect ratio within those limits, letterboxing the canvas when
+ *   clamped.
+ */
+export type Sizing = 'fill' | 'content';
+
 const COMPOSER_PLACEMENTS: readonly ComposerPlacement[] = ['top', 'bottom'];
 const TOOLBAR_PLACEMENTS: readonly ToolbarPlacement[] = ['bottom', 'top', 'none'];
 const CANVAS_FITS: readonly CanvasFit[] = ['full', 'available'];
@@ -123,6 +137,13 @@ const HISTORY_PLACEMENTS: readonly HistoryPlacement[] = [
   'canvas-top',
   'canvas-bottom',
 ];
+
+/** CDN preview renditions step up in buckets of this many CSS pixels — and
+ *  never down — so a drag-resize can't mint a new image URL per pixel and a
+ *  shrunk host keeps the sharper, already-cached rendition. */
+const PREVIEW_WIDTH_STEP = 200;
+
+const previewWidthBucket = (width: number): number => Math.ceil(width / PREVIEW_WIDTH_STEP) * PREVIEW_WIDTH_STEP;
 
 /**
  * `<uc-ai-enhancer>` — the standalone AI image generate/edit editor.
@@ -289,6 +310,19 @@ export class UcAiEnhancer extends LitElement {
   public canvasFit: CanvasFit = 'available';
 
   /**
+   * How the editor's own box is sized. `fill` (default) keeps the host at
+   * `width/height: 100%` — size it explicitly via its container or own CSS.
+   * `content` derives the editor's height from the canvas's aspect ratio at
+   * the width you set: give the host a width and optional `min-height` /
+   * `max-height` in plain CSS, and the editor grows and shrinks with the
+   * active ratio within those limits (the canvas letterboxes when clamped).
+   * The mode is CSS-driven off the reflected attribute, so an unknown value
+   * behaves as `fill`.
+   */
+  @property({ reflect: true })
+  public sizing: Sizing = 'fill';
+
+  /**
    * Where the history strip sits. `composer-above` (default) / `composer-below`
    * are relative to the composer; `canvas-top` / `canvas-bottom` pin it to the
    * canvas edge.
@@ -338,6 +372,24 @@ export class UcAiEnhancer extends LitElement {
   @state()
   private _fetchedFileInfo?: UploadcareFile;
 
+  /** Effective frame ratio reported by the canvas (`uc:frame-ratio`) — covers
+   *  the decoded-image fallback the editor can't resolve on its own. */
+  @state()
+  private _frameRatio: number | null = null;
+
+  /** True once the initial content-mode layout has painted — gates the
+   *  stage-height transition so the editor never animates in from a guessed
+   *  size (mirrors the canvas's own `is-ready` gate for the frame). */
+  @state()
+  private _sizingReady = false;
+
+  /** Host width in CSS px, bucketed upward (see {@link PREVIEW_WIDTH_STEP}),
+   *  for picking the CDN preview rendition. `0` until first measured. */
+  @state()
+  private _previewWidth = 0;
+
+  private _hostResizeObserver?: ResizeObserver;
+
   /** Last derived mode, to (re)default the ratio selection when it flips. */
   private _lastMode?: AiEditorMode;
 
@@ -356,6 +408,57 @@ export class UcAiEnhancer extends LitElement {
   @state()
   private _localeStrings: Partial<typeof enLocale> = enLocale;
   private _localeToken = 0;
+
+  /** @internal */
+  public override connectedCallback(): void {
+    super.connectedCallback();
+    // Track the host's width so the CDN preview rendition follows resizes
+    // (without it, the width read at first render goes stale and a grown
+    // editor shows a blurry upscale). Width-only and bucketed, so the
+    // content-mode height animation can't feed back into re-renders.
+    if (typeof ResizeObserver === 'function') {
+      this._hostResizeObserver = new ResizeObserver((entries) => {
+        const width = entries[entries.length - 1]?.contentRect.width ?? 0;
+        const bucket = previewWidthBucket(width);
+        if (bucket > this._previewWidth) this._previewWidth = bucket;
+      });
+      this._hostResizeObserver.observe(this);
+    }
+  }
+
+  /** @internal */
+  public override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._hostResizeObserver?.disconnect();
+    this._hostResizeObserver = undefined;
+  }
+
+  /** @internal */
+  protected override firstUpdated(): void {
+    // Enable the content-mode height transition only after the initial layout
+    // has painted, so the editor's first size snaps in instead of animating.
+    this._armSizingReady();
+  }
+
+  /** Arm (or re-arm after a snap) the content-height transition gate once the
+   *  current layout has painted — mirrors the canvas's `_frameReady` gate. */
+  private _armSizingReady(): void {
+    afterNextPaint(() => {
+      this._sizingReady = true;
+    });
+  }
+
+  private _onFrameRatio(e: CustomEvent<FrameRatioDetail>): void {
+    const first = this._frameRatio == null;
+    this._frameRatio = e.detail.ratio;
+    // The first reported ratio replaces the provisional guess the stage may
+    // have been sized with — apply that correction as a snap, not a 460ms
+    // morph (the canvas suppresses its own frame transition the same way).
+    if (first && this._sizingReady) {
+      this._sizingReady = false;
+      this._armSizingReady();
+    }
+  }
 
   /** @internal */
   public override willUpdate(changed: PropertyValues<this>): void {
@@ -390,7 +493,12 @@ export class UcAiEnhancer extends LitElement {
     // Namespace persisted history by pubkey before any hydration below (both can
     // land in the same update when the plugin sets pubkey and source together).
     if (changed.has('pubkey')) this._history.setNamespace(this.pubkey);
-    if (sourceChanged) this._gen.reset();
+    if (sourceChanged) {
+      this._gen.reset();
+      // The canvas-reported ratio described the previous source's imagery —
+      // without this, the content-mode stage briefly sizes to the old image.
+      this._frameRatio = null;
+    }
     // Restore the strip for the current source's lineage from past sessions. Keyed
     // off the source uuid (from either input), so reopening on a previously edited
     // image rehydrates its results automatically.
@@ -612,9 +720,14 @@ export class UcAiEnhancer extends LitElement {
       this._lastPreviewUrl = null;
       return null;
     }
-    // The canvas spans the editor width; measured at render time (the result
-    // arrives long after first layout). Fall back for detached renders.
-    const resolved = this._secure.resolve(cdnPreviewUrl(url, this.clientWidth || 1024));
+    // The canvas spans the editor width, observed via the host ResizeObserver
+    // (bucketed, never shrinking — see PREVIEW_WIDTH_STEP). Fall back to a
+    // render-time read for renders before the observer's first tick and for
+    // observer-less environments — bucketed the same way, so both paths agree
+    // on the URL instead of fetching two renditions of the same image.
+    const resolved = this._secure.resolve(
+      cdnPreviewUrl(url, this._previewWidth || previewWidthBucket(this.clientWidth) || 1024),
+    );
     // An async resolver returns `null` while pending; keep the previous preview
     // on screen (rather than blanking the canvas) until the new one resolves.
     if (resolved != null) this._lastPreviewUrl = resolved;
@@ -865,9 +978,16 @@ export class UcAiEnhancer extends LitElement {
     // A concrete pick sizes the frame (as width/height); "Original"/null lets
     // the canvas fall back to the displayed image's natural ratio.
     const frameRatio = isConcreteRatio(this._selectedRatio) ? this._selectedRatio[0] / this._selectedRatio[1] : null;
+    // Content sizing: the stage derives its height from this ratio (see the
+    // `sizing="content"` stylesheet block). Precedence mirrors the canvas's
+    // own resolution — the pinned pick, then metadata, then the ratio the
+    // canvas reported back (which also covers the decoded-image fallback the
+    // editor can't see), then the shared landscape default.
+    const stageRatio = frameRatio ?? this._displayedNaturalRatio() ?? this._frameRatio ?? DEFAULT_FRAME_RATIO;
     const stageClasses = {
       stage: true,
       'is-empty': !hasImage,
+      'stage--ready': this._sizingReady,
     };
 
     // Two orthogonal public axes: which edge the composer sits on, and whether
@@ -1033,7 +1153,7 @@ export class UcAiEnhancer extends LitElement {
       >
         ${toolbarTop ? footerTpl : nothing}
         ${composerDocked && edge === 'top' ? composerTpl : nothing}
-        <div class=${classMap(stageClasses)}>
+        <div class=${classMap(stageClasses)} style=${styleMap({ '--uc-ai-frame-ratio': String(stageRatio) })}>
           <uc-ai-canvas
             .url=${this._previewUrl}
             .ratio=${frameRatio}
@@ -1046,6 +1166,7 @@ export class UcAiEnhancer extends LitElement {
             error-label="${this._l('ai-enhancer-error')}"
             fullscreen-label="${this._l('ai-enhancer-fullscreen')}"
             exit-fullscreen-label="${this._l('ai-enhancer-exit-fullscreen')}"
+            @uc:frame-ratio=${this._onFrameRatio}
           ></uc-ai-canvas>
 
           ${dockChrome}
