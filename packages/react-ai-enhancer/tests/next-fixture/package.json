@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "@uploadcare/react-ai-enhancer": "file:../..",
-    "next": "^16.2.10",
+    "next": "^16.2.11",
     "react": "^19",
     "react-dom": "^19"
   }
