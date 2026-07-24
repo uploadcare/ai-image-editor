@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/uploadcare/ai-enhancer/compare/ai-enhancer-v0.1.5...ai-enhancer-v0.1.6) (2026-07-24)
+
+
+### Features
+
+* **ai-enhancer:** add sizing mode for consumer-controlled container behavior ([#51](https://github.com/uploadcare/ai-enhancer/issues/51)) ([85c36b6](https://github.com/uploadcare/ai-enhancer/commit/85c36b6fae75801eefbcdac90825c0747c2f2696))
+
 ## [0.1.5](https://github.com/uploadcare/ai-enhancer/compare/ai-enhancer-v0.1.4...ai-enhancer-v0.1.5) (2026-07-22)
 
 
