@@ -4,10 +4,10 @@ title: Getting started
 
 # Getting started
 
-AI image generation and editing for [Uploadcare](https://uploadcare.com/) — a
-framework-agnostic `<uc-ai-image-editor>` web component, plus an optional plugin that
-adds an **AI Edit** action and a **Generate image** source to the
-[File Uploader](https://uploadcare.com/docs/file-uploader/).
+AI image generation and editing for [Uploadcare](https://uploadcare.com/). The
+package gives you a framework-agnostic `<uc-ai-image-editor>` web component, plus an
+optional plugin that adds an **AI Edit** action and a **Generate image** source
+to the [File Uploader](https://uploadcare.com/docs/file-uploader/).
 
 Want to see it first? Head to the [live demo](/demo).
 
@@ -29,22 +29,23 @@ bun add @uploadcare/ai-image-editor
 :::
 
 You'll also need an Uploadcare **public key** to enable generate/edit. Grab one
-from the [Uploadcare dashboard](https://app.uploadcare.com/) — see
+from the [Uploadcare dashboard](https://app.uploadcare.com/); see
 [API keys](https://uploadcare.com/docs/start/settings/#keys) in the docs.
 
 ::: info Public beta
-AI Enhancer is in **public beta** and available on all **paid** Uploadcare
+AI Image Editor is in **public beta** and available on all **paid** Uploadcare
 plans. On a free project, generation and edit requests fail with the
 [`derivative_disabled` error](/guide/errors#derivative-disabled).
 :::
 
-Three entry points, imported independently so you only pull in what you use:
+The package has three entry points, imported independently so you only pull in
+what you use:
 
 | Import | What it gives you |
 |---|---|
 | `@uploadcare/ai-image-editor` | Registers the `<uc-ai-image-editor>` element and exports its public types, the provider, and the localization helpers. |
-| `@uploadcare/ai-image-editor/plugin` | Just the `AiImageEditorPlugin` for the File Uploader — no eager component registration. |
-| `@uploadcare/ai-image-editor/errors` | Just `AiImageEditorError` and its types — side-effect-free, safe to import in server code (no element registration). |
+| `@uploadcare/ai-image-editor/plugin` | Just the `AiImageEditorPlugin` for the File Uploader, with no eager component registration. |
+| `@uploadcare/ai-image-editor/errors` | Just `AiImageEditorError` and its types. Side-effect-free, so it's safe to import in server code (no element registration). |
 
 ::: tip Plugin peer dependency
 The plugin entry needs `@uploadcare/file-uploader` **≥ 1.31.2** as a peer
@@ -54,7 +55,7 @@ peer dependency.
 
 ## The standalone editor
 
-Importing the package registers the element; configure it via
+Importing the package registers the element. Configure it via
 attributes/properties and listen for `uc:*` events.
 
 ```ts
@@ -76,9 +77,9 @@ editor.addEventListener('uc:cancel', () => {/* closed without committing */})
 editor.addEventListener('uc:error', (e) => console.warn(e.detail.error.code, e.detail.error)) // see the error handling guide
 ```
 
-See the [Components API](/api/components) for the full list of attributes,
-properties, events, and CSS custom properties, and [Error handling](/guide/errors)
-for what `uc:error` carries.
+The [Components API](/api/components) has the full list of attributes,
+properties, events, and CSS custom properties, and
+[Error handling](/guide/errors) explains what `uc:error` carries.
 
 ## Edit an existing image
 
@@ -93,12 +94,12 @@ The editor resolves the image and frames the canvas to its real aspect ratio.
 If you already hold the file as an `UploadcareFile` (returned by
 [`@uploadcare/upload-client`](https://uploadcare.com/docs/uploads/), or the
 `fileInfo` of a File Uploader output entry), pass it as `sourceFileInfo` instead
-to skip the lookup — use **one or the other**, not both.
-The first successful generation also flips a from-scratch session into edit mode,
-so you can chain edits.
+to skip the lookup. Use **one or the other**, not both. The first successful
+generation also flips a from-scratch session into edit mode, so you can chain
+edits.
 
 ## Where to next
 
-- [File Uploader plugin](/guide/plugin) — drop it into the uploader.
+- [File Uploader plugin](/guide/plugin): drop it into the uploader.
 - [Theming](/guide/theming) · [Localization](/guide/localization)
-- [Live demo](/demo) — try the editor and its layout options.
+- [Live demo](/demo): try the editor and its layout options.
