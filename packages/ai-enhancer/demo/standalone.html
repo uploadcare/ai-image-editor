@@ -129,51 +129,30 @@
     import './demo-shell.ts';
     import '../src/index.ts';
     import { SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
-
-    // Supply your Uploadcare public key at runtime — `?pubkey=…` in the URL or the
-    // `uc-ai-demo-pubkey` localStorage entry (the input below persists it) — so no
-    // account key is committed to the repo.
-    const PUBKEY_STORAGE_KEY = 'uc-ai-demo-pubkey';
-    const PUBKEY =
-      new URLSearchParams(location.search).get('pubkey') || localStorage.getItem(PUBKEY_STORAGE_KEY) || '';
-
-    const ENVIRONMENTS = {
-      // Production is the SDK default — no need to set URLs explicitly.
-      production: {
-        pubkey: PUBKEY,
-      },
-      staging: {
-        pubkey: PUBKEY,
-        baseUrl: 'https://upload.staging0.uploadcare.com',
-        cdnCnamePrefixed: 'https://staging0.ucarecd.net',
-      },
-    };
-
-    // Persist the env choice across reloads (and shared with the plugin demo).
-    const ENV_STORAGE_KEY = 'uc-ai-demo-env';
-    const savedEnv = localStorage.getItem(ENV_STORAGE_KEY);
+    import { ENVIRONMENTS, initialEnv, rememberEnv, rememberPubkey, resolvePubkey } from './demo-env.ts';
 
     const shell = document.querySelector('demo-shell');
     const editor = document.querySelector('uc-ai-enhancer');
     const pubkeyInput = document.getElementById('pubkey');
     const envSelect = document.getElementById('env');
 
-    let currentEnv = ENVIRONMENTS[savedEnv] ? savedEnv : 'production';
+    let currentEnv = initialEnv();
 
     function applyEnv(name) {
       const env = ENVIRONMENTS[name];
       currentEnv = name;
+      const pubkey = resolvePubkey(name);
       editor.baseUrl = env.baseUrl;
       editor.cdnCnamePrefixed = env.cdnCnamePrefixed;
-      editor.pubkey = env.pubkey;
-      pubkeyInput.value = env.pubkey;
+      editor.pubkey = pubkey;
+      pubkeyInput.value = pubkey;
     }
 
     envSelect.value = currentEnv;
     applyEnv(currentEnv);
 
     envSelect.addEventListener('change', (e) => {
-      localStorage.setItem(ENV_STORAGE_KEY, e.target.value);
+      rememberEnv(e.target.value);
       applyEnv(e.target.value);
       shell.log(`env → ${currentEnv}`);
     });
@@ -183,11 +162,9 @@
       shell.log(`brand-themed: ${e.target.checked}`);
     });
     pubkeyInput.addEventListener('change', (e) => {
-      const key = e.target.value.trim() || ENVIRONMENTS[currentEnv].pubkey;
-      editor.pubkey = key;
-      pubkeyInput.value = key;
-      localStorage.setItem(PUBKEY_STORAGE_KEY, key);
-      shell.log(`pubkey → ${key}`);
+      rememberPubkey(e.target.value.trim());
+      applyEnv(currentEnv);
+      shell.log(`pubkey → ${editor.pubkey}`);
     });
     document.getElementById('source').addEventListener('change', (e) => {
       const uuid = e.target.value.trim();
