@@ -23,6 +23,9 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Demo', link: '/demo' },
       { text: 'API', link: '/api/' },
+      // Built by `playground:build` into `<dist>/playground/`, not a VitePress
+      // route — so it is only reachable on a built site, not in `docs:dev`.
+      { text: 'Playground', link: '/playground/' },
       {
         text: 'Uploadcare',
         items: [

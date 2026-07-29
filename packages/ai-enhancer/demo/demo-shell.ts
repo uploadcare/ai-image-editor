@@ -4,6 +4,58 @@ import { customElement, property, state } from 'lit/decorators.js';
 type Theme = 'auto' | 'light' | 'dark';
 
 /**
+ * Controls are slotted, so they stay in the page's light DOM and the shell's own
+ * shadow styles cannot reach them — `::slotted()` matches the <label> but not the
+ * <select>/<input> inside it. Adopting one document stylesheet keeps the fields
+ * looking like the shell's own instead of copying this block into every demo page.
+ */
+const CONTROL_STYLES = new CSSStyleSheet();
+CONTROL_STYLES.replaceSync(`
+  demo-shell label[slot='controls'] select,
+  demo-shell label[slot='controls'] input:not([type='checkbox']) {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    font: inherit;
+    font-size: 13px;
+    border: 1px solid light-dark(#d1d5db, #3a3b41);
+    border-radius: 7px;
+    background: light-dark(#fff, #1e1f24);
+    color: inherit;
+  }
+  demo-shell label[slot='controls'] select:focus-visible,
+  demo-shell label[slot='controls'] input:focus-visible {
+    outline: 2px solid light-dark(#2563eb, #60a5fa);
+    outline-offset: 1px;
+  }
+  demo-shell label[slot='controls'] input[type='checkbox'] {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: light-dark(#2563eb, #60a5fa);
+  }
+  /*
+   * A checkbox belongs beside its text, not above it. This lives here rather than
+   * in the shadow styles because :has() is not matched inside ::slotted(), and
+   * document rules win over ::slotted() for slotted elements anyway.
+   */
+  demo-shell label[slot='controls']:has(input[type='checkbox']) {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    /* Line up with the fields in neighbouring columns, not with their labels. */
+    padding-block-end: 7px;
+    font-size: 13px;
+    font-weight: 400;
+    color: inherit;
+  }
+  /* The demos set size="20"/size="36" etc.; the grid decides the width now. */
+  demo-shell label[slot='controls'] input[size] {
+    min-width: 0;
+  }
+`);
+
+/**
  * Shared chrome for the AI Enhancer demos: page heading, a toolbar with a
  * built-in theme switch (plus a `controls` slot for demo-specific inputs), a
  * stage for the demoed component, and a log panel that auto-captures the
@@ -46,31 +98,56 @@ export class DemoShell extends LitElement {
       color: light-dark(#4b5563, #9ca3af);
       margin: 0 0 16px;
     }
+    /*
+     * A grid rather than a wrapping flex row: the controls have wildly different
+     * label lengths, and flex-wrap left ragged gaps and orphaned fields. Fixed
+     * tracks keep every field the same width and line the labels up in columns,
+     * which is what makes a form of this size legible. One column on narrow
+     * screens, where the old layout was close to unusable.
+     */
     .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 10px 16px;
+      align-items: end;
       margin: 0 0 20px;
-      padding: 12px;
+      padding: 16px;
       background: light-dark(#fff, #25262b);
-      border-radius: 10px;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      border: 1px solid light-dark(#e5e7eb, #33343a);
+      border-radius: 12px;
+      box-shadow: 0 1px 2px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.3));
     }
+    /* Label above control, so a long label never squeezes its field. */
     .toolbar label,
     ::slotted(label) {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      color: light-dark(#4b5563, #9ca3af);
     }
-    .toolbar select {
-      padding: 4px 8px;
+    /*
+     * ::slotted() only reaches the slotted element itself, so fields inside a
+     * slotted label cannot be styled from here — CONTROL_STYLES above covers
+     * those. These rules are for the shell's own controls (the theme switch).
+     */
+    .toolbar select,
+    .toolbar input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
       font: inherit;
       font-size: 13px;
       border: 1px solid light-dark(#d1d5db, #3a3b41);
-      border-radius: 6px;
-      background: transparent;
+      border-radius: 7px;
+      background: light-dark(#fff, #1e1f24);
       color: inherit;
+    }
+    .toolbar select:focus-visible,
+    .toolbar input:focus-visible {
+      outline: 2px solid light-dark(#2563eb, #60a5fa);
+      outline-offset: 1px;
     }
     .log {
       margin: 20px 0 0;
@@ -103,6 +180,9 @@ export class DemoShell extends LitElement {
 
   public override connectedCallback(): void {
     super.connectedCallback();
+    if (!document.adoptedStyleSheets.includes(CONTROL_STYLES)) {
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, CONTROL_STYLES];
+    }
     this.addEventListener('uc:done', this._onUcEvent);
     this.addEventListener('uc:cancel', this._onUcEvent);
     this.addEventListener('uc:error', this._onUcEvent);

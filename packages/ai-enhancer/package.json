@@ -35,6 +35,8 @@
     "docs:api": "cem analyze && node scripts/build-cem-docs.mjs && typedoc && node scripts/clean-typedoc-class.mjs",
     "docs:dev": "npm run docs:api && vitepress dev docs",
     "docs:build": "npm run docs:api && vitepress build docs",
+    "site:build": "npm run docs:build && npm run playground:build",
+    "playground:build": "vite build --mode demo --outDir ../docs/.vitepress/dist/playground --base ${DOCS_BASE:-/ai-enhancer/}playground/",
     "docs:preview": "vitepress preview docs",
     "typecheck": "tsc --noEmit",
     "lint:lit": "lit-analyzer './src/**/*.ts' --strict --rules.no-unknown-attribute off"

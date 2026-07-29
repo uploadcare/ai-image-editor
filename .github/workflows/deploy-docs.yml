@@ -29,8 +29,11 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Build VitePress docs (guide + API + live demo)
-        run: npm run docs:build -w @uploadcare/ai-enhancer
+      # Builds the VitePress site, then the standalone playground pages into
+      # `<dist>/playground/` so both ship in one Pages artifact. Order matters:
+      # VitePress empties its own outDir, so the playground has to land after it.
+      - name: Build docs + playground
+        run: npm run site:build -w @uploadcare/ai-enhancer
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
