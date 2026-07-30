@@ -29,7 +29,7 @@ dependencies (Lit) for you, so a single import registers `<uc-ai-image-editor>`:
 
 ```html
 <script type="module">
-  import 'https://esm.run/@uploadcare/ai-image-editor@%AI_ENHANCER_VERSION%'
+  import 'https://esm.run/@uploadcare/ai-image-editor@%AI_IMAGE_EDITOR_VERSION%'
 </script>
 
 <uc-ai-image-editor pubkey="YOUR_PUBLIC_KEY"></uc-ai-image-editor>
@@ -39,7 +39,7 @@ Set object/function properties and listen for events from a module script:
 
 ```html
 <script type="module">
-  import 'https://esm.run/@uploadcare/ai-image-editor@%AI_ENHANCER_VERSION%'
+  import 'https://esm.run/@uploadcare/ai-image-editor@%AI_IMAGE_EDITOR_VERSION%'
 
   const editor = document.querySelector('uc-ai-image-editor')
   editor.aspectRatios = [[1, 1], [16, 9]]
@@ -58,7 +58,7 @@ browser fetches the matching one (`de`, `ja`, and so on) from the same CDN:
 <uc-ai-image-editor pubkey="YOUR_PUBLIC_KEY" locale-name="de"></uc-ai-image-editor>
 ```
 
-The examples above pin `@%AI_ENHANCER_VERSION%`, the version this
+The examples above pin `@%AI_IMAGE_EDITOR_VERSION%`, the version this
 documentation was built for. **Keep an exact version pin** in production: the
 lazy locale modules must come from the same build as the entry, and an
 unpinned URL (`@latest`) can otherwise resolve them to a different version.
