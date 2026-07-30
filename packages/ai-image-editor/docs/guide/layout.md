@@ -5,17 +5,17 @@ title: UI & layout
 # UI & layout
 
 The editor's chrome is arranged from a few independent pieces. This page explains
-each and the properties that position them. Every option here is an attribute, so
-you can set it in HTML or as a property — and you can try them all live on the
+each and the properties that position them. Every option here is an attribute,
+so you can set it in HTML or as a property, and you can try them all live on the
 [demo](/demo).
 
 ## The pieces
 
-- **Canvas** — the central stage where the image (or the idle dot grid) is shown.
-- **Composer** — the bar holding the **prompt input**, the **preset chips**, and
-  the **aspect-ratio** picker. It's what the user types into to generate/edit.
-- **History strip** — the row of result thumbnails from the current session.
-- **Toolbar** — the **Cancel** / **Done** actions.
+- **Canvas.** The central stage where the image (or the idle dot grid) is shown.
+- **Composer.** The bar holding the **prompt input**, the **preset chips**, and
+  the **aspect-ratio** picker. It's where the user types to generate or edit.
+- **History strip.** The row of result thumbnails from the current session.
+- **Toolbar.** The **Cancel** and **Done** actions.
 
 ## Sizing
 
@@ -106,8 +106,9 @@ composer or pinned to a canvas edge:
 
 ## Toolbar position
 
-`toolbarPlacement` sets the edge for the **Cancel** / **Done** toolbar — `bottom`
-(default) or `top` — or removes it entirely with `none`.
+`toolbarPlacement` sets the edge for the **Cancel** / **Done** toolbar, either
+`bottom` (the default) or `top`. Setting it to `none` removes the toolbar
+entirely.
 
 ```html
 <uc-ai-image-editor toolbar-placement="top"></uc-ai-image-editor>
@@ -115,14 +116,14 @@ composer or pinned to a canvas edge:
 
 ### Bring your own toolbar
 
-With `toolbar-placement="none"` the editor renders no Cancel / Done buttons —
-the stage reclaims their space, and your app provides the controls. Track the
-current result via the `uc:change` event: it fires whenever the result changes —
-a finished generation, a history-strip selection, or *Start over* (then
-`detail.result` is `null`) — with the same payload shape as `uc:done` (`url`,
-`uuid`, `prompt`, `mode`, `aspectRatio`, `file`). Every result is already an
-uploaded Uploadcare file, so `result.file` and `result.url` are usable
-immediately — nothing about it waits for a "commit":
+With `toolbar-placement="none"` the editor renders no Cancel or Done buttons.
+The stage reclaims their space, and your app provides the controls. Track the
+current result via the `uc:change` event, which fires whenever the result
+changes: a finished generation, a history-strip selection, or *Start over*, in
+which case `detail.result` is `null`. The payload has the same shape as
+`uc:done` (`url`, `uuid`, `prompt`, `mode`, `aspectRatio`, `file`). Every
+result is already an uploaded Uploadcare file, so `result.file` and
+`result.url` are usable immediately. Nothing about them waits for a "commit".
 
 ```html
 <uc-ai-image-editor pubkey="YOUR_PUBLIC_KEY" toolbar-placement="none"></uc-ai-image-editor>
@@ -143,8 +144,8 @@ useBtn.addEventListener('click', () => {
 });
 ```
 
-Closing is yours too: with no toolbar, `uc:done` and `uc:cancel` simply never
-fire (their buttons are the only triggers) — use `uc:change` as the source of
+Closing is yours too. With no toolbar, `uc:done` and `uc:cancel` never fire,
+since their buttons are the only triggers. Use `uc:change` as the source of
 truth and remove or hide the editor whenever your UI decides the session is
 over.
 
@@ -153,7 +154,7 @@ In React the same pattern is the `onChange` prop; see the
 
 ## Presets-only mode
 
-`presets-only` hides the free-text prompt so only the preset chips remain — and
+`presets-only` hides the free-text prompt so only the preset chips remain, and
 picking a chip starts the generation immediately (there's nothing to type, so no
 separate send step). Pair it with custom [`presets`](/api/components) per mode.
 
@@ -163,7 +164,7 @@ separate send step). Pair it with custom [`presets`](/api/components) per mode.
 
 ## Putting it together
 
-These axes are orthogonal — mix them freely. For example, a floating composer
+These axes are orthogonal, so mix them freely. For example, a floating composer
 pinned to the top, with the history along the bottom of the canvas:
 
 ```html
