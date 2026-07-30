@@ -3,29 +3,255 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>@uploadcare/ai-image-editor — demos</title>
+  <title>@uploadcare/ai-image-editor — playground</title>
   <style>
-    :root { color-scheme: light dark; }
-    body {
-      margin: 0; padding: 40px;
-      font-family: system-ui, -apple-system, sans-serif;
-      background: light-dark(#f6f7f9, #1b1b1f);
-      color: light-dark(#111, #f5f5f5);
+    /*
+     * Palette, radii and type sizes are lifted from demo-shell.ts so this index
+     * reads as the same product as the demos it links to. The dot grid is the
+     * editor's own idle-canvas texture (--uc-ai-dot-grid-color).
+     */
+    :root {
+      color-scheme: light dark;
+      --bg: light-dark(#f6f7f9, #1b1b1f);
+      --card: light-dark(#fff, #25262b);
+      --border: light-dark(#e5e7eb, #33343a);
+      --text: light-dark(#111, #f5f5f5);
+      --muted: light-dark(#4b5563, #9ca3af);
+      --primary: light-dark(#174bd7, #579aff);
+      /* The canvas token is 0.21/0.1; held back here so small type stays legible on it. */
+      --dots: light-dark(rgba(0, 0, 0, 0.13), rgba(255, 255, 255, 0.07));
     }
-    main { max-width: 640px; margin: 0 auto; }
-    h1 { font-weight: 500; }
-    ul { line-height: 2; }
-    a { color: inherit; }
+
+    * { box-sizing: border-box; }
+
+    body {
+      position: relative;
+      margin: 0;
+      padding: clamp(24px, 6vw, 72px) clamp(20px, 5vw, 40px);
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /*
+     * The signature: the editor's own idle-canvas dot grid, full-bleed behind the
+     * masthead and vignetted the way the canvas vignettes it, so the title sits on
+     * the same surface the component shows before an image exists.
+     */
+    body::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto;
+      height: 360px;
+      background-image: radial-gradient(var(--dots) 1.5px, transparent 1.5px);
+      background-size: 15px 15px;
+      mask-image: radial-gradient(115% 100% at 50% 0%, #000 28%, transparent 78%);
+      -webkit-mask-image: radial-gradient(115% 100% at 50% 0%, #000 28%, transparent 78%);
+      pointer-events: none;
+    }
+
+    main { position: relative; max-width: 680px; margin: 0 auto; }
+
+    header { padding: clamp(12px, 3vw, 24px) 0 clamp(28px, 5vw, 40px); }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      font-family: ui-monospace, Menlo, monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 6vw, 44px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+
+    .lede {
+      margin: 14px 0 0;
+      max-width: 46ch;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+    .lede code {
+      font-family: ui-monospace, Menlo, monospace;
+      font-size: 0.92em;
+      color: var(--text);
+    }
+
+    .demos {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .demo {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 4px 16px;
+      padding: 18px 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 1px 2px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.3));
+      transition: border-color 0.16s ease, transform 0.16s ease;
+    }
+    .demo:hover { border-color: var(--primary); transform: translateY(-1px); }
+    .demo:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+    .demo h2 {
+      grid-column: 1;
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .demo p {
+      grid-column: 1;
+      margin: 0;
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    /* Arrow sits on the title row and nudges on hover — the only motion here. */
+    .arrow {
+      grid-column: 2;
+      grid-row: 1;
+      font-size: 15px;
+      color: var(--muted);
+      transition: transform 0.16s ease, color 0.16s ease;
+    }
+    .demo:hover .arrow { transform: translateX(3px); color: var(--primary); }
+
+    /* A badge only where it carries information: this one is not a product demo. */
+    .badge {
+      grid-column: 2;
+      grid-row: 1;
+      justify-self: end;
+      padding: 3px 8px;
+      font-family: ui-monospace, Menlo, monospace;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .note {
+      display: flex;
+      gap: 10px;
+      margin: 18px 0 0;
+      padding: 14px 16px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+    }
+    .note code {
+      font-family: ui-monospace, Menlo, monospace;
+      font-size: 0.92em;
+      color: var(--text);
+    }
+    .note b { color: var(--text); font-weight: 600; }
+
+    footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      margin: 32px 0 0;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--primary); }
+    footer a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 3px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .demo, .arrow { transition: none; }
+      .demo:hover { transform: none; }
+      .demo:hover .arrow { transform: none; }
+    }
   </style>
 </head>
 <body>
   <main>
-    <h1>@uploadcare/ai-image-editor — demos</h1>
-    <ul>
-      <li><a href="./standalone.html">Standalone editor</a></li>
-      <li><a href="./plugin.html">File Uploader plugin</a></li>
-      <li><a href="./shimmer-lab.html">Shimmer Lab (dot-grid calibration)</a></li>
+    <header>
+      <p class="eyebrow">Playground</p>
+      <h1>AI Image Editor</h1>
+      <p class="lede">
+        Live demos of the <code>&lt;uc-ai-image-editor&gt;</code> web component,
+        built from the current source in this repository.
+      </p>
+    </header>
+
+    <ul class="demos">
+      <li>
+        <a class="demo" href="./standalone.html">
+          <h2>Standalone editor</h2>
+          <span class="arrow" aria-hidden="true">&rarr;</span>
+          <p>The element on its own. Generate an image from a prompt, or point it at an existing one to edit.</p>
+        </a>
+      </li>
+      <li>
+        <a class="demo" href="./plugin.html">
+          <h2>File Uploader plugin</h2>
+          <span class="arrow" aria-hidden="true">&rarr;</span>
+          <p>The editor as an AI upload source inside File Uploader — Generate image and AI Edit.</p>
+        </a>
+      </li>
+      <!--
+        Shimmer Lab is a renderer-tuning harness, not something to show visitors of
+        the published playground. The script below reveals it only under `vite dev`;
+        in a production build `import.meta.env.DEV` folds to false and the row stays
+        hidden, so nothing links to it from the deployed site.
+      -->
+      <li id="shimmer-lab" hidden>
+        <a class="demo" href="./shimmer-lab.html">
+          <h2>Shimmer Lab</h2>
+          <span class="badge">Dev only</span>
+          <p>Calibration harness for the idle canvas dot grid. Renderer tuning, not a product demo.</p>
+        </a>
+      </li>
     </ul>
+
+    <p class="note">
+      <span aria-hidden="true">&#9432;</span>
+      <span>
+        <b>Bring your own key.</b> No project key ships with these demos. Enter an
+        Uploadcare public key in the <b>Public key</b> field, or pass
+        <code>?pubkey=&hellip;</code> in the URL. Both stick for your next visit.
+      </span>
+    </p>
+
+    <footer>
+      <a href="../">Documentation</a>
+      <a href="../api/">API reference</a>
+      <a href="https://www.npmjs.com/package/@uploadcare/ai-image-editor">npm</a>
+      <a href="https://github.com/uploadcare/ai-image-editor">Source</a>
+    </footer>
   </main>
+
+  <script type="module">
+    if (import.meta.env.DEV) {
+      document.getElementById('shimmer-lab').hidden = false;
+    }
+  </script>
 </body>
 </html>

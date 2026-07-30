@@ -18,11 +18,13 @@ export default defineConfig(({ command, mode }) => {
         outDir: resolve(__dirname, 'dist-demo'),
         emptyOutDir: true,
         rollupOptions: {
+          // shimmer-lab.html is deliberately absent: it is a renderer-tuning
+          // harness, so it stays a `vite dev` page (which serves any HTML under
+          // the demo root) rather than shipping to the published playground.
           input: {
             index: resolve(__dirname, 'demo/index.html'),
             standalone: resolve(__dirname, 'demo/standalone.html'),
             plugin: resolve(__dirname, 'demo/plugin.html'),
-            'shimmer-lab': resolve(__dirname, 'demo/shimmer-lab.html'),
           },
         },
       },
