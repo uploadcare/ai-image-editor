@@ -1,6 +1,6 @@
 {
   "name": "@uploadcare/react-ai-image-editor",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "React component for Uploadcare's AI image generation and editing — typed props and events, SSR-safe, works in Next.js Server Components out of the box.",
   "type": "module",
   "sideEffects": false,
@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@lit/react": "^1.0.8",
-    "@uploadcare/ai-image-editor": "^0.1.6"
+    "@uploadcare/ai-image-editor": "^0.2.0"
   },
   "peerDependencies": {
     "@types/react": ">= 17.0.0",

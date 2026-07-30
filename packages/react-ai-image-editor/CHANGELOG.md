@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.0](https://github.com/uploadcare/ai-image-editor/compare/react-ai-image-editor-v0.1.6...react-ai-image-editor-v0.2.0) (2026-07-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename AI Enhancer to AI Image Editor ([#56](https://github.com/uploadcare/ai-image-editor/issues/56))
+
+### Features
+
+* rename AI Enhancer to AI Image Editor ([#56](https://github.com/uploadcare/ai-image-editor/issues/56)) ([a834049](https://github.com/uploadcare/ai-image-editor/commit/a834049e72af55f454906b71398bc08ebe0ae568))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @uploadcare/ai-image-editor bumped from ^0.1.6 to ^0.2.0
+
 ## [0.1.6](https://github.com/uploadcare/ai-enhancer/compare/react-ai-enhancer-v0.1.5...react-ai-enhancer-v0.1.6) (2026-07-24)
 
 
