@@ -1,0 +1,14 @@
+{
+  "name": "next-fixture",
+  "private": true,
+  "description": "Minimal Next.js App Router app proving @uploadcare/react-ai-image-editor survives next build (SSR/prerender). Not a workspace member on purpose — it installs its own deps.",
+  "scripts": {
+    "build": "next build"
+  },
+  "dependencies": {
+    "@uploadcare/react-ai-image-editor": "file:../..",
+    "next": "^16.2.10",
+    "react": "^19",
+    "react-dom": "^19"
+  }
+}

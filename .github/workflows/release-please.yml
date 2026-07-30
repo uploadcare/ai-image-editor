@@ -53,7 +53,7 @@ jobs:
           branch=$(jq -r .headBranchName <<< "$PR_JSON")
           git fetch -q origin "$branch"
           git checkout -q -B release-branch "origin/$branch"
-          version=$(jq -r '."packages/ai-enhancer"' .release-please-manifest.json)
+          version=$(jq -r '."packages/ai-image-editor"' .release-please-manifest.json)
           title="chore: release v$version 🚀"
           gh pr edit "$number" --repo "$GITHUB_REPOSITORY" \
             --title "$title" \
@@ -89,13 +89,13 @@ jobs:
             echo 'release branch already based on current main'; exit 0
           fi
           echo "release branch is stale — rebuilding onto $(git rev-parse --short origin/main)"
-          version=$(git show "origin/$branch:.release-please-manifest.json" | jq -r '."packages/ai-enhancer"')
+          version=$(git show "origin/$branch:.release-please-manifest.json" | jq -r '."packages/ai-image-editor"')
           git checkout -q -B release-rebuild origin/main
           # changelogs + manifest are wholly release-please-generated: take them as-is
-          git checkout "origin/$branch" -- .release-please-manifest.json packages/ai-enhancer/CHANGELOG.md packages/react-ai-enhancer/CHANGELOG.md
+          git checkout "origin/$branch" -- .release-please-manifest.json packages/ai-image-editor/CHANGELOG.md packages/react-ai-image-editor/CHANGELOG.md
           # versions + inter-package range are surgical; the lockfile is regenerated
-          npm pkg set version="$version" -w packages/ai-enhancer -w packages/react-ai-enhancer
-          npm pkg set "dependencies.@uploadcare/ai-enhancer=^$version" -w packages/react-ai-enhancer
+          npm pkg set version="$version" -w packages/ai-image-editor -w packages/react-ai-image-editor
+          npm pkg set "dependencies.@uploadcare/ai-image-editor=^$version" -w packages/react-ai-image-editor
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           git add -A
           git -c user.name='github-actions[bot]' \
@@ -155,7 +155,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
         run: |
           message=""
-          for dir in packages/ai-enhancer packages/react-ai-enhancer; do
+          for dir in packages/ai-image-editor packages/react-ai-image-editor; do
             name=$(node -p "require('./$dir/package.json').name")
             version=$(node -p "require('./$dir/package.json').version")
             if [ -n "$(npm view "$name@$version" version 2>/dev/null)" ]; then

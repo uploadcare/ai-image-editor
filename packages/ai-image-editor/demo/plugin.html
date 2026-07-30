@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Image Editor — File Uploader Plugin</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    .uc-light { color-scheme: light; }
+    .uc-dark { color-scheme: dark; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 24px;
+      margin: 0;
+      background: light-dark(#ffffff, #121213);
+      color: light-dark(#181818, #ffffff);
+    }
+</style>
+</head>
+<body>
+  <demo-shell
+    heading="AI Image Editor — File Uploader Plugin"
+    description="Click Generate image as an upload source to create an image with AI."
+  >
+    <label slot="controls">
+      Environment
+      <select id="env">
+        <option value="production">production</option>
+        <option value="staging">staging</option>
+      </select>
+    </label>
+    <label slot="controls">
+      Public key
+      <input id="pubkey" type="text" size="20" />
+    </label>
+    <label slot="controls">
+      Locale
+      <select id="locale"></select>
+    </label>
+
+    <uc-file-uploader-regular ctx-name="my-uploader"></uc-file-uploader-regular>
+    <uc-config
+      ctx-name="my-uploader"
+      pubkey=""
+      debug
+      test-mode
+      source-list="local, url, camera, ai-image-editor"
+    ></uc-config>
+    <uc-upload-ctx-provider ctx-name="my-uploader"></uc-upload-ctx-provider>
+  </demo-shell>
+
+  <script type="module">
+    import './demo-shell.ts';
+    import { ENVIRONMENTS, initialEnv, rememberEnv, rememberPubkey, resolvePubkey } from './demo-env.ts';
+    import '@uploadcare/file-uploader/web/uc-file-uploader-regular.min.css';
+    import * as UC from '@uploadcare/file-uploader';
+    import { AiImageEditorPlugin } from '../src/plugin.ts';
+    import { SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
+
+    UC.defineComponents(UC);
+
+    // The uploader ships only English eagerly; register a lazy resolver for every
+    // other locale so switching `localeName` actually re-languages the uploader UI.
+    // (The AI Image Editor strings are loaded separately by the plugin.)
+    // Vite globs the package's shipped locale definitions (a bare-specifier
+    // template `import()` can't be statically analyzed, so it never loads).
+    const uploaderLocales = import.meta.glob(
+      '../../../node_modules/@uploadcare/file-uploader/dist/locales/file-uploader/*.js',
+    );
+    for (const [path, load] of Object.entries(uploaderLocales)) {
+      const name = path.split('/').pop().replace(/\.js$/, '');
+      if (name === 'en') continue;
+      UC.defineLocale(name, () => load().then((m) => m.default));
+    }
+
+    const config = document.querySelector('uc-config');
+    config.plugins = [AiImageEditorPlugin];
+
+    const shell = document.querySelector('demo-shell');
+    const envSelect = document.getElementById('env');
+    const pubkeyInput = document.getElementById('pubkey');
+
+    function applyEnv(name) {
+      const env = ENVIRONMENTS[name];
+      const pubkey = resolvePubkey(name);
+      config.setAttribute('pubkey', pubkey);
+      pubkeyInput.value = pubkey;
+      if (env.baseUrl) {
+        config.setAttribute('base-url', env.baseUrl);
+        config.setAttribute('cdn-cname-prefixed', env.cdnCnamePrefixed);
+      } else {
+        config.removeAttribute('base-url');
+        config.removeAttribute('cdn-cname-prefixed');
+      }
+    }
+
+    // Apply unconditionally, not just when a choice was saved: without this the
+    // uploader kept the empty `pubkey=""` from the markup until you touched the
+    // selector, so a first visit could not upload anything.
+    envSelect.value = initialEnv();
+    applyEnv(envSelect.value);
+
+    envSelect.addEventListener('change', (e) => {
+      rememberEnv(e.target.value);
+      applyEnv(e.target.value);
+      shell.log(`env → ${e.target.value}`);
+    });
+
+    pubkeyInput.addEventListener('change', (e) => {
+      const pubkey = e.target.value.trim();
+      rememberPubkey(pubkey);
+      applyEnv(envSelect.value);
+      shell.log(pubkey ? `pubkey → ${pubkey}` : `pubkey → ${envSelect.value} default`);
+    });
+
+    // The plugin syncs the editor's locale (and the uploader's labels) from the
+    // uploader config's `localeName`, so the chooser just drives that.
+    const localeSelect = document.getElementById('locale');
+    for (const name of SUPPORTED_LOCALES) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      localeSelect.append(opt);
+    }
+    localeSelect.value = 'en';
+    localeSelect.addEventListener('change', (e) => {
+      config.localeName = e.target.value;
+    });
+  </script>
+</body>
+</html>

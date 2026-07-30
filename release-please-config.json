@@ -4,11 +4,11 @@
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
   "packages": {
-    "packages/ai-enhancer": {
-      "component": "ai-enhancer"
+    "packages/ai-image-editor": {
+      "component": "ai-image-editor"
     },
-    "packages/react-ai-enhancer": {
-      "component": "react-ai-enhancer"
+    "packages/react-ai-image-editor": {
+      "component": "react-ai-image-editor"
     }
   },
   "plugins": [
@@ -18,8 +18,8 @@
     },
     {
       "type": "linked-versions",
-      "groupName": "ai-enhancer",
-      "components": ["ai-enhancer", "react-ai-enhancer"]
+      "groupName": "ai-image-editor",
+      "components": ["ai-image-editor", "react-ai-image-editor"]
     }
   ]
 }

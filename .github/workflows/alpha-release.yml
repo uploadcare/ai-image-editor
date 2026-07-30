@@ -34,22 +34,22 @@ jobs:
 
       - name: Set alpha version
         run: |
-          base=$(node -p "require('./packages/ai-enhancer/package.json').version")
+          base=$(node -p "require('./packages/ai-image-editor/package.json').version")
           slug=$(echo "$GITHUB_REF_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
           version="$base-alpha.$slug.$GITHUB_RUN_NUMBER"
           echo "VERSION=$version" >> "$GITHUB_ENV"
           # npm pkg set instead of npm version: the latter re-resolves the
           # workspace dependency range against the registry and fails
-          npm pkg set "version=$version" -w packages/ai-enhancer -w packages/react-ai-enhancer
-          npm pkg set "dependencies.@uploadcare/ai-enhancer=$version" -w packages/react-ai-enhancer
+          npm pkg set "version=$version" -w packages/ai-image-editor -w packages/react-ai-image-editor
+          npm pkg set "dependencies.@uploadcare/ai-image-editor=$version" -w packages/react-ai-image-editor
 
       - run: npm run build
 
       - name: Publish alpha to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-        run: npm publish --tag alpha -w packages/ai-enhancer -w packages/react-ai-enhancer
+        run: npm publish --tag alpha -w packages/ai-image-editor -w packages/react-ai-image-editor
 
       - name: Summary
         run: |
-          echo "Published \`@uploadcare/ai-enhancer@$VERSION\` and \`@uploadcare/react-ai-enhancer@$VERSION\` under the \`alpha\` dist-tag" >> "$GITHUB_STEP_SUMMARY"
+          echo "Published \`@uploadcare/ai-image-editor@$VERSION\` and \`@uploadcare/react-ai-image-editor@$VERSION\` under the \`alpha\` dist-tag" >> "$GITHUB_STEP_SUMMARY"
