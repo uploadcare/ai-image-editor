@@ -1,6 +1,6 @@
 {
   "name": "@uploadcare/ai-image-editor",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "AI image generation and editing web component for Uploadcare: create images from text prompts, enhance and edit existing ones, and plug into the Uploadcare File Uploader.",
   "type": "module",
   "files": [

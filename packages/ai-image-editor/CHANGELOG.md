@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.1](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.0...ai-image-editor-v0.2.1) (2026-07-30)
+
+
+### Features
+
+* **demo:** redesign the playground index and make Shimmer Lab dev-only ([5b2f584](https://github.com/uploadcare/ai-image-editor/commit/5b2f584aed9cbfd31fe9e2a515a02d94632ba7ca))
+* **i18n:** friendly message for ProjectPublicKeyInvalidError ([a6e4e13](https://github.com/uploadcare/ai-image-editor/commit/a6e4e13af47dc3122c336bf4b598b9de22317f65))
+
+
+### Bug Fixes
+
+* **demo:** stop linking to Shimmer Lab from the published playground ([4e615ca](https://github.com/uploadcare/ai-image-editor/commit/4e615ca6a5c460e5b8ecf0744947aa1546faef83))
+
 ## [0.2.0](https://github.com/uploadcare/ai-image-editor/compare/ai-enhancer-v0.1.6...ai-image-editor-v0.2.0) (2026-07-30)
 
 
