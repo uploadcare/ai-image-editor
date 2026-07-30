@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "@uploadcare/react-ai-image-editor": "file:../..",
-    "next": "^16.2.10",
+    "next": "^16.2.11",
     "react": "^19",
     "react-dom": "^19"
   }
