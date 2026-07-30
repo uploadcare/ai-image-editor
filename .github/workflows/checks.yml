@@ -7,8 +7,8 @@ on:
   pull_request:
     paths:
       - 'packages/**'
-      - '!packages/ai-enhancer/docs/**'
-      - 'packages/ai-enhancer/docs/.vitepress/**'
+      - '!packages/ai-image-editor/docs/**'
+      - 'packages/ai-image-editor/docs/.vitepress/**'
       - '!packages/*/README.md'
       - 'biome.json'
       - '.github/workflows/**'
@@ -19,8 +19,8 @@ on:
       - main
     paths:
       - 'packages/**'
-      - '!packages/ai-enhancer/docs/**'
-      - 'packages/ai-enhancer/docs/.vitepress/**'
+      - '!packages/ai-image-editor/docs/**'
+      - 'packages/ai-image-editor/docs/.vitepress/**'
       - '!packages/*/README.md'
       - 'biome.json'
       - '.github/workflows/**'
@@ -57,8 +57,8 @@ jobs:
 
       - run: npm ci
 
-      # react-ai-enhancer's types resolve against the built ai-enhancer dist
-      - run: npm run build -w @uploadcare/ai-enhancer
+      # react-ai-image-editor's types resolve against the built ai-image-editor dist
+      - run: npm run build -w @uploadcare/ai-image-editor
 
       - run: npm run typecheck
 
@@ -106,4 +106,4 @@ jobs:
       - run: npm run build --workspaces --if-present
 
       - name: Build Next.js fixture (SSR/prerender proof)
-        run: npm run test:next -w @uploadcare/react-ai-enhancer
+        run: npm run test:next -w @uploadcare/react-ai-image-editor
