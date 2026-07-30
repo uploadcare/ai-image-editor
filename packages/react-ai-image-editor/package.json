@@ -1,0 +1,72 @@
+{
+  "name": "@uploadcare/react-ai-image-editor",
+  "version": "0.1.6",
+  "description": "React component for Uploadcare's AI image generation and editing — typed props and events, SSR-safe, works in Next.js Server Components out of the box.",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/react-ai-image-editor.cjs",
+  "module": "./dist/react-ai-image-editor.js",
+  "types": "./dist/react-ai-image-editor.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/react-ai-image-editor.d.ts",
+      "import": "./dist/react-ai-image-editor.js",
+      "require": "./dist/react-ai-image-editor.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:next": "node scripts/test-next-fixture.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lit/react": "^1.0.8",
+    "@uploadcare/ai-image-editor": "^0.1.6"
+  },
+  "peerDependencies": {
+    "@types/react": ">= 17.0.0",
+    "react": ">= 17.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "keywords": [
+    "uploadcare",
+    "ai",
+    "react",
+    "react-component",
+    "ai-image-generator",
+    "image-generation",
+    "image-editing",
+    "text-to-image",
+    "ssr",
+    "nextjs",
+    "server-components",
+    "web-component",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uploadcare/ai-image-editor.git",
+    "directory": "packages/react-ai-image-editor"
+  },
+  "author": {
+    "name": "Uploadcare",
+    "url": "https://uploadcare.com"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://uploadcare.github.io/ai-image-editor/guide/react",
+  "bugs": "https://github.com/uploadcare/ai-image-editor/issues"
+}
