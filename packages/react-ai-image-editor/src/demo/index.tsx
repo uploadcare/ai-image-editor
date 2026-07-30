@@ -37,8 +37,6 @@ function App() {
       </label>
       <AiImageEditor
         pubkey={PUBKEY}
-        baseUrl="https://upload.example.com"
-        cdnCnamePrefixed="https://cdn.example.com"
         onDone={(detail) => append(`done: ${JSON.stringify(detail)}`)}
         onCancel={() => append('cancel')}
         onError={(error) => append(`error: ${(error as Error)?.message ?? String(error)}`)}

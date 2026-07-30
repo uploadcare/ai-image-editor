@@ -1,69 +1,38 @@
 /**
- * Environment + public-key wiring shared by the standalone and plugin demos.
+ * Public key + upload API wiring shared by the standalone and plugin demos.
  *
- * Both pages had their own copy of this; the plugin one had drifted (it never
- * applied an environment on first load, so the uploader started with an empty
- * `pubkey` until you changed the selector).
- *
- * The keys below are Uploadcare **public** keys for throwaway demo projects.
- * Public keys ship in client-side code by design — that is what makes the demos
- * work when opened from a link, with no query string to remember. Anything secret
- * still has no business here.
+ * No project key is committed here: this repo is public, and a baked-in key is
+ * someone's quota. Both fields are editable in the demo toolbar, persist to
+ * localStorage, and accept a `?pubkey=…` / `?baseUrl=…` override so a link can
+ * carry them.
  */
 
-export type EnvName = 'production' | 'staging';
+/** Uploadcare's production upload API — the SDK default, surfaced so it's editable. */
+export const DEFAULT_BASE_URL = 'https://upload.uploadcare.com';
 
-export type DemoEnv = {
-  pubkey: string;
-  /** Set only where the SDK default is wrong; production needs no overrides. */
-  baseUrl?: string;
-  cdnCnamePrefixed?: string;
-};
+/** Placeholder, not a key: the demos need one entered before they can generate. */
+export const DEFAULT_PUBKEY = 'YOUR_PUBLIC_KEY';
 
-const ENV_STORAGE_KEY = 'uc-ai-demo-env';
 const PUBKEY_STORAGE_KEY = 'uc-ai-demo-pubkey';
+const BASE_URL_STORAGE_KEY = 'uc-ai-demo-base-url';
 
-export const ENVIRONMENTS: Record<EnvName, DemoEnv> = {
-  production: {
-    pubkey: 'YOUR_PUBLIC_KEY',
-  },
-  staging: {
-    pubkey: 'YOUR_PUBLIC_KEY',
-    baseUrl: 'https://upload.example.com',
-    cdnCnamePrefixed: 'https://cdn.example.com',
-  },
-};
-
-const isEnvName = (value: string | null): value is EnvName => value === 'production' || value === 'staging';
-
-/** The environment to start in: whatever was last chosen, else production. */
-export function initialEnv(): EnvName {
-  const saved = localStorage.getItem(ENV_STORAGE_KEY);
-  return isEnvName(saved) ? saved : 'production';
+/** URL param wins over a remembered value, which wins over the default. */
+function resolve(param: string, storageKey: string, fallback: string): string {
+  const fromUrl = new URLSearchParams(location.search).get(param);
+  return fromUrl || localStorage.getItem(storageKey) || fallback;
 }
 
-export function rememberEnv(name: EnvName): void {
-  localStorage.setItem(ENV_STORAGE_KEY, name);
-}
-
-/**
- * The key to use for `env`: an explicit override wins over the environment's
- * default, so `?pubkey=…` still works and a key typed into a demo sticks.
- *
- * The override is deliberately not per-environment — one typed key applies to
- * whichever environment you switch to, which is what you want when testing your
- * own project against staging.
- */
-export function resolvePubkey(env: EnvName): string {
-  const fromUrl = new URLSearchParams(location.search).get('pubkey');
-  return fromUrl || localStorage.getItem(PUBKEY_STORAGE_KEY) || ENVIRONMENTS[env].pubkey;
-}
-
-/** Persist a key typed into a demo, or forget it when the field is cleared. */
-export function rememberPubkey(pubkey: string): void {
-  if (pubkey) {
-    localStorage.setItem(PUBKEY_STORAGE_KEY, pubkey);
+function remember(storageKey: string, value: string): void {
+  if (value) {
+    localStorage.setItem(storageKey, value);
   } else {
-    localStorage.removeItem(PUBKEY_STORAGE_KEY);
+    localStorage.removeItem(storageKey);
   }
 }
+
+export const resolvePubkey = (): string => resolve('pubkey', PUBKEY_STORAGE_KEY, DEFAULT_PUBKEY);
+export const resolveBaseUrl = (): string => resolve('baseUrl', BASE_URL_STORAGE_KEY, DEFAULT_BASE_URL);
+
+/** Persist a value typed into a demo field, or forget it when the field is cleared. */
+export const rememberPubkey = (pubkey: string): void => remember(PUBKEY_STORAGE_KEY, pubkey);
+export const rememberBaseUrl = (baseUrl: string): void => remember(BASE_URL_STORAGE_KEY, baseUrl);

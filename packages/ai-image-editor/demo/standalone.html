@@ -44,15 +44,12 @@
 <body>
   <demo-shell heading="AI Image Editor — Standalone">
     <label slot="controls">
-      Environment
-      <select id="env">
-        <option value="production">production</option>
-        <option value="staging">staging</option>
-      </select>
-    </label>
-    <label slot="controls">
       Public key
       <input id="pubkey" type="text" size="20" />
+    </label>
+    <label slot="controls">
+      Upload API
+      <input id="base-url" type="text" size="30" />
     </label>
     <label slot="controls">
       Source UUID (edit mode)
@@ -129,32 +126,28 @@
     import './demo-shell.ts';
     import '../src/index.ts';
     import { SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
-    import { ENVIRONMENTS, initialEnv, rememberEnv, rememberPubkey, resolvePubkey } from './demo-env.ts';
+    import { rememberBaseUrl, rememberPubkey, resolveBaseUrl, resolvePubkey } from './demo-env.ts';
 
     const shell = document.querySelector('demo-shell');
     const editor = document.querySelector('uc-ai-image-editor');
     const pubkeyInput = document.getElementById('pubkey');
-    const envSelect = document.getElementById('env');
+    const baseUrlInput = document.getElementById('base-url');
 
-    let currentEnv = initialEnv();
-
-    function applyEnv(name) {
-      const env = ENVIRONMENTS[name];
-      currentEnv = name;
-      const pubkey = resolvePubkey(name);
-      editor.baseUrl = env.baseUrl;
-      editor.cdnCnamePrefixed = env.cdnCnamePrefixed;
+    function apply() {
+      const pubkey = resolvePubkey();
+      const baseUrl = resolveBaseUrl();
       editor.pubkey = pubkey;
+      editor.baseUrl = baseUrl;
       pubkeyInput.value = pubkey;
+      baseUrlInput.value = baseUrl;
     }
 
-    envSelect.value = currentEnv;
-    applyEnv(currentEnv);
+    apply();
 
-    envSelect.addEventListener('change', (e) => {
-      rememberEnv(e.target.value);
-      applyEnv(e.target.value);
-      shell.log(`env → ${currentEnv}`);
+    baseUrlInput.addEventListener('change', (e) => {
+      rememberBaseUrl(e.target.value.trim());
+      apply();
+      shell.log(`baseUrl → ${editor.baseUrl}`);
     });
 
     document.getElementById('branded').addEventListener('change', (e) => {
@@ -163,7 +156,7 @@
     });
     pubkeyInput.addEventListener('change', (e) => {
       rememberPubkey(e.target.value.trim());
-      applyEnv(currentEnv);
+      apply();
       shell.log(`pubkey → ${editor.pubkey}`);
     });
     document.getElementById('source').addEventListener('change', (e) => {

@@ -25,15 +25,12 @@
     description="Click Generate image as an upload source to create an image with AI."
   >
     <label slot="controls">
-      Environment
-      <select id="env">
-        <option value="production">production</option>
-        <option value="staging">staging</option>
-      </select>
-    </label>
-    <label slot="controls">
       Public key
       <input id="pubkey" type="text" size="20" />
+    </label>
+    <label slot="controls">
+      Upload API
+      <input id="base-url" type="text" size="30" />
     </label>
     <label slot="controls">
       Locale
@@ -53,7 +50,7 @@
 
   <script type="module">
     import './demo-shell.ts';
-    import { ENVIRONMENTS, initialEnv, rememberEnv, rememberPubkey, resolvePubkey } from './demo-env.ts';
+    import { rememberBaseUrl, rememberPubkey, resolveBaseUrl, resolvePubkey } from './demo-env.ts';
     import '@uploadcare/file-uploader/web/uc-file-uploader-regular.min.css';
     import * as UC from '@uploadcare/file-uploader';
     import { AiImageEditorPlugin } from '../src/plugin.ts';
@@ -79,40 +76,34 @@
     config.plugins = [AiImageEditorPlugin];
 
     const shell = document.querySelector('demo-shell');
-    const envSelect = document.getElementById('env');
     const pubkeyInput = document.getElementById('pubkey');
+    const baseUrlInput = document.getElementById('base-url');
 
-    function applyEnv(name) {
-      const env = ENVIRONMENTS[name];
-      const pubkey = resolvePubkey(name);
+    function apply() {
+      const pubkey = resolvePubkey();
+      const baseUrl = resolveBaseUrl();
       config.setAttribute('pubkey', pubkey);
+      config.setAttribute('base-url', baseUrl);
       pubkeyInput.value = pubkey;
-      if (env.baseUrl) {
-        config.setAttribute('base-url', env.baseUrl);
-        config.setAttribute('cdn-cname-prefixed', env.cdnCnamePrefixed);
-      } else {
-        config.removeAttribute('base-url');
-        config.removeAttribute('cdn-cname-prefixed');
-      }
+      baseUrlInput.value = baseUrl;
     }
 
-    // Apply unconditionally, not just when a choice was saved: without this the
-    // uploader kept the empty `pubkey=""` from the markup until you touched the
-    // selector, so a first visit could not upload anything.
-    envSelect.value = initialEnv();
-    applyEnv(envSelect.value);
+    // Apply unconditionally, not just when a value was saved: without this the
+    // uploader kept the empty `pubkey=""` from the markup until you touched a
+    // field, so a first visit could not upload anything.
+    apply();
 
-    envSelect.addEventListener('change', (e) => {
-      rememberEnv(e.target.value);
-      applyEnv(e.target.value);
-      shell.log(`env → ${e.target.value}`);
+    baseUrlInput.addEventListener('change', (e) => {
+      rememberBaseUrl(e.target.value.trim());
+      apply();
+      shell.log(`baseUrl → ${config.getAttribute('base-url')}`);
     });
 
     pubkeyInput.addEventListener('change', (e) => {
       const pubkey = e.target.value.trim();
       rememberPubkey(pubkey);
-      applyEnv(envSelect.value);
-      shell.log(pubkey ? `pubkey → ${pubkey}` : `pubkey → ${envSelect.value} default`);
+      apply();
+      shell.log(pubkey ? `pubkey → ${pubkey}` : 'pubkey → default placeholder');
     });
 
     // The plugin syncs the editor's locale (and the uploader's labels) from the
