@@ -20,6 +20,8 @@ export const KNOWN_ERROR_CODES = [
   'derivative_disabled',
   'job_id_required',
   'job_not_found',
+  // Project / key (Upload API rejects the request before a job exists)
+  'ProjectPublicKeyInvalidError',
   // AI gateway (job status)
   'content_moderated',
   'provider_unavailable',

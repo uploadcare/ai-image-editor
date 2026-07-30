@@ -101,6 +101,7 @@ editor.localeDefinitionOverride = {
 | `ai-image-editor-error-derivative_disabled` | AI generation isn't enabled for the account. |
 | `ai-image-editor-error-job_id_required` | A job id was missing (internal). |
 | `ai-image-editor-error-job_not_found` | The generation job expired or doesn't exist. |
+| `ai-image-editor-error-ProjectPublicKeyInvalidError` | The `pubkey` isn't a valid project key. |
 
 **AI gateway.** The job failed while the model ran.
 

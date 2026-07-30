@@ -48,6 +48,9 @@ const errorLocale: Record<`ai-image-editor-error-${KnownErrorCode}`, string> = {
   'ai-image-editor-error-derivative_disabled': "AI image generation isn't enabled for this account.",
   'ai-image-editor-error-job_id_required': 'Something went wrong. Please try again.',
   'ai-image-editor-error-job_not_found': 'This generation has expired. Please try again.',
+  // Project / key
+  'ai-image-editor-error-ProjectPublicKeyInvalidError':
+    "That public key isn't valid. Check the key for this project and try again.",
   // AI gateway (job status)
   'ai-image-editor-error-content_moderated': 'This request was blocked by content moderation. Try a different prompt.',
   'ai-image-editor-error-provider_unavailable': 'The image service is busy right now. Please try again in a moment.',
