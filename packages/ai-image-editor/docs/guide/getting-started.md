@@ -83,8 +83,18 @@ properties, events, and CSS custom properties, and
 
 ## Edit an existing image
 
-Set `sourceUuid` to an Uploadcare uuid to open the editor in **edit** mode
-instead of generating from scratch:
+Point the editor at an Uploadcare uuid to open it in **edit** mode instead of
+generating from scratch. In markup, use the `source-uuid` attribute:
+
+```html
+<uc-ai-image-editor
+  pubkey="YOUR_PUBLIC_KEY"
+  source-uuid="c2499162-eb07-4b93-b31e-94a89a47e858"
+></uc-ai-image-editor>
+```
+
+Or set the matching `sourceUuid` property, which is what you want when the uuid
+only becomes known at runtime:
 
 ```ts
 editor.sourceUuid = 'c2499162-eb07-4b93-b31e-94a89a47e858'
@@ -93,10 +103,10 @@ editor.sourceUuid = 'c2499162-eb07-4b93-b31e-94a89a47e858'
 The editor resolves the image and frames the canvas to its real aspect ratio.
 If you already hold the file as an `UploadcareFile` (returned by
 [`@uploadcare/upload-client`](https://uploadcare.com/docs/uploads/), or the
-`fileInfo` of a File Uploader output entry), pass it as `sourceFileInfo` instead
-to skip the lookup. Use **one or the other**, not both. The first successful
-generation also flips a from-scratch session into edit mode, so you can chain
-edits.
+`fileInfo` of a File Uploader output entry), pass it as `sourceFileInfo` to skip
+the lookup — that one is a property only, since an attribute can't carry an
+object. Use **one or the other**, not both. The first successful generation also
+flips a from-scratch session into edit mode, so you can chain edits.
 
 ## Where to next
 
