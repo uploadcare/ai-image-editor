@@ -22,8 +22,8 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          # the action defaults to the repo default branch (feature/ai-enhancer);
-          # releases are cut from main
+          # pinned rather than relying on the action's repo-default-branch
+          # fallback: releases are always cut from main
           target-branch: main
 
       # for the commit-message amend and stale-branch rebuild below.
