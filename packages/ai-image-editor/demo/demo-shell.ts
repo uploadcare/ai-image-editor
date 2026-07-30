@@ -3,6 +3,17 @@ import { customElement, property, state } from 'lit/decorators.js';
 
 type Theme = 'auto' | 'light' | 'dark';
 
+/*
+ * Shimmer Lab is a renderer-tuning harness and is not a production build input,
+ * so linking to it from the published playground would 404. Kept out of the Lit
+ * template itself because lit-html preserves comments inside a template literal,
+ * which would ship this note in the bundle.
+ */
+const shimmerLabLink = (page: string) =>
+  import.meta.env.DEV
+    ? html`<a href="./shimmer-lab.html" aria-current=${page === 'shimmer-lab.html' ? 'page' : nothing}>Shimmer Lab</a>`
+    : nothing;
+
 /**
  * Controls are slotted, so they stay in the page's light DOM and the shell's own
  * shadow styles cannot reach them — `::slotted()` matches the <label> but not the
@@ -230,7 +241,7 @@ export class DemoShell extends LitElement {
       <nav>
         <a href="./standalone.html" aria-current=${page === 'standalone.html' ? 'page' : nothing}>Standalone</a>
         <a href="./plugin.html" aria-current=${page === 'plugin.html' ? 'page' : nothing}>Plugin</a>
-        <a href="./shimmer-lab.html" aria-current=${page === 'shimmer-lab.html' ? 'page' : nothing}>Shimmer Lab</a>
+        ${shimmerLabLink(page)}
       </nav>
       <h1>${this.heading}</h1>
       ${this.description ? html`<p class="description">${this.description}</p>` : nothing}

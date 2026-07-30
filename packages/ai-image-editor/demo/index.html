@@ -216,19 +216,6 @@
           <p>The editor as an AI upload source inside File Uploader — Generate image and AI Edit.</p>
         </a>
       </li>
-      <!--
-        Shimmer Lab is a renderer-tuning harness, not something to show visitors of
-        the published playground. The script below reveals it only under `vite dev`;
-        in a production build `import.meta.env.DEV` folds to false and the row stays
-        hidden, so nothing links to it from the deployed site.
-      -->
-      <li id="shimmer-lab" hidden>
-        <a class="demo" href="./shimmer-lab.html">
-          <h2>Shimmer Lab</h2>
-          <span class="badge">Dev only</span>
-          <p>Calibration harness for the idle canvas dot grid. Renderer tuning, not a product demo.</p>
-        </a>
-      </li>
     </ul>
 
     <p class="note">
@@ -249,8 +236,21 @@
   </main>
 
   <script type="module">
+    // Shimmer Lab is a renderer-tuning harness and is not a production build
+    // input. Injecting the row here rather than shipping it hidden keeps the
+    // markup — and a link to an unpublished page — out of the built site: this
+    // whole block folds away when `import.meta.env.DEV` is false.
     if (import.meta.env.DEV) {
-      document.getElementById('shimmer-lab').hidden = false;
+      document.querySelector('.demos').insertAdjacentHTML(
+        'beforeend',
+        `<li>
+          <a class="demo" href="./shimmer-lab.html">
+            <h2>Shimmer Lab</h2>
+            <span class="badge">Dev only</span>
+            <p>Calibration harness for the idle canvas dot grid. Renderer tuning, not a product demo.</p>
+          </a>
+        </li>`,
+      );
     }
   </script>
 </body>
