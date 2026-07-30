@@ -6,9 +6,10 @@ title: Localization
 
 The editor ships English eagerly and lazy-loads 34 other locales. Set the active
 language with `localeName`; the editor loads that locale's built-in strings on
-demand. Customize individual strings with `localeDefinitionOverride` — **keyed by
-locale name**, the same shape as the file uploader's config. As a plugin, both
-follow the uploader's `localeName` / `localeDefinitionOverride` automatically.
+demand. Customize individual strings with `localeDefinitionOverride`, which is
+**keyed by locale name** and takes the same shape as the file uploader's config.
+As a plugin, both follow the uploader's `localeName` /
+`localeDefinitionOverride` automatically.
 
 ```ts
 // Standalone: pick the language and override specific strings per locale.
@@ -21,7 +22,7 @@ editor.localeDefinitionOverride = {
 
 Supported locales: `en ar az ca cs da de el es et fi fr he hy is it ja ka kk ko
 lv nb nl pl pt ro ru sk sr sv tr uk vi zh` (and `zh-TW`). Browse the translations
-on GitHub — the base [`en.ts`](https://github.com/uploadcare/ai-image-editor/blob/HEAD/packages/ai-image-editor/src/shared/i18n/en.ts)
+on GitHub: the base [`en.ts`](https://github.com/uploadcare/ai-image-editor/blob/HEAD/packages/ai-image-editor/src/shared/i18n/en.ts)
 and the [other locales](https://github.com/uploadcare/ai-image-editor/tree/HEAD/packages/ai-image-editor/src/shared/i18n/locales).
 
 ## Available strings
@@ -72,8 +73,8 @@ enLocale['ai-image-editor-generate-btn'] // 'Generate'
 When a generation or edit fails, the editor maps the backend `error_code` to an
 `ai-image-editor-error-<code>` key and shows that message. If no key matches the code
 (or you haven't translated it), it falls back to the generic `ai-image-editor-error`.
-These per-code keys are **optional in every locale** — translate only the ones you
-care about and the rest fall back gracefully:
+These per-code keys are **optional in every locale**, so translate only the ones
+you care about and the rest fall back gracefully:
 
 ```ts
 editor.localeDefinitionOverride = {
@@ -84,7 +85,7 @@ editor.localeDefinitionOverride = {
 }
 ```
 
-**Platform validation** — the request was rejected before generation started:
+**Platform validation.** The request was rejected before generation started.
 
 | Key | When it fires |
 |---|---|
@@ -101,7 +102,7 @@ editor.localeDefinitionOverride = {
 | `ai-image-editor-error-job_id_required` | A job id was missing (internal). |
 | `ai-image-editor-error-job_not_found` | The generation job expired or doesn't exist. |
 
-**AI gateway** — the job failed while the model ran:
+**AI gateway.** The job failed while the model ran.
 
 | Key | When it fires |
 |---|---|
@@ -109,9 +110,9 @@ editor.localeDefinitionOverride = {
 | `ai-image-editor-error-provider_unavailable` | The upstream image service is overloaded. |
 | `ai-image-editor-error-generation_timeout` | The job took too long and timed out. |
 | `ai-image-editor-error-invalid_input` | The model rejected the inputs or settings. |
-| `ai-image-editor-error-RequestThrottledError` | Too many requests — rate limited. |
+| `ai-image-editor-error-RequestThrottledError` | Too many requests: rate limited. |
 
-**Upload pipeline** — the result couldn't be saved:
+**Upload pipeline.** The result couldn't be saved.
 
 | Key | When it fires |
 |---|---|
