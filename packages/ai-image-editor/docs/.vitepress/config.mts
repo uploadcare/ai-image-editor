@@ -46,7 +46,13 @@ export default defineConfig({
       { text: 'API', link: '/api/' },
       // Built by `playground:build` into `<dist>/playground/`, not a VitePress
       // route — so it is only reachable on a built site, not in `docs:dev`.
-      { text: 'Playground', link: '/playground/' },
+      //
+      // `target` is load-bearing: VitePress's router hijacks same-origin clicks
+      // unless the anchor carries `download`/`target`, and since the playground
+      // is not in its route map that lookup 404s. `_self` (rather than `_blank`)
+      // keeps it in the same tab and avoids the external-link icon, which
+      // `VPLink` only adds for `_blank`.
+      { text: 'Playground', link: '/playground/', target: '_self' },
       {
         text: 'Uploadcare',
         items: [
