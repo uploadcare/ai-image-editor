@@ -961,12 +961,10 @@ export class UcAiImageEditor extends LitElement {
   /** @internal */
   public override render(): TemplateResult {
     const mode = this._mode;
-    // "Start over" discards the current image and returns to a blank generate
-    // canvas, so it only makes sense for a generate session (edit mode reached
-    // via a generation). When the editor was opened to edit an existing image
-    // (a source set — e.g. the uploader's AI-edit action), there's nothing to
-    // start over to, so it's hidden.
-    const showStartOver = mode === 'edit' && !this.sourceUuid && !this.sourceFileInfo;
+    // "Start over" is currently disabled — the affordance is never shown, so the
+    // editor never exposes the discard-and-restart flow. (The handler and event
+    // wiring below remain in place so it can be re-enabled by flipping this flag.)
+    const showStartOver = false;
     const placeholderKey = MODES[mode].placeholderKey as keyof typeof enLocale;
     // Quick-prompt chips: the per-mode preset override if set, else the built-in set.
     const activePresets = this.presets?.[mode] ?? MODES[mode].presets;
