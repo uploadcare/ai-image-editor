@@ -75,6 +75,7 @@
   /* scale(1) gives every chip a stacking context so they paint in DOM order —
      later (newer) chips overlap earlier ones even when scaled. */
   transform: scale(1);
+  transform-origin: center center;
   transition:
     margin 300ms var(--uc-ai-ease-out, ease),
     border-color 225ms ease,

@@ -125,16 +125,32 @@ describe('UcAiHistory', () => {
     expect((onSelect.mock.calls[1]![0] as CustomEvent).detail.entry.id).toBe('e6');
   });
 
-  it('slides the window when the selection steps off its edge', async () => {
-    const el = await mount({ entries: series(7), selectedUuid: 'e2' });
-    // e2 is the left edge of the newest window.
-    expect(labelsOf(el)).toEqual(['e2', 'e3', 'e4', 'e5', 'e6']);
+  const selectedIndex = (el: UcAiHistory) => chips(el).findIndex((c) => c.classList.contains('chip--selected'));
 
-    prev(el)!.click();
-    el.selectedUuid = 'e1'; // parent restores the older result
+  it('centers the selected result, re-centering as it steps', async () => {
+    const el = await mount({ entries: series(9), selectedUuid: 'e4' });
+    // e4 sits dead-center (window index 2) of the 5-wide window.
+    expect(labelsOf(el)).toEqual(['e2', 'e3', 'e4', 'e5', 'e6']);
+    expect(selectedIndex(el)).toBe(2);
+
+    // Stepping newer re-centers: the window shifts one and e5 lands in the middle.
+    next(el)!.click();
+    el.selectedUuid = 'e5'; // parent restores the newer result
     await el.updateComplete;
-    expect(labelsOf(el)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5']);
-    expect(selectedLabels(el)).toEqual(['e1']);
+    expect(labelsOf(el)).toEqual(['e3', 'e4', 'e5', 'e6', 'e7']);
+    expect(selectedIndex(el)).toBe(2);
+  });
+
+  it('pins the window at the edges for the first/last results (cannot center)', async () => {
+    const first = await mount({ entries: series(9), selectedUuid: 'e1' });
+    // Second-oldest can't be centered — window stays at the start, chip off-center.
+    expect(labelsOf(first)).toEqual(['e0', 'e1', 'e2', 'e3', 'e4']);
+    expect(selectedIndex(first)).toBe(1);
+
+    const last = await mount({ entries: series(9), selectedUuid: 'e8' });
+    // Newest can't be centered — window stays at the end, chip on the right.
+    expect(labelsOf(last)).toEqual(['e4', 'e5', 'e6', 'e7', 'e8']);
+    expect(selectedIndex(last)).toBe(4);
   });
 
   it('disables prev at the oldest result and next at the newest', async () => {
@@ -148,15 +164,15 @@ describe('UcAiHistory', () => {
   });
 
   it('keeps the window steady across unrelated re-renders (fresh array, same selection)', async () => {
-    const el = await mount({ entries: series(7), selectedUuid: 'e2' });
-    expect(labelsOf(el)).toEqual(['e2', 'e3', 'e4', 'e5', 'e6']);
+    const el = await mount({ entries: series(7), selectedUuid: 'e3' });
+    expect(labelsOf(el)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5']); // e3 centered
 
     // The parent re-renders with a freshly-built array (new ref, same content)
     // and the unchanged selection — the window must not jitter.
     el.entries = series(7);
     el.busy = false;
     await el.updateComplete;
-    expect(labelsOf(el)).toEqual(['e2', 'e3', 'e4', 'e5', 'e6']);
+    expect(labelsOf(el)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5']);
   });
 
   it('slides the window to keep the selected chip visible', async () => {
