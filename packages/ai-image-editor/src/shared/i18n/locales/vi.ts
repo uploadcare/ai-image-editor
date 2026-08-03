@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Xong',
   'ai-image-editor-start-over': 'Bắt đầu lại',
   'ai-image-editor-history-title': 'Lời nhắc gần đây',
+  'ai-image-editor-history-prev': 'Kết quả cũ hơn',
+  'ai-image-editor-history-next': 'Kết quả mới hơn',
   'ai-image-editor-busy': 'Đang tạo…',
   'ai-image-editor-error': 'Đã xảy ra lỗi. Vui lòng thử lại.',
   'ai-image-editor-fullscreen': 'Xem toàn màn hình',

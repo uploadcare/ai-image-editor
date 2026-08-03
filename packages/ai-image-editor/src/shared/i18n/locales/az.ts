@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Hazırdır',
   'ai-image-editor-start-over': 'Yenidən başla',
   'ai-image-editor-history-title': 'Son promptlar',
+  'ai-image-editor-history-prev': 'Köhnə nəticələr',
+  'ai-image-editor-history-next': 'Daha yeni nəticələr',
   'ai-image-editor-busy': 'Yaradılır…',
   'ai-image-editor-error': 'Nəsə səhv getdi. Yenidən cəhd edin.',
   'ai-image-editor-fullscreen': 'Tam ekran bax',

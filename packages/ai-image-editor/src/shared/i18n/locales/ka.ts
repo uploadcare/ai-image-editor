@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'მზადაა',
   'ai-image-editor-start-over': 'თავიდან დაწყება',
   'ai-image-editor-history-title': 'ბოლო მოთხოვნები',
+  'ai-image-editor-history-prev': 'ძველი შედეგები',
+  'ai-image-editor-history-next': 'ახალი შედეგები',
   'ai-image-editor-busy': 'გენერირდება…',
   'ai-image-editor-error': 'რაღაც ვერ მოხერხდა. სცადეთ თავიდან.',
   'ai-image-editor-fullscreen': 'სრულ ეკრანზე ნახვა',

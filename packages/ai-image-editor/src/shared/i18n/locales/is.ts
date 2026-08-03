@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Lokið',
   'ai-image-editor-start-over': 'Byrja upp á nýtt',
   'ai-image-editor-history-title': 'Nýlegar leiðbeiningar',
+  'ai-image-editor-history-prev': 'Eldri niðurstöður',
+  'ai-image-editor-history-next': 'Nýrri niðurstöður',
   'ai-image-editor-busy': 'Bý til…',
   'ai-image-editor-error': 'Eitthvað fór úrskeiðis. Reyndu aftur.',
   'ai-image-editor-fullscreen': 'Skoða á öllum skjánum',

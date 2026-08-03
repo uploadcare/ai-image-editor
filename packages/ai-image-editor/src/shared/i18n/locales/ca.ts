@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Fet',
   'ai-image-editor-start-over': 'Comença de nou',
   'ai-image-editor-history-title': 'Indicacions recents',
+  'ai-image-editor-history-prev': 'Resultats anteriors',
+  'ai-image-editor-history-next': 'Resultats més recents',
   'ai-image-editor-busy': 'S’està generant…',
   'ai-image-editor-error': 'Hi ha hagut un error. Torna-ho a provar.',
   'ai-image-editor-fullscreen': 'Veure a pantalla completa',

@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Valmis',
   'ai-image-editor-start-over': 'Alusta uuesti',
   'ai-image-editor-history-title': 'Hiljutised viiped',
+  'ai-image-editor-history-prev': 'Vanemad tulemused',
+  'ai-image-editor-history-next': 'Uuemad tulemused',
   'ai-image-editor-busy': 'Genereerimine…',
   'ai-image-editor-error': 'Midagi läks valesti. Proovi uuesti.',
   'ai-image-editor-fullscreen': 'Kuva täisekraanil',

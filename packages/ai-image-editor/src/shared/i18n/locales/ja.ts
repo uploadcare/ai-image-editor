@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': '完了',
   'ai-image-editor-start-over': '最初からやり直す',
   'ai-image-editor-history-title': '最近のプロンプト',
+  'ai-image-editor-history-prev': '以前の結果',
+  'ai-image-editor-history-next': '新しい結果',
   'ai-image-editor-busy': '生成中…',
   'ai-image-editor-error': '問題が発生しました。もう一度お試しください。',
   'ai-image-editor-fullscreen': '全画面表示',

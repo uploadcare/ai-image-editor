@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Gata',
   'ai-image-editor-start-over': 'Începe din nou',
   'ai-image-editor-history-title': 'Prompturi recente',
+  'ai-image-editor-history-prev': 'Rezultate mai vechi',
+  'ai-image-editor-history-next': 'Rezultate mai noi',
   'ai-image-editor-busy': 'Se generează…',
   'ai-image-editor-error': 'Ceva n-a mers bine. Încearcă din nou.',
   'ai-image-editor-fullscreen': 'Vizualizare pe tot ecranul',

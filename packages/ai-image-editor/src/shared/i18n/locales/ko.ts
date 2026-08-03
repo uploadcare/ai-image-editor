@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': '완료',
   'ai-image-editor-start-over': '다시 시작',
   'ai-image-editor-history-title': '최근 프롬프트',
+  'ai-image-editor-history-prev': '이전 결과',
+  'ai-image-editor-history-next': '최신 결과',
   'ai-image-editor-busy': '생성 중…',
   'ai-image-editor-error': '문제가 발생했습니다. 다시 시도하세요.',
   'ai-image-editor-fullscreen': '전체 화면으로 보기',
