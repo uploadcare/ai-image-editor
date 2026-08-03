@@ -1030,6 +1030,8 @@ export class UcAiImageEditor extends LitElement {
             ?show-start-over=${showStartOver}
             start-over-label="${this._l('ai-image-editor-start-over')}"
             list-label="${this._l('ai-image-editor-history-title')}"
+            prev-label="${this._l('ai-image-editor-history-prev')}"
+            next-label="${this._l('ai-image-editor-history-next')}"
             .secureResolver=${this.secureDeliveryProxyUrlResolver}
             @uc:select=${this._onSelectHistoryEntry}
             @uc:start-over=${this._onStartOver}

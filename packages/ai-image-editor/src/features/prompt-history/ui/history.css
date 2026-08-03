@@ -12,6 +12,56 @@
   min-height: 44px;
 }
 
+/* Holds the visible (windowed) chips; the prev/next arrows flank it. Its own
+   flex row keeps `.chip:last-child` scoped to the window, not the whole strip. */
+.chips {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Paging arrow — a round chip-surfaced button on either side of the window. */
+.nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--uc-ai-button-size, 32px);
+  height: var(--uc-ai-button-size, 32px);
+  padding: 0;
+  background: var(--uc-ai-floating, var(--uc-ai-background));
+  border: 1px solid var(--uc-ai-floating-border, transparent);
+  border-radius: 50%;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+  color: var(--uc-ai-foreground);
+  cursor: pointer;
+  transition:
+    background 200ms var(--uc-ai-ease-out, ease),
+    opacity 200ms var(--uc-ai-ease-out, ease);
+}
+
+.nav--prev {
+  margin-right: 10px;
+}
+
+.nav--next {
+  margin-left: 10px;
+}
+
+.nav svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.nav:not(:disabled):hover {
+  background: var(--uc-ai-secondary);
+}
+
 .chip {
   display: flex;
   align-items: center;
@@ -46,11 +96,11 @@
   }
 
   /* On hover, spread the chips apart instead of overlapping. */
-  .strip:hover .chip:not(:disabled) {
+  .chips:hover .chip:not(:disabled) {
     margin-right: 7px;
   }
 
-  .strip:hover .chip:not(:disabled):last-child {
+  .chips:hover .chip:not(:disabled):last-child {
     margin-right: 0;
   }
 }

@@ -63,14 +63,24 @@ const errorLocale: Record<`ai-image-editor-error-${KnownErrorCode}`, string> = {
   'ai-image-editor-error-DownloadFileTaskFailedError': "Couldn't save the generated image. Please try again.",
 };
 
-export const enLocale = { ...coreLocale, ...errorLocale };
+/**
+ * History paging arrow aria-labels. Optional per locale (they fall back to
+ * English), so translations can adopt them incrementally like the error codes.
+ */
+const navLocale = {
+  'ai-image-editor-history-prev': 'Older results',
+  'ai-image-editor-history-next': 'Newer results',
+};
+
+export const enLocale = { ...coreLocale, ...navLocale, ...errorLocale };
 
 export type AiImageEditorLocaleKey = keyof typeof enLocale;
 
 /**
- * A locale's strings. Core keys are required; the per-error-code messages are
- * optional (they fall back to English / the generic message), so translations
- * can adopt them incrementally without every locale listing every code.
+ * A locale's strings. Core keys are required; the paging labels and per-error-
+ * code messages are optional (they fall back to English / the generic message),
+ * so translations can adopt them incrementally without every locale listing all.
  */
 export type AiImageEditorLocale = Record<keyof typeof coreLocale, string> &
+  Partial<Record<keyof typeof navLocale, string>> &
   Partial<Record<keyof typeof errorLocale, string>>;
