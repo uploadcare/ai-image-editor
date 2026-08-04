@@ -197,10 +197,6 @@ export class UcAiHistory extends LitElement {
     );
   }
 
-  private _startOver(): void {
-    this.dispatchEvent(new CustomEvent('uc:start-over', { bubbles: true, composed: true }));
-  }
-
   // ----- Touch carousel -----
 
   protected override firstUpdated(): void {
