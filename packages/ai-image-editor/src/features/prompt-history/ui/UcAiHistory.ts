@@ -1,16 +1,16 @@
 import { animate } from '@lit-labs/motion';
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
+import { createRef, ref } from 'lit/directives/ref.js';
 import { repeat } from 'lit/directives/repeat.js';
-
+import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import { cdnSquareThumbUrl } from '../../../shared/lib/cdn';
 import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
 import type { SecureDeliveryProxyUrlResolver } from '../../../shared/lib/secureDelivery';
+import { ICON_NEXT_ARROW, ICON_PREV_ARROW } from '../../../shared/ui/icons';
 import type { HistoryEntry } from '../../generation';
 import styles from './history.css?inline';
-import { ICON_NEXT_ARROW, ICON_PREV_ARROW } from '../../../shared/ui/icons';
-import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 
 export type HistorySelectDetail = { entry: HistoryEntry };
 
@@ -33,6 +33,11 @@ const VISIBLE = 5;
  * visible window keeps the selected chip centred — except near the ends, where
  * the window can't overrun the roster, so the first/last couple of results sit
  * off-centre against their edge.
+ *
+ * On touch (coarse-pointer) devices there are no arrows: the strip becomes a
+ * centre-snapping horizontal carousel holding *every* result, iPhone-style. The
+ * chip nearest the centre is the selection, so flicking through pages results
+ * one by one; tapping a chip snaps it to the centre.
  */
 @customElement('uc-ai-history')
 export class UcAiHistory extends LitElement {
@@ -82,6 +87,44 @@ export class UcAiHistory extends LitElement {
   private _prevSelected: string | null = null;
   /** Whether the window has been given its initial (newest) anchor yet. */
   private _windowReady = false;
+
+  /** Primary pointer is coarse (touch): render the centre-snap carousel — every
+   *  result in a scroller, no arrows — instead of the windowed strip. */
+  @state()
+  private _coarse = false;
+
+  /** The scroller element (`.chips`) in carousel mode, for centring math. */
+  private readonly _chipsRef = createRef<HTMLElement>();
+  private _coarseMq?: MediaQueryList;
+  /** rAF gate so the scroll handler reads layout at most once per frame. */
+  private _scrollRaf = false;
+  /** Set when the carousel's own scroll drove the selection — tells `updated`
+   *  not to re-centre and fight the in-progress flick. */
+  private _selectFromScroll = false;
+
+  public override connectedCallback(): void {
+    super.connectedCallback();
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      this._coarseMq = window.matchMedia('(pointer: coarse)');
+      this._coarse = this._coarseMq.matches;
+      this._coarseMq.addEventListener?.('change', this._onCoarseChange);
+    }
+    window.addEventListener?.('resize', this._onResize);
+  }
+
+  public override disconnectedCallback(): void {
+    this._coarseMq?.removeEventListener?.('change', this._onCoarseChange);
+    window.removeEventListener?.('resize', this._onResize);
+    super.disconnectedCallback();
+  }
+
+  private readonly _onCoarseChange = (e: MediaQueryListEvent): void => {
+    this._coarse = e.matches;
+  };
+
+  private readonly _onResize = (): void => {
+    if (this._coarse) this._syncCarousel(false);
+  };
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (changed.has('secureResolver')) this._secure.setResolver(this.secureResolver);
@@ -158,81 +201,182 @@ export class UcAiHistory extends LitElement {
     this.dispatchEvent(new CustomEvent('uc:start-over', { bubbles: true, composed: true }));
   }
 
+  // ----- Touch carousel -----
+
+  protected override firstUpdated(): void {
+    if (this._coarse) this._syncCarousel(false);
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    if (!this._coarse) return;
+    // The carousel's own scroll picked this selection — let the flick settle.
+    if (this._selectFromScroll) {
+      this._selectFromScroll = false;
+      return;
+    }
+    // Just switched to touch, a new result arrived, or the parent restored a
+    // selection: pad the scroller and snap the selected chip back to centre.
+    if (changed.has('_coarse') || changed.has('entries') || changed.has('selectedUuid')) {
+      this._syncCarousel(!changed.has('_coarse'));
+    }
+  }
+
+  /** Re-pad the scroller and centre the selected chip (`smooth` for restores). */
+  private _syncCarousel(smooth: boolean): void {
+    const scroller = this._chipsRef.value;
+    if (!scroller || !this._coarse) return;
+    this._padScroller(scroller);
+    const sel = scroller.querySelector<HTMLElement>('.chip--selected');
+    if (sel) this._centerChip(sel, smooth);
+  }
+
+  /** Pad the ends so the first/last chip can still reach the centre. */
+  private _padScroller(scroller: HTMLElement): void {
+    const chip = scroller.querySelector<HTMLElement>('.chip');
+    const chipW = chip ? chip.offsetWidth : 44;
+    const pad = Math.max(0, (scroller.getBoundingClientRect().width - chipW) / 2);
+    scroller.style.paddingLeft = `${pad}px`;
+    scroller.style.paddingRight = `${pad}px`;
+  }
+
+  /** Scroll a chip to the horizontal centre of the scroller. */
+  private _centerChip(chip: HTMLElement, smooth: boolean): void {
+    const scroller = this._chipsRef.value;
+    if (!scroller) return;
+    const s = scroller.getBoundingClientRect();
+    const c = chip.getBoundingClientRect();
+    const delta = c.left + c.width / 2 - (s.left + s.width / 2);
+    scroller.scrollTo?.({ left: scroller.scrollLeft + delta, behavior: smooth ? 'smooth' : 'auto' });
+  }
+
+  /** The chip whose centre is nearest the scroller's centre. */
+  private _centeredChip(): HTMLElement | null {
+    const scroller = this._chipsRef.value;
+    if (!scroller) return null;
+    const center = scroller.getBoundingClientRect().left + scroller.getBoundingClientRect().width / 2;
+    let best: HTMLElement | null = null;
+    let bestD = Infinity;
+    for (const c of scroller.querySelectorAll<HTMLElement>('.chip')) {
+      const r = c.getBoundingClientRect();
+      const d = Math.abs(r.left + r.width / 2 - center);
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    return best;
+  }
+
+  /** Live-select whichever chip is under the centre as the strip is flicked. */
+  private readonly _onScroll = (): void => {
+    if (!this._coarse || this._scrollRaf) return;
+    this._scrollRaf = true;
+    requestAnimationFrame(() => {
+      this._scrollRaf = false;
+      const chip = this._centeredChip();
+      const uuid = chip?.dataset.uuid;
+      if (!uuid || uuid === this.selectedUuid) return;
+      const entry = this.entries.find((e) => e.file.uuid === uuid);
+      if (entry) {
+        this._selectFromScroll = true;
+        this._select(entry);
+      }
+    });
+  };
+
   public override render(): TemplateResult {
     const hasEntries = this.entries.length > 0;
     // Nothing to show: no results and start-over not applicable (generate mode).
     if (!hasEntries && !this.showStartOver) return html`${nothing}`;
 
-    const stripClasses = { strip: true, 'strip--empty': !hasEntries };
+    const carousel = this._coarse;
+    const stripClasses = { strip: true, 'strip--empty': !hasEntries, 'strip--carousel': carousel };
     // Ordered oldest→newest so the newest chip is rightmost and paints on top
     // (later DOM order wins), while the source array stays newest-first.
     const ordered = this._ordered;
     const total = ordered.length;
-    // Arrows appear once the roster outgrows the window; they step the active
-    // result, so their enablement tracks the selection, not the window edge.
-    const showArrows = total > VISIBLE;
+    // Touch carousels hold every result; the pointer strip windows to VISIBLE
+    // with arrows once the roster outgrows it.
+    const showArrows = !carousel && total > VISIBLE;
     const start = Math.min(this._windowStart, this._maxStart(total));
-    const windowEntries = ordered.slice(start, start + VISIBLE);
+    const chipEntries = carousel ? ordered : ordered.slice(start, start + VISIBLE);
     const sel = ordered.findIndex((e) => e.file.uuid === this.selectedUuid);
     const canPrev = sel > 0; // an older result to step back to
     const canNext = sel >= 0 && sel < total - 1; // a newer result to step forward to
 
     return html`
       <div class=${classMap(stripClasses)} role="toolbar" aria-label="${this.listLabel}">
-        ${this.showStartOver
-          ? html`
-              <div class="startover">
-                <button type="button" ?disabled="${this.busy}" class="startover__btn" @click=${this._startOver}>
-                  ${this.startOverLabel}
-                </button>
-              </div>
-            `
-          : nothing}
+        ${
+          // Position readout (selected / total), revealed with the arrows on
+          // hover. Decorative — the toolbar + arrow labels already convey state.
+          showArrows ? html`<div class="counter" aria-hidden="true">${Math.max(0, sel) + 1} / ${total}</div>` : nothing
+        }
         ${showArrows ? this._navButton('prev', this.prevLabel, !canPrev) : nothing}
-        <div class="chips">
+        <div
+          class=${classMap({ chips: true, 'chips--carousel': carousel })}
+          ${ref(this._chipsRef)}
+          @scroll=${this._onScroll}
+        >
           ${repeat(
-            windowEntries,
+            chipEntries,
             (entry) => entry.id,
-            (entry) => {
-              const thumb = this._secure.resolve(cdnSquareThumbUrl(entry.url, THUMB_SIZE));
-              const selected = this.selectedUuid != null && entry.file.uuid === this.selectedUuid;
-              const loaded = this._loaded.has(entry.id);
-              return html`
-                <button
-                  type="button"
-                  ?disabled=${this.busy}
-                  class=${classMap({ chip: true, 'chip--selected': selected })}
-                  aria-pressed="${selected ? 'true' : 'false'}"
-                  aria-label=${entry.prompt || 'Result'}
-                  title=${entry.prompt}
-                  @click=${() => this._select(entry)}
-                  ${animate({ keyframeOptions: { duration: 300, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' } })}
-                >
-                  <span class=${classMap({ thumb: true, 'thumb--loaded': loaded })}>
-                    ${
-                      // Rendering the <img> preloads it; the skeleton shows until it
-                      // decodes, then it fades in (see history.css).
-                      thumb
-                        ? html`<img
-                            class="thumb__img"
-                            src="${thumb}"
-                            alt=""
-                            aria-hidden="true"
-                            decoding="async"
-                            @load=${() => this._onThumbSettled(entry.id)}
-                            @error=${() => this._onThumbSettled(entry.id)}
-                          />`
-                        : nothing
-                    }
-                  </span>
-                </button>
-              `;
-            },
+            (entry) => this._renderChip(entry, carousel),
           )}
         </div>
         ${showArrows ? this._navButton('next', this.nextLabel, !canNext) : nothing}
       </div>
     `;
+  }
+
+  /** A single result chip. In carousel mode the FLIP `animate()` is dropped so
+   *  it can't fight the scroller's snap, and a `data-uuid` lets the scroll
+   *  handler map the centred chip back to its entry. */
+  private _renderChip(entry: HistoryEntry, carousel: boolean): TemplateResult {
+    const thumb = this._secure.resolve(cdnSquareThumbUrl(entry.url, THUMB_SIZE));
+    const selected = this.selectedUuid != null && entry.file.uuid === this.selectedUuid;
+    const loaded = this._loaded.has(entry.id);
+    return html`
+      <button
+        type="button"
+        ?disabled=${this.busy}
+        data-uuid=${entry.file.uuid}
+        class=${classMap({ chip: true, 'chip--selected': selected })}
+        aria-pressed="${selected ? 'true' : 'false'}"
+        aria-label=${entry.prompt || 'Result'}
+        title=${entry.prompt}
+        @click=${() => this._onChipClick(entry)}
+        ${carousel ? nothing : animate({ keyframeOptions: { duration: 300, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' } })}
+      >
+        <span class=${classMap({ thumb: true, 'thumb--loaded': loaded })}>
+          ${
+            // Rendering the <img> preloads it; the skeleton shows until it
+            // decodes, then it fades in (see history.css).
+            thumb
+              ? html`<img
+                  class="thumb__img"
+                  src="${thumb}"
+                  alt=""
+                  aria-hidden="true"
+                  decoding="async"
+                  @load=${() => this._onThumbSettled(entry.id)}
+                  @error=${() => this._onThumbSettled(entry.id)}
+                />`
+              : nothing
+          }
+        </span>
+      </button>
+    `;
+  }
+
+  /** Selecting a chip restores it; on touch it also snaps to the centre. */
+  private _onChipClick(entry: HistoryEntry): void {
+    this._select(entry);
+    if (!this._coarse) return;
+    // Centre after the DOM reflects the new selection.
+    requestAnimationFrame(() => {
+      const el = this._chipsRef.value?.querySelector<HTMLElement>(`.chip--selected`);
+      if (el) this._centerChip(el, true);
+    });
   }
 
   /** A paging arrow. `dir` picks the chevron direction and CSS modifier. */

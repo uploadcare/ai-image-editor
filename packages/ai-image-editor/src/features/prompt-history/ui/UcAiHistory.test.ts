@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import './UcAiHistory';
 import type { HistoryEntry } from '../../generation';
 import type { UcAiHistory } from './UcAiHistory';
@@ -190,6 +190,62 @@ describe('UcAiHistory', () => {
     el.selectedUuid = 'e7';
     await el.updateComplete;
     expect(labelsOf(el)).toEqual(['e3', 'e4', 'e5', 'e6', 'e7']);
+  });
+
+  describe('touch (coarse pointer) carousel', () => {
+    let restoreMatchMedia: (() => void) | undefined;
+
+    /** Force `matchMedia('(pointer: coarse)')` to report a touch device. */
+    function mockCoarse(matches: boolean) {
+      const original = window.matchMedia;
+      window.matchMedia = ((query: string) =>
+        ({
+          matches: query.includes('coarse') ? matches : false,
+          media: query,
+          addEventListener() {},
+          removeEventListener() {},
+          addListener() {},
+          removeListener() {},
+          dispatchEvent: () => false,
+          onchange: null,
+        }) as unknown as MediaQueryList) as typeof window.matchMedia;
+      restoreMatchMedia = () => {
+        window.matchMedia = original;
+      };
+    }
+
+    afterEach(() => {
+      restoreMatchMedia?.();
+      restoreMatchMedia = undefined;
+    });
+
+    it('renders every result (no windowing) and no arrows on touch', async () => {
+      mockCoarse(true);
+      const el = await mount({ entries: series(9), selectedUuid: 'e8' });
+      // All nine chips are present — the carousel scrolls rather than paging.
+      expect(chips(el)).toHaveLength(9);
+      expect(prev(el)).toBeNull();
+      expect(next(el)).toBeNull();
+      expect(el.shadowRoot!.querySelector('.chips--carousel')).toBeTruthy();
+    });
+
+    it('selects the chip whose uuid is tapped and emits uc:select', async () => {
+      mockCoarse(true);
+      const el = await mount({ entries: series(9), selectedUuid: 'e8' });
+      const onSelect = vi.fn();
+      el.addEventListener('uc:select', onSelect);
+
+      chips(el)[0]!.click(); // oldest (e0)
+      expect((onSelect.mock.calls[0]![0] as CustomEvent).detail.entry.id).toBe('e0');
+    });
+
+    it('still windows with arrows on non-touch (pointer) devices', async () => {
+      mockCoarse(false);
+      const el = await mount({ entries: series(9), selectedUuid: 'e8' });
+      expect(chips(el)).toHaveLength(5);
+      expect(next(el)).toBeTruthy();
+      expect(el.shadowRoot!.querySelector('.chips--carousel')).toBeNull();
+    });
   });
 
   it('shows a Start over control in edit mode and emits uc:start-over', async () => {
