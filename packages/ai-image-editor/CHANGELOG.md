@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.1...ai-image-editor-v0.2.2) (2026-08-04)
+
+
+### Bug Fixes
+
+* **docs:** stop the Playground nav link 404ing on click ([#61](https://github.com/uploadcare/ai-image-editor/issues/61)) ([ade1b5d](https://github.com/uploadcare/ai-image-editor/commit/ade1b5d13993c2624d5393b1d04e0be9cd508acb))
+
 ## [0.2.1](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.0...ai-image-editor-v0.2.1) (2026-07-30)
 
 
