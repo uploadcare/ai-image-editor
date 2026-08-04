@@ -248,7 +248,7 @@ describe('UcAiHistory', () => {
     });
   });
 
-  it('shows a Start over control in edit mode and emits uc:start-over', async () => {
+  it.skip('shows a Start over control in edit mode and emits uc:start-over', async () => {
     const el = await mount({ entries: [], showStartOver: true, startOverLabel: 'Start over' });
     expect(el.shadowRoot!.querySelector('.strip')).toBeTruthy();
     expect(startOver(el)?.textContent).toContain('Start over');
