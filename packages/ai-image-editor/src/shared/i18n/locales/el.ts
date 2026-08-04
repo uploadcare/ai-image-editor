@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Τέλος',
   'ai-image-editor-start-over': 'Ξεκινήστε από την αρχή',
   'ai-image-editor-history-title': 'Πρόσφατες προτροπές',
+  'ai-image-editor-history-prev': 'Παλαιότερα αποτελέσματα',
+  'ai-image-editor-history-next': 'Νεότερα αποτελέσματα',
   'ai-image-editor-busy': 'Δημιουργία…',
   'ai-image-editor-error': 'Κάτι πήγε στραβά. Δοκιμάστε ξανά.',
   'ai-image-editor-fullscreen': 'Προβολή σε πλήρη οθόνη',

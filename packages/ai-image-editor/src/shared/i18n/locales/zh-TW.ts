@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': '完成',
   'ai-image-editor-start-over': '重新開始',
   'ai-image-editor-history-title': '最近的提示詞',
+  'ai-image-editor-history-prev': '較舊的結果',
+  'ai-image-editor-history-next': '較新的結果',
   'ai-image-editor-busy': '生成中…',
   'ai-image-editor-error': '發生錯誤，請重試。',
   'ai-image-editor-fullscreen': '全螢幕檢視',

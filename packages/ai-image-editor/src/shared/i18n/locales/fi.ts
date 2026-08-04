@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Valmis',
   'ai-image-editor-start-over': 'Aloita alusta',
   'ai-image-editor-history-title': 'Viimeisimmät kehotteet',
+  'ai-image-editor-history-prev': 'Vanhemmat tulokset',
+  'ai-image-editor-history-next': 'Uudemmat tulokset',
   'ai-image-editor-busy': 'Luodaan…',
   'ai-image-editor-error': 'Jotain meni pieleen. Yritä uudelleen.',
   'ai-image-editor-fullscreen': 'Näytä koko näytöllä',

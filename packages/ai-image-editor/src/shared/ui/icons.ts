@@ -32,3 +32,12 @@ export const ICON_FULLSCREEN = `<svg viewBox="0 0 24 24" fill="none" xmlns="http
 export const ICON_FULLSCREEN_EXIT = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <path d="M4 9h5V4M20 9h-5V4M4 15h5v5M20 15h-5v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
+
+export const ICON_NEXT_ARROW = `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+  <path fill-rule="evenodd" d="M3.75 12c0 .414.335.75.75.75h13.433l-5.72 5.85a.75.75 0 0 0 1.073 1.05l6.578-6.729a1.29 1.29 0 0 0 0-1.842L13.286 4.35a.75.75 0 0 0-1.073 1.048l5.72 5.851H4.5a.75.75 0 0 0-.75.75" clip-rule="evenodd"/>
+</svg>
+`
+
+export const ICON_PREV_ARROW = `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+  <path fill-rule="evenodd" d="M20.251 12a.75.75 0 0 1-.75.75H6.067l5.72 5.85a.75.75 0 1 1-1.072 1.05l-6.579-6.73a1.29 1.29 0 0 1 0-1.842l6.579-6.728a.75.75 0 1 1 1.072 1.048l-5.72 5.851H19.5a.75.75 0 0 1 .75.75" clip-rule="evenodd"/>
+</svg>`

@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Дайын',
   'ai-image-editor-start-over': 'Қайтадан бастау',
   'ai-image-editor-history-title': 'Соңғы сұраулар',
+  'ai-image-editor-history-prev': 'Ескі нәтижелер',
+  'ai-image-editor-history-next': 'Жаңа нәтижелер',
   'ai-image-editor-busy': 'Жасалуда…',
   'ai-image-editor-error': 'Бірдеңе дұрыс болмады. Қайталап көріңіз.',
   'ai-image-editor-fullscreen': 'Толық экранда қарау',

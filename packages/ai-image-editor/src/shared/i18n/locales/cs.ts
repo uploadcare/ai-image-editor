@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Hotovo',
   'ai-image-editor-start-over': 'Začít znovu',
   'ai-image-editor-history-title': 'Poslední prompty',
+  'ai-image-editor-history-prev': 'Starší výsledky',
+  'ai-image-editor-history-next': 'Novější výsledky',
   'ai-image-editor-busy': 'Generování…',
   'ai-image-editor-error': 'Něco se pokazilo. Zkuste to znovu.',
   'ai-image-editor-fullscreen': 'Zobrazit na celou obrazovku',

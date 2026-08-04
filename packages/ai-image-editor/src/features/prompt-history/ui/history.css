@@ -12,6 +12,136 @@
   min-height: 44px;
 }
 
+/* Holds the visible (windowed) chips; the prev/next arrows flank it. Its own
+   flex row keeps `.chip:last-child` scoped to the window, not the whole strip. */
+.chips {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Paging arrow — a round chip-surfaced button on either side of the window. */
+.nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--uc-ai-button-size, 32px);
+  height: var(--uc-ai-button-size, 32px);
+  padding: 0;
+  background: var(--uc-ai-floating, var(--uc-ai-background));
+  border: 1px solid var(--uc-ai-floating-border, transparent);
+  border-radius: calc(var(--uc-ai-radius-button, 8px) + 2px);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+  color: var(--uc-ai-foreground);
+  cursor: pointer;
+  transition:
+    background 200ms var(--uc-ai-ease-out, ease),
+    opacity 200ms var(--uc-ai-ease-out, ease);
+}
+
+.nav--prev {
+  margin-right: 10px;
+}
+
+.nav--next {
+  margin-left: 10px;
+}
+
+.nav svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.nav:not(:disabled):hover {
+  background: var(--uc-ai-secondary);
+}
+
+/* On pointer devices the arrows stay hidden until the strip is hovered/focused
+   (like the composer's quiet-until-hovered affordances), and the dead-end
+   direction's arrow is hidden entirely rather than dimmed. Coarse-pointer
+   (touch) devices keep the arrows visible — they're the only paging mechanism
+   there, with no carousel fallback. */
+@media (hover: hover) and (pointer: fine) {
+  .nav,
+  .nav:disabled {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .strip:hover .nav:not(:disabled),
+  .strip:focus-within .nav:not(:disabled) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* Position readout (selected / total), centred above the strip and revealed
+   alongside the arrows on hover/focus. */
+.counter {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  padding: 4px 7px;
+  background: var(--uc-ai-background);
+  border-radius: calc(var(--uc-ai-radius-button, 8px) + 2px);
+  box-shadow: var(--uc-ai-dialog-shadow);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--uc-ai-foreground);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px) scale(0.9);
+  pointer-events: none;
+  transition:
+    opacity 220ms var(--uc-ai-ease-out, ease),
+    transform 220ms var(--uc-ai-ease-out, ease);
+}
+
+.strip:hover .counter,
+.strip:focus-within .counter {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+/* ---------- Touch: centre-snap scroll carousel (no arrows) ---------- */
+/* Coarse-pointer devices swap the windowed strip for a full-width horizontal
+   scroller: every result is a snap point, so flicking pages through them one by
+   one (iPhone-style) and the centred chip is the selection. JS pads the ends so
+   the first/last chip can still reach the centre. */
+.strip--carousel {
+  display: flex;
+  width: 100%;
+}
+
+/* The hover bridge and its arrows/counter are pointer-only affordances. */
+.strip--carousel::before {
+  content: none;
+}
+
+.chips--carousel {
+  display: flex;
+  width: 100%;
+  /* Vertical room so the scaled selected chip + its shadow aren't clipped. */
+  padding-block: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chips--carousel::-webkit-scrollbar {
+  display: none;
+}
+
 .chip {
   display: flex;
   align-items: center;
@@ -25,6 +155,7 @@
   /* scale(1) gives every chip a stacking context so they paint in DOM order —
      later (newer) chips overlap earlier ones even when scaled. */
   transform: scale(1);
+  transform-origin: center center;
   transition:
     margin 300ms var(--uc-ai-ease-out, ease),
     border-color 225ms ease,
@@ -58,6 +189,12 @@
 .chip--selected {
   border-color: var(--uc-ai-primary);
   transform: scale(1.2);
+}
+
+/* Carousel chips are fixed-size snap points (overlap kept from the base rule). */
+.chips--carousel .chip {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
 }
 
 .thumb {
@@ -206,5 +343,13 @@
   .strip:not(.strip--empty):hover .startover,
   .strip:not(.strip--empty):focus-within .startover {
     transform: translateY(-50%);
+  }
+
+  /* Counter fades in place — drop the slide/scale but keep it centred. */
+  .counter,
+  .strip:hover .counter,
+  .strip:focus-within .counter {
+    transform: translateX(-50%);
+    transition-property: opacity;
   }
 }

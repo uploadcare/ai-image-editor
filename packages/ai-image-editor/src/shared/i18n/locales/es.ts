@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Listo',
   'ai-image-editor-start-over': 'Empezar de nuevo',
   'ai-image-editor-history-title': 'Prompts recientes',
+  'ai-image-editor-history-prev': 'Resultados anteriores',
+  'ai-image-editor-history-next': 'Resultados más recientes',
   'ai-image-editor-busy': 'Generando…',
   'ai-image-editor-error': 'Algo salió mal. Inténtalo de nuevo.',
   'ai-image-editor-fullscreen': 'Ver en pantalla completa',

@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Ferdig',
   'ai-image-editor-start-over': 'Start på nytt',
   'ai-image-editor-history-title': 'Nylige prompts',
+  'ai-image-editor-history-prev': 'Eldre resultater',
+  'ai-image-editor-history-next': 'Nyere resultater',
   'ai-image-editor-busy': 'Genererer…',
   'ai-image-editor-error': 'Noe gikk galt. Prøv igjen.',
   'ai-image-editor-fullscreen': 'Vis i fullskjerm',

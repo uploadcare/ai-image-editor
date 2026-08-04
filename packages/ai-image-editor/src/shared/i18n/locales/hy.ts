@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Պատրաստ է',
   'ai-image-editor-start-over': 'Սկսել նորից',
   'ai-image-editor-history-title': 'Վերջին հուշումները',
+  'ai-image-editor-history-prev': 'Ավելի հին արդյունքներ',
+  'ai-image-editor-history-next': 'Ավելի նոր արդյունքներ',
   'ai-image-editor-busy': 'Ստեղծվում է…',
   'ai-image-editor-error': 'Ինչ-որ բան սխալ գնաց։ Կրկին փորձեք։',
   'ai-image-editor-fullscreen': 'Դիտել լիաէկրան',

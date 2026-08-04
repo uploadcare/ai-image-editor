@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Klaar',
   'ai-image-editor-start-over': 'Opnieuw beginnen',
   'ai-image-editor-history-title': 'Recente prompts',
+  'ai-image-editor-history-prev': 'Oudere resultaten',
+  'ai-image-editor-history-next': 'Nieuwere resultaten',
   'ai-image-editor-busy': 'Genereren…',
   'ai-image-editor-error': 'Er ging iets mis. Probeer het opnieuw.',
   'ai-image-editor-fullscreen': 'Volledig scherm weergeven',

@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Gatavs',
   'ai-image-editor-start-over': 'Sākt no jauna',
   'ai-image-editor-history-title': 'Nesenās uzvednes',
+  'ai-image-editor-history-prev': 'Vecāki rezultāti',
+  'ai-image-editor-history-next': 'Jaunāki rezultāti',
   'ai-image-editor-busy': 'Ģenerē…',
   'ai-image-editor-error': 'Radās kļūda. Mēģiniet vēlreiz.',
   'ai-image-editor-fullscreen': 'Skatīt pilnekrāna režīmā',

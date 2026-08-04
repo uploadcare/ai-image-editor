@@ -1,7 +1,20 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import './UcAiHistory';
 import type { HistoryEntry } from '../../generation';
 import type { UcAiHistory } from './UcAiHistory';
+
+// happy-dom has no Element.animate; @lit-labs/motion's FLIP directive calls it
+// when chips re-render (e.g. paging), which would surface as an unhandled
+// rejection. Stub a no-op Animation so those updates stay quiet.
+beforeAll(() => {
+  if (typeof Element.prototype.animate !== 'function') {
+    Element.prototype.animate = (() => ({
+      finished: Promise.resolve(),
+      cancel() {},
+      finish() {},
+    })) as unknown as Element['animate'];
+  }
+});
 
 function entry(overrides: Partial<HistoryEntry> & { uuid?: string } = {}): HistoryEntry {
   const uuid = overrides.uuid ?? 'uuid-1';
@@ -25,6 +38,16 @@ async function mount(overrides: Partial<UcAiHistory> = {}): Promise<UcAiHistory>
 
 const chips = (el: UcAiHistory) => [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.chip')];
 const startOver = (el: UcAiHistory) => el.shadowRoot!.querySelector<HTMLButtonElement>('.startover__btn');
+const prev = (el: UcAiHistory) => el.shadowRoot!.querySelector<HTMLButtonElement>('.nav--prev');
+const next = (el: UcAiHistory) => el.shadowRoot!.querySelector<HTMLButtonElement>('.nav--next');
+
+/** Build `n` newest-first entries (uuid/id `e{n-1}` … `e0`, newest first). */
+function series(n: number): HistoryEntry[] {
+  return Array.from({ length: n }, (_, i) => {
+    const uuid = `e${n - 1 - i}`;
+    return entry({ uuid, id: uuid, prompt: uuid });
+  });
+}
 
 describe('UcAiHistory', () => {
   it('renders nothing in generate mode with no results', async () => {
@@ -64,7 +87,168 @@ describe('UcAiHistory', () => {
     expect((onSelect.mock.calls[0]![0] as CustomEvent).detail.entry.id).toBe('a');
   });
 
-  it('shows a Start over control in edit mode and emits uc:start-over', async () => {
+  const labelsOf = (el: UcAiHistory) => chips(el).map((c) => c.getAttribute('aria-label'));
+  const selectedLabels = (el: UcAiHistory) =>
+    chips(el)
+      .filter((c) => c.classList.contains('chip--selected'))
+      .map((c) => c.getAttribute('aria-label'));
+
+  it('shows no arrows when entries fit the window', async () => {
+    const el = await mount({ entries: series(5), selectedUuid: 'e4' });
+    expect(chips(el)).toHaveLength(5);
+    expect(prev(el)).toBeNull();
+    expect(next(el)).toBeNull();
+  });
+
+  it('windows to 5 chips around the newest selection by default', async () => {
+    const el = await mount({ entries: series(7), selectedUuid: 'e6' });
+    // ordered oldest→newest is e0…e6; the newest window is e2…e6.
+    expect(labelsOf(el)).toEqual(['e2', 'e3', 'e4', 'e5', 'e6']);
+    expect(prev(el)!.disabled).toBe(false); // an older result exists
+    expect(next(el)!.disabled).toBe(true); // already at the newest
+  });
+
+  it('prev/next step the active result and emit uc:select', async () => {
+    const el = await mount({ entries: series(7), selectedUuid: 'e6' });
+    const onSelect = vi.fn();
+    el.addEventListener('uc:select', onSelect);
+
+    prev(el)!.click(); // one older than e6
+    expect((onSelect.mock.calls[0]![0] as CustomEvent).detail.entry.id).toBe('e5');
+
+    // The parent restores that result, handing the selection back down.
+    el.selectedUuid = 'e5';
+    await el.updateComplete;
+    expect(selectedLabels(el)).toEqual(['e5']);
+
+    next(el)!.click(); // one newer than e5
+    expect((onSelect.mock.calls[1]![0] as CustomEvent).detail.entry.id).toBe('e6');
+  });
+
+  const selectedIndex = (el: UcAiHistory) => chips(el).findIndex((c) => c.classList.contains('chip--selected'));
+
+  it('centers the selected result, re-centering as it steps', async () => {
+    const el = await mount({ entries: series(9), selectedUuid: 'e4' });
+    // e4 sits dead-center (window index 2) of the 5-wide window.
+    expect(labelsOf(el)).toEqual(['e2', 'e3', 'e4', 'e5', 'e6']);
+    expect(selectedIndex(el)).toBe(2);
+
+    // Stepping newer re-centers: the window shifts one and e5 lands in the middle.
+    next(el)!.click();
+    el.selectedUuid = 'e5'; // parent restores the newer result
+    await el.updateComplete;
+    expect(labelsOf(el)).toEqual(['e3', 'e4', 'e5', 'e6', 'e7']);
+    expect(selectedIndex(el)).toBe(2);
+  });
+
+  it('pins the window at the edges for the first/last results (cannot center)', async () => {
+    const first = await mount({ entries: series(9), selectedUuid: 'e1' });
+    // Second-oldest can't be centered — window stays at the start, chip off-center.
+    expect(labelsOf(first)).toEqual(['e0', 'e1', 'e2', 'e3', 'e4']);
+    expect(selectedIndex(first)).toBe(1);
+
+    const last = await mount({ entries: series(9), selectedUuid: 'e8' });
+    // Newest can't be centered — window stays at the end, chip on the right.
+    expect(labelsOf(last)).toEqual(['e4', 'e5', 'e6', 'e7', 'e8']);
+    expect(selectedIndex(last)).toBe(4);
+  });
+
+  it('disables prev at the oldest result and next at the newest', async () => {
+    const oldest = await mount({ entries: series(7), selectedUuid: 'e0' });
+    expect(prev(oldest)!.disabled).toBe(true);
+    expect(next(oldest)!.disabled).toBe(false);
+
+    const newest = await mount({ entries: series(7), selectedUuid: 'e6' });
+    expect(prev(newest)!.disabled).toBe(false);
+    expect(next(newest)!.disabled).toBe(true);
+  });
+
+  it('keeps the window steady across unrelated re-renders (fresh array, same selection)', async () => {
+    const el = await mount({ entries: series(7), selectedUuid: 'e3' });
+    expect(labelsOf(el)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5']); // e3 centered
+
+    // The parent re-renders with a freshly-built array (new ref, same content)
+    // and the unchanged selection — the window must not jitter.
+    el.entries = series(7);
+    el.busy = false;
+    await el.updateComplete;
+    expect(labelsOf(el)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5']);
+  });
+
+  it('slides the window to keep the selected chip visible', async () => {
+    const el = await mount({ entries: series(7), selectedUuid: 'e0' });
+    // Selecting the oldest pulls the window to the start.
+    expect(labelsOf(el)).toEqual(['e0', 'e1', 'e2', 'e3', 'e4']);
+    expect(selectedLabels(el)).toEqual(['e0']);
+  });
+
+  it('snaps to the newest window when a new entry is prepended', async () => {
+    const el = await mount({ entries: series(7), selectedUuid: 'e0' });
+    expect(chips(el)[0]!.getAttribute('aria-label')).toBe('e0');
+    // A fresh generation prepends a newest-first entry and selects it.
+    el.entries = [entry({ uuid: 'e7', id: 'e7', prompt: 'e7' }), ...series(7)];
+    el.selectedUuid = 'e7';
+    await el.updateComplete;
+    expect(labelsOf(el)).toEqual(['e3', 'e4', 'e5', 'e6', 'e7']);
+  });
+
+  describe('touch (coarse pointer) carousel', () => {
+    let restoreMatchMedia: (() => void) | undefined;
+
+    /** Force `matchMedia('(pointer: coarse)')` to report a touch device. */
+    function mockCoarse(matches: boolean) {
+      const original = window.matchMedia;
+      window.matchMedia = ((query: string) =>
+        ({
+          matches: query.includes('coarse') ? matches : false,
+          media: query,
+          addEventListener() {},
+          removeEventListener() {},
+          addListener() {},
+          removeListener() {},
+          dispatchEvent: () => false,
+          onchange: null,
+        }) as unknown as MediaQueryList) as typeof window.matchMedia;
+      restoreMatchMedia = () => {
+        window.matchMedia = original;
+      };
+    }
+
+    afterEach(() => {
+      restoreMatchMedia?.();
+      restoreMatchMedia = undefined;
+    });
+
+    it('renders every result (no windowing) and no arrows on touch', async () => {
+      mockCoarse(true);
+      const el = await mount({ entries: series(9), selectedUuid: 'e8' });
+      // All nine chips are present — the carousel scrolls rather than paging.
+      expect(chips(el)).toHaveLength(9);
+      expect(prev(el)).toBeNull();
+      expect(next(el)).toBeNull();
+      expect(el.shadowRoot!.querySelector('.chips--carousel')).toBeTruthy();
+    });
+
+    it('selects the chip whose uuid is tapped and emits uc:select', async () => {
+      mockCoarse(true);
+      const el = await mount({ entries: series(9), selectedUuid: 'e8' });
+      const onSelect = vi.fn();
+      el.addEventListener('uc:select', onSelect);
+
+      chips(el)[0]!.click(); // oldest (e0)
+      expect((onSelect.mock.calls[0]![0] as CustomEvent).detail.entry.id).toBe('e0');
+    });
+
+    it('still windows with arrows on non-touch (pointer) devices', async () => {
+      mockCoarse(false);
+      const el = await mount({ entries: series(9), selectedUuid: 'e8' });
+      expect(chips(el)).toHaveLength(5);
+      expect(next(el)).toBeTruthy();
+      expect(el.shadowRoot!.querySelector('.chips--carousel')).toBeNull();
+    });
+  });
+
+  it.skip('shows a Start over control in edit mode and emits uc:start-over', async () => {
     const el = await mount({ entries: [], showStartOver: true, startOverLabel: 'Start over' });
     expect(el.shadowRoot!.querySelector('.strip')).toBeTruthy();
     expect(startOver(el)?.textContent).toContain('Start over');

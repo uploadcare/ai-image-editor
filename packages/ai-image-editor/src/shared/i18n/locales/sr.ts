@@ -12,6 +12,8 @@ const locale: AiImageEditorLocale = {
   'ai-image-editor-done-btn': 'Gotovo',
   'ai-image-editor-start-over': 'Почни изнова',
   'ai-image-editor-history-title': 'Nedavni upiti',
+  'ai-image-editor-history-prev': 'Stariji rezultati',
+  'ai-image-editor-history-next': 'Noviji rezultati',
   'ai-image-editor-busy': 'Generisanje…',
   'ai-image-editor-error': 'Nešto je pošlo po zlu. Pokušajte ponovo.',
   'ai-image-editor-fullscreen': 'Prikaži preko celog ekrana',
