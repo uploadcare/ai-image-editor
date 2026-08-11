@@ -5,9 +5,7 @@ hero:
   text: AI image generation & editing
   tagline: A web component for Uploadcare. Generate images from a prompt or edit an existing one by uuid. Ships standalone and as a File Uploader plugin.
   actions:
-    - theme: brand
-      text: Try the demo
-      link: /demo
+
     - theme: alt
       text: Get started
       link: /guide/getting-started
