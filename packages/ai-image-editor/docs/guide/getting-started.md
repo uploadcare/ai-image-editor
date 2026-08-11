@@ -9,7 +9,7 @@ package gives you a framework-agnostic `<uc-ai-image-editor>` web component, plu
 optional plugin that adds an **AI Edit** action and a **Generate image** source
 to the [File Uploader](https://uploadcare.com/docs/file-uploader/).
 
-Want to see it first? Head to the [live demo](/demo).
+<!-- Want to see it first? Head to the [live demo](/demo). -->
 
 ## Install
 
@@ -112,4 +112,4 @@ flips a from-scratch session into edit mode, so you can chain edits.
 
 - [File Uploader plugin](/guide/plugin): drop it into the uploader.
 - [Theming](/guide/theming) · [Localization](/guide/localization)
-- [Live demo](/demo): try the editor and its layout options.
+<!-- - [Live demo](/demo): try the editor and its layout options. -->
