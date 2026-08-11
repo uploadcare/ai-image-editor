@@ -6,8 +6,7 @@ title: UI & layout
 
 The editor's chrome is arranged from a few independent pieces. This page explains
 each and the properties that position them. Every option here is an attribute,
-so you can set it in HTML or as a property, and you can try them all live on the
-[demo](/demo).
+so you can set it in HTML or as a property.
 
 ## The pieces
 

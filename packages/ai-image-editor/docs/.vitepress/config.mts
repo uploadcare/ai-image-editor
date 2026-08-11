@@ -42,7 +42,7 @@ export default defineConfig({
     siteTitle: 'AI Image Editor',
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
-      { text: 'Demo', link: '/demo' },
+      // { text: 'Demo', link: '/demo' },
       { text: 'API', link: '/api/' },
       // Built by `playground:build` into `<dist>/playground/`, not a VitePress
       // route — so it is only reachable on a built site, not in `docs:dev`.
@@ -52,7 +52,7 @@ export default defineConfig({
       // is not in its route map that lookup 404s. `_self` (rather than `_blank`)
       // keeps it in the same tab and avoids the external-link icon, which
       // `VPLink` only adds for `_blank`.
-      { text: 'Playground', link: '/playground/', target: '_self' },
+      // { text: 'Playground', link: '/playground/', target: '_self' },
       {
         text: 'Uploadcare',
         items: [
