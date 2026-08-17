@@ -1,15 +1,17 @@
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
-import { info } from '@uploadcare/upload-client';
+import { info, isReadyPoll } from '@uploadcare/upload-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
 
 // Keep the real UploadcareFile (used to wrap the result) but stub the `info`
-// network call so getFileInfo is exercised without hitting the Upload API.
+// and `isReadyPoll` network calls so both are exercised without hitting the
+// Upload API.
 vi.mock('@uploadcare/upload-client', async (importActual) => {
   const actual = await importActual<typeof import('@uploadcare/upload-client')>();
-  return { ...actual, info: vi.fn() };
+  return { ...actual, info: vi.fn(), isReadyPoll: vi.fn() };
 });
 const mockInfo = vi.mocked(info);
+const mockIsReadyPoll = vi.mocked(isReadyPoll);
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -155,18 +157,45 @@ describe('UploadcareDerivativeApi', () => {
     expect(result.url).toBe('https://cdn.example.com/final-uuid/');
   });
 
+  it('waits for CDN readiness when the success status reports is_ready: false', async () => {
+    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [
+      { status: 'success', uuid: 'final-uuid', is_ready: false },
+    ]);
+    mockIsReadyPoll.mockResolvedValue({
+      uuid: 'final-uuid',
+      originalFilename: 'ready.png',
+      isReady: true,
+    } as unknown as Awaited<ReturnType<typeof isReadyPoll>>);
+    const controller = new AbortController();
+    const provider = new UploadcareDerivativeApi({
+      publicKey: 'pk',
+      baseUrl: 'https://upload.example.com',
+      cdnBaseUrl: 'https://cdn.example.com',
+      fetch: fetchImpl,
+      ...NO_DELAY,
+    });
+
+    const result = await provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
+
+    expect(mockIsReadyPoll).toHaveBeenCalledWith(
+      'final-uuid',
+      expect.objectContaining({
+        publicKey: 'pk',
+        baseURL: 'https://upload.example.com',
+        signal: controller.signal,
+      }),
+    );
+    expect(result.file.originalFilename).toBe('ready.png');
+    expect(result.url).toBe('https://cdn.example.com/final-uuid/');
+    mockIsReadyPoll.mockReset();
+  });
+
   it('derives the CDN base from the public key when cdnBaseUrl is left at the default', async () => {
     const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'final-uuid' }]);
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
     const result = await provider.generate({ prompt: 'x', mode: 'generate' });
     const base = await getPrefixedCdnBaseAsync('pk', 'https://ucarecd.net');
     expect(result.url).toBe(`${base}/final-uuid/`);
-  });
-
-  it('throws when the success status has no uuid', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success' }]);
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/uuid/);
   });
 
   it('surfaces non-2xx generate responses with status text', async () => {

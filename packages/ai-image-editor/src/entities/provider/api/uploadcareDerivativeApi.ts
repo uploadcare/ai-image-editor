@@ -1,10 +1,14 @@
 import { serializeCdnUrl } from '@uploadcare/cdn-url';
 import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-prefix/async';
-import { type FileInfo, info, type Metadata, UploadcareFile } from '@uploadcare/upload-client';
+import { type FileInfo, info, isReadyPoll, type Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import { camelizeKeys } from '../../../shared/lib/camelizeKeys';
 import { isValidAspectRatio } from '../../aspect-ratio';
 import { AiProviderError, type AiProvider, type AiProviderRequest, type AiProviderResult } from '../model/types';
-import { UploadcareApiClient, type UploadcareJobResponse } from './uploadcareApiClient';
+import {
+  UploadcareApiClient,
+  type UploadcareJobResponse,
+  type UploadcareJobSuccessStatus,
+} from './uploadcareApiClient';
 
 const DEFAULT_RATIO: [number, number] = [1, 1];
 const DEFAULT_CDN_CNAME = 'https://ucarecdn.com';
@@ -177,10 +181,7 @@ export class UploadcareDerivativeApi implements AiProvider {
       const status = await this.api.getJobStatus(jobId, request.signal);
 
       if (status.status === 'success') {
-        if (!status.uuid) {
-          throw new Error('Uploadcare derivative: response did not include a uuid');
-        }
-        const fileInfo = camelizeKeys(status) as unknown as FileInfo;
+        const fileInfo = await this.readyFileInfo(status, request.signal);
         const file = new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
         return { url: file.cdnUrl, uuid: file.uuid, prompt: request.prompt, mode: request.mode, file };
       }
@@ -197,6 +198,18 @@ export class UploadcareDerivativeApi implements AiProvider {
 
       await delay(this.pollIntervalMs, request.signal);
     }
+  }
+
+  /**
+   * File info for a finished job. The job can finish before the CDN has ingested
+   * the file, in which case its URL still 404s — so an explicitly unready file is
+   * re-read through `isReadyPoll` instead of the status frame.
+   */
+  private readyFileInfo(status: UploadcareJobSuccessStatus, signal?: AbortSignal): Promise<FileInfo> {
+    if (status.is_ready === false) {
+      return isReadyPoll(status.uuid, { publicKey: this.publicKey, baseURL: this.baseUrl, signal });
+    }
+    return Promise.resolve(camelizeKeys(status) as unknown as FileInfo);
   }
 
   /**
