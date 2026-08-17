@@ -247,7 +247,7 @@ describe('UploadcareDerivativeApi', () => {
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
 
     await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toThrow(
-      /abort/i,
+      /cancel/i,
     );
     // 1 POST + exactly 1 status poll, then it bails — no further polling.
     expect(fetchImpl).toHaveBeenCalledTimes(2);
