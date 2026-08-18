@@ -1,6 +1,7 @@
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
 import { info, isReadyPoll } from '@uploadcare/upload-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { AiProviderError } from '../model/types';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
 
 // Keep the real UploadcareFile (used to wrap the result) but stub the `info`
@@ -120,6 +121,22 @@ describe('UploadcareDerivativeApi', () => {
     ]);
     const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
     await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/content_policy|blocked/);
+  });
+
+  it('wraps an internal poll timeout as a generation_timeout provider error', async () => {
+    // Never-successful status + a zero timeout: `poll` gives up on its own,
+    // without the caller's signal ever aborting.
+    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-slow' }, [{ type: 'job', status: 'processing' }]);
+    const provider = new UploadcareDerivativeApi({
+      publicKey: 'pk',
+      fetch: fetchImpl,
+      pollIntervalMs: 0,
+      pollTimeoutMs: 0,
+    });
+    const err = await provider.generate({ prompt: 'x', mode: 'generate' }).catch((e) => e);
+    expect(err).toBeInstanceOf(AiProviderError);
+    expect(err.errorCode).toBe('generation_timeout');
+    expect(err.message).toContain('job-slow');
   });
 
   it('honours baseUrl + cdnBaseUrl overrides for both generate and status', async () => {

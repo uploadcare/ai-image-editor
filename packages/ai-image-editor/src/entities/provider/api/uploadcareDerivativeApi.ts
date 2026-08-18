@@ -2,6 +2,7 @@ import { serializeCdnUrl } from '@uploadcare/cdn-url';
 import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-prefix/async';
 import {
   type CustomUserAgentFn,
+  CancelError,
   camelizeKeys,
   type FileInfo,
   info,
@@ -167,20 +168,7 @@ export class UploadcareDerivativeApi implements AiProvider {
   }
 
   private async pollUntilDone(jobId: string, request: AiProviderRequest): Promise<AiProviderResult> {
-    const status = await poll<UploadcareJobSuccessStatus>({
-      check: async (signal) => {
-        const status = await this.api.getJobStatus(jobId, signal);
-        if (status.status === 'error') {
-          const code = status.error_code ?? 'unknown';
-          throw new AiProviderError(code, status.error ?? code, status.error_source);
-        }
-        // `processing` / `uploading` — falsy keeps the poll going.
-        return status.status === 'success' && status;
-      },
-      interval: this.pollIntervalMs,
-      timeout: this.pollTimeoutMs,
-      signal: request.signal,
-    });
+    const status = await this.pollJobStatus(jobId, request);
 
     // The job can finish before the CDN has ingested the file, in which case its
     // URL still 404s — so an explicitly unready file is re-read until it is.
@@ -190,6 +178,39 @@ export class UploadcareDerivativeApi implements AiProvider {
         : camelizeKeys<FileInfo>(status);
     const file = new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
     return { url: file.cdnUrl, uuid: file.uuid, prompt: request.prompt, mode: request.mode, file };
+  }
+
+  /**
+   * Poll the job to its terminal `success` status. `poll` rejects with a
+   * `CancelError` for two reasons — a caller-driven abort or its own timeout.
+   * A caller abort re-throws untouched so the generation controller still
+   * recognises the cancellation; the timeout (signal not aborted) becomes a
+   * coded, localizable domain error that names the job. Job and transport
+   * failures already carry their own shape (AiProviderError / Error) and
+   * propagate unchanged.
+   */
+  private async pollJobStatus(jobId: string, request: AiProviderRequest): Promise<UploadcareJobSuccessStatus> {
+    try {
+      return await poll<UploadcareJobSuccessStatus>({
+        check: async (signal) => {
+          const status = await this.api.getJobStatus(jobId, signal);
+          if (status.status === 'error') {
+            const code = status.error_code ?? 'unknown';
+            throw new AiProviderError(code, status.error ?? code, status.error_source);
+          }
+          // `processing` / `uploading` — falsy keeps the poll going.
+          return status.status === 'success' && status;
+        },
+        interval: this.pollIntervalMs,
+        timeout: this.pollTimeoutMs,
+        signal: request.signal,
+      });
+    } catch (err) {
+      if (err instanceof CancelError && !request.signal?.aborted) {
+        throw new AiProviderError('generation_timeout', `Uploadcare derivative: timed out waiting for job ${jobId}`);
+      }
+      throw err;
+    }
   }
 
   /**
