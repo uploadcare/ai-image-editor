@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.2...ai-image-editor-v0.2.3) (2026-08-19)
+
+
+### Bug Fixes
+
+* **ai-image-editor:** wait for CDN readiness before returning a result ([#72](https://github.com/uploadcare/ai-image-editor/issues/72)) ([1fdc0cb](https://github.com/uploadcare/ai-image-editor/commit/1fdc0cb095811ea2001eef6ce453e6f6f2367d74))
+
 ## [0.2.2](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.1...ai-image-editor-v0.2.2) (2026-08-04)
 
 
