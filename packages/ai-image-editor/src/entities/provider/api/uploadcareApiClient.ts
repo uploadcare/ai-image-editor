@@ -68,30 +68,35 @@ export type UploadcareJobErrorStatus = {
 };
 
 /**
- * The job finished. The payload is the upload-info bag: the raw (snake_case)
- * form of upload-client's `FileInfo`, which {@link camelizeKeys} turns into the
- * `FileInfo` that `UploadcareFile` consumes. Fields beyond `uuid` are treated as
- * best-effort (the frame may omit them), but `uuid` is always present.
+ * The job finished. The payload is the platform's `File.get_upload_info()` bag
+ * (uploadcare/apps/files/models/files.py) — the snake_case form of
+ * upload-client's `FileInfo`, which {@link camelizeKeys} turns into the
+ * `FileInfo` that `UploadcareFile` consumes. Optionality mirrors that method:
+ * the scalar fields are always present; `image_info` / `video_info` /
+ * `content_info` / `metadata` are present but `null` for the files that don't
+ * carry them; `s3_bucket` appears only for foreign-bucket files; `tags` is not
+ * part of this frame.
  */
-type RawSuccess = Partial<SnakeCasedPropertiesDeep<FileInfo>>;
+type RawSuccess = SnakeCasedPropertiesDeep<FileInfo>;
 type RawImageInfo = NonNullable<RawSuccess['image_info']>;
 /** upload-client types `dpi` as a `{0,1}` object, but the live API sends a `[x, y]` tuple. */
 type CorrectedImageInfo = Omit<RawImageInfo, 'dpi'> & { dpi: number[] | null };
 type RawContentInfo = NonNullable<RawSuccess['content_info']>;
 type CorrectedContentInfo = Omit<RawContentInfo, 'image'> & { image?: CorrectedImageInfo };
 
-export type UploadcareJobSuccessStatus = Omit<RawSuccess, 'is_ready' | 'image_info' | 'content_info'> & {
+export type UploadcareJobSuccessStatus = Omit<
+  RawSuccess,
+  'is_ready' | 'image_info' | 'content_info' | 'metadata' | 'tags'
+> & {
   status: 'success';
-  /** Always present on success — the uploaded file's UUID (see platform PR #1497). */
-  uuid: string;
   /**
-   * Whether the derivative file is ready to serve from the CDN. The success
-   * frame arrives with `is_ready: false` while the file is still being ingested,
-   * then flips true. (The live API sends a boolean; upload-client mistypes it.)
+   * Whether the derivative file is ready to serve from the CDN. The frame
+   * arrives `false` while the file is still being ingested, then flips true.
    */
   is_ready: boolean;
-  image_info?: CorrectedImageInfo | null;
-  content_info?: CorrectedContentInfo | null;
+  image_info: CorrectedImageInfo | null;
+  content_info: CorrectedContentInfo | null;
+  metadata: Metadata | null;
 };
 
 /**

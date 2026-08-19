@@ -52,7 +52,24 @@ describe('uploadcare derivative API dev schema validation', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     validate('status', { type: 'job', status: 'processing' });
     validate('status', { type: 'job', status: 'error', error_source: 'x', error_code: 'y', error: 'z' });
-    validate('status', { status: 'success', uuid: 'u', is_ready: true, original_filename: 'f.png', size: 123 });
+    validate('status', {
+      status: 'success',
+      uuid: 'u',
+      file_id: 'u',
+      size: 123,
+      done: 123,
+      total: 123,
+      original_filename: 'f.png',
+      filename: 'f.png',
+      mime_type: 'image/png',
+      is_image: true,
+      is_stored: false,
+      is_ready: true,
+      image_info: null,
+      video_info: null,
+      content_info: null,
+      metadata: {},
+    });
     expect(spy).not.toHaveBeenCalled();
   });
 

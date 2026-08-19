@@ -25,6 +25,28 @@ function readSentBody(init: RequestInit | undefined): Record<string, unknown> {
 }
 
 /**
+ * A complete `derivative/status/` success frame minus `uuid` and `status` (which
+ * every test sets). Merged under each success fixture so the strict dev-schema
+ * validates them and the readiness poll ends — tests set only what they assert.
+ */
+const SUCCESS_FRAME_DEFAULTS = {
+  file_id: '',
+  size: 0,
+  done: 0,
+  total: 0,
+  original_filename: '',
+  filename: '',
+  mime_type: 'image/png',
+  is_image: true,
+  is_stored: false,
+  is_ready: true,
+  image_info: null,
+  video_info: null,
+  content_info: null,
+  metadata: {},
+} as const;
+
+/**
  * Builds a fetch mock that answers the generate POST with `jobResponse` and
  * then walks through `statuses` on each successive status GET.
  */
@@ -36,12 +58,10 @@ function routedFetch(jobResponse: unknown, statuses: unknown[]): ReturnType<type
     const body = statuses[Math.min(statusIndex, statuses.length - 1)];
     statusIndex += 1;
     void url;
-    // A success frame is ready unless the test sets `is_ready` itself, so the
-    // readiness poll (resolves only on `is_ready: true`) completes by default.
-    let frame = body;
-    if (body && typeof body === 'object' && 'status' in body && body.status === 'success' && !('is_ready' in body)) {
-      frame = { ...body, is_ready: true };
-    }
+    const frame =
+      body && typeof body === 'object' && 'status' in body && body.status === 'success'
+        ? { ...SUCCESS_FRAME_DEFAULTS, ...body }
+        : body;
     return jsonResponse(frame);
   });
 }
