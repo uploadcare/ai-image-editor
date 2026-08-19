@@ -197,7 +197,7 @@ export class UploadcareDerivativeApi implements AiProvider {
           // Not done yet — a falsy result keeps the poll going. `processing` /
           // `uploading` haven't finished; a `success` frame is only truly done
           // once `is_ready` is true (until then its CDN URL would still 404).
-          return frame.status === 'success' && frame.is_ready === true && frame;
+          return frame.status === 'success' && frame.is_ready && frame;
         },
         interval: this.pollIntervalMs,
         timeout: this.pollTimeoutMs,

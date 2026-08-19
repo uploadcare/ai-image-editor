@@ -103,7 +103,6 @@ const StatusResponseSchema: z.ZodType<UploadcareJobStatus> = z.discriminatedUnio
     error: z.string().optional(),
   }),
   z.object({
-    type: z.literal('job').optional(),
     status: z.literal('success'),
     // Always present on success — the uploaded file's `uuid` (see platform PR #1497).
     uuid: z.string(),

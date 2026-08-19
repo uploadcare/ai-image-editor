@@ -81,7 +81,6 @@ type RawContentInfo = NonNullable<RawSuccess['content_info']>;
 type CorrectedContentInfo = Omit<RawContentInfo, 'image'> & { image?: CorrectedImageInfo };
 
 export type UploadcareJobSuccessStatus = Omit<RawSuccess, 'is_ready' | 'image_info' | 'content_info'> & {
-  type?: 'job';
   status: 'success';
   /** Always present on success — the uploaded file's UUID (see platform PR #1497). */
   uuid: string;
