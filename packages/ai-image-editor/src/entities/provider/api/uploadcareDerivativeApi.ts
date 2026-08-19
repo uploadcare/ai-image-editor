@@ -6,7 +6,6 @@ import {
   camelizeKeys,
   type FileInfo,
   info,
-  isReadyPoll,
   type Metadata,
   poll,
   UploadcareFile,
@@ -169,22 +168,17 @@ export class UploadcareDerivativeApi implements AiProvider {
 
   private async pollUntilDone(jobId: string, request: AiProviderRequest): Promise<AiProviderResult> {
     const status = await this.pollJobStatus(jobId, request);
-
-    // The job can finish before the CDN has ingested the file, in which case its
-    // URL still 404s — so an explicitly unready file is re-read until it is.
-    const fileInfo =
-      status.is_ready === false
-        ? await isReadyPoll(status.uuid, { ...this.uploadClientOptions, signal: request.signal })
-        : camelizeKeys<FileInfo>(status);
-    const file = new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
+    // `pollJobStatus` only resolves once the success frame reports the file as
+    // CDN-ready, so the frame is the final FileInfo — no extra readiness fetch.
+    const file = new UploadcareFile(camelizeKeys<FileInfo>(status), { baseCDN: await this.getCdnBase() });
     return { url: file.cdnUrl, uuid: file.uuid, prompt: request.prompt, mode: request.mode, file };
   }
 
   /**
-   * Poll the job to its terminal `success` status. `poll` rejects with a
-   * `CancelError` for two reasons — a caller-driven abort or its own timeout.
-   * A caller abort re-throws untouched so the generation controller still
-   * recognises the cancellation; the timeout (signal not aborted) becomes a
+   * Poll the job until it succeeds *and* its file is CDN-ready. `poll` rejects
+   * with a `CancelError` for two reasons — a caller-driven abort or its own
+   * timeout. A caller abort re-throws untouched so the generation controller
+   * still recognises the cancellation; the timeout (signal not aborted) becomes a
    * coded, localizable domain error that names the job. Job and transport
    * failures already carry their own shape (AiProviderError / Error) and
    * propagate unchanged.
@@ -198,8 +192,11 @@ export class UploadcareDerivativeApi implements AiProvider {
             const code = status.error_code ?? 'unknown';
             throw new AiProviderError(code, status.error ?? code, status.error_source);
           }
-          // `processing` / `uploading` — falsy keeps the poll going.
-          return status.status === 'success' && status;
+          // Not done yet — a falsy result keeps the poll going. `processing` /
+          // `uploading` haven't finished; a `success` frame with `is_ready:
+          // false` has finished generating but the CDN URL would still 404, so
+          // wait for the ready frame (its `is_ready` flips true).
+          return status.status === 'success' && status.is_ready !== false && status;
         },
         interval: this.pollIntervalMs,
         timeout: this.pollTimeoutMs,

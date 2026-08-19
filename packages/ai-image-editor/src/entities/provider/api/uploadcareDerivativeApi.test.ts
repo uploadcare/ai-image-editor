@@ -1,18 +1,16 @@
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
-import { info, isReadyPoll } from '@uploadcare/upload-client';
+import { info } from '@uploadcare/upload-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AiProviderError } from '../model/types';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
 
-// Keep the real UploadcareFile (used to wrap the result) but stub the `info`
-// and `isReadyPoll` network calls so both are exercised without hitting the
-// Upload API.
+// Keep the real UploadcareFile (used to wrap results) but stub the `info`
+// network call (used by getFileInfo) so it's exercised without the Upload API.
 vi.mock('@uploadcare/upload-client', async (importActual) => {
   const actual = await importActual<typeof import('@uploadcare/upload-client')>();
-  return { ...actual, info: vi.fn(), isReadyPoll: vi.fn() };
+  return { ...actual, info: vi.fn() };
 });
 const mockInfo = vi.mocked(info);
-const mockIsReadyPoll = vi.mocked(isReadyPoll);
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -174,37 +172,24 @@ describe('UploadcareDerivativeApi', () => {
     expect(result.url).toBe('https://cdn.example.com/final-uuid/');
   });
 
-  it('waits for CDN readiness when the success status reports is_ready: false', async () => {
+  it('keeps polling the status until the success frame reports is_ready: true', async () => {
     const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [
       { status: 'success', uuid: 'final-uuid', is_ready: false },
+      { status: 'success', uuid: 'final-uuid', is_ready: true, original_filename: 'ready.png' },
     ]);
-    mockIsReadyPoll.mockResolvedValue({
-      uuid: 'final-uuid',
-      originalFilename: 'ready.png',
-      isReady: true,
-    } as unknown as Awaited<ReturnType<typeof isReadyPoll>>);
-    const controller = new AbortController();
     const provider = new UploadcareDerivativeApi({
       publicKey: 'pk',
-      baseUrl: 'https://upload.example.com',
       cdnBaseUrl: 'https://cdn.example.com',
       fetch: fetchImpl,
       ...NO_DELAY,
     });
 
-    const result = await provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
+    const result = await provider.generate({ prompt: 'x', mode: 'generate' });
 
-    expect(mockIsReadyPoll).toHaveBeenCalledWith(
-      'final-uuid',
-      expect.objectContaining({
-        publicKey: 'pk',
-        baseURL: 'https://upload.example.com',
-        signal: controller.signal,
-      }),
-    );
+    // 1 POST + 2 status polls: the first `success` frame isn't CDN-ready yet.
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
     expect(result.file.originalFilename).toBe('ready.png');
     expect(result.url).toBe('https://cdn.example.com/final-uuid/');
-    mockIsReadyPoll.mockReset();
   });
 
   it('derives the CDN base from the public key when cdnBaseUrl is left at the default', async () => {
