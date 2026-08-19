@@ -1,10 +1,24 @@
 import { serializeCdnUrl } from '@uploadcare/cdn-url';
 import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-prefix/async';
-import { type FileInfo, info, type Metadata, UploadcareFile } from '@uploadcare/upload-client';
-import { camelizeKeys } from '../../../shared/lib/camelizeKeys';
+import {
+  type CustomUserAgentFn,
+  CancelError,
+  camelizeKeys,
+  type FileInfo,
+  info,
+  isReadyPoll,
+  type Metadata,
+  poll,
+  UploadcareFile,
+} from '@uploadcare/upload-client';
+import { customUserAgent } from '../../../shared/lib/userAgent';
 import { isValidAspectRatio } from '../../aspect-ratio';
-import { AiProviderError, type AiProvider, type AiProviderRequest, type AiProviderResult } from '../model/types';
-import { UploadcareApiClient, type UploadcareJobResponse } from './uploadcareApiClient';
+import { type AiProvider, AiProviderError, type AiProviderRequest, type AiProviderResult } from '../model/types';
+import {
+  UploadcareApiClient,
+  type UploadcareJobResponse,
+  type UploadcareJobSuccessStatus,
+} from './uploadcareApiClient';
 
 const DEFAULT_RATIO: [number, number] = [1, 1];
 const DEFAULT_CDN_CNAME = 'https://ucarecdn.com';
@@ -35,29 +49,6 @@ export type UploadcareDerivativeApiOptions = {
   pollTimeoutMs?: number;
 };
 
-function delay(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new DOMException('Aborted', 'AbortError'));
-      return;
-    }
-    const timer = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort);
-      resolve();
-    }, ms);
-    const onAbort = () => {
-      clearTimeout(timer);
-      reject(new DOMException('Aborted', 'AbortError'));
-    };
-    signal?.addEventListener('abort', onAbort, { once: true });
-  });
-}
-
-/** Monotonic-ish clock that works in browsers, workers, and Node. */
-function performanceNow(): number {
-  return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
-}
-
 /**
  * AI provider backed by Uploadcare's `derivative/*` API. A single instance
  * serves both editor modes, dispatching on `request.mode`: `generate`
@@ -72,13 +63,14 @@ export class UploadcareDerivativeApi implements AiProvider {
 
   private readonly api: UploadcareApiClient;
   private readonly publicKey: string;
-  private readonly baseUrl?: string;
   private readonly filename: string;
   private readonly store?: 'auto' | boolean;
   private readonly cname: string;
   private readonly cnamePrefixed: string;
   private readonly pollIntervalMs: number;
   private readonly pollTimeoutMs: number;
+  /** What every upload-client call needs: credentials, endpoint, and our identity. */
+  private readonly uploadClientOptions: { publicKey: string; baseURL?: string; userAgent: CustomUserAgentFn };
   private cdnBasePromise?: Promise<string>;
 
   constructor(options: UploadcareDerivativeApiOptions) {
@@ -91,13 +83,17 @@ export class UploadcareDerivativeApi implements AiProvider {
       fetch: options.fetch,
     });
     this.publicKey = options.publicKey;
-    this.baseUrl = options.baseUrl;
     this.filename = options.filename ?? 'generated.png';
     this.store = options.store;
     this.cname = options.cdnBaseUrl ?? DEFAULT_CDN_CNAME;
     this.cnamePrefixed = options.cdnCnamePrefixed ?? 'https://ucarecd.net';
     this.pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
     this.pollTimeoutMs = options.pollTimeoutMs ?? DEFAULT_POLL_TIMEOUT_MS;
+    this.uploadClientOptions = {
+      publicKey: options.publicKey,
+      baseURL: options.baseUrl,
+      userAgent: customUserAgent,
+    };
   }
 
   async generate(request: AiProviderRequest): Promise<AiProviderResult> {
@@ -121,7 +117,7 @@ export class UploadcareDerivativeApi implements AiProvider {
    * true aspect ratio before the image decodes, and name outputs after it.
    */
   async getFileInfo(uuid: string, signal?: AbortSignal): Promise<UploadcareFile> {
-    const fileInfo = await info(uuid, { publicKey: this.publicKey, baseURL: this.baseUrl, signal });
+    const fileInfo = await info(uuid, { ...this.uploadClientOptions, signal });
     return new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
   }
 
@@ -172,30 +168,48 @@ export class UploadcareDerivativeApi implements AiProvider {
   }
 
   private async pollUntilDone(jobId: string, request: AiProviderRequest): Promise<AiProviderResult> {
-    const deadline = this.pollTimeoutMs + performanceNow();
-    while (true) {
-      const status = await this.api.getJobStatus(jobId, request.signal);
+    const status = await this.pollJobStatus(jobId, request);
 
-      if (status.status === 'success') {
-        if (!status.uuid) {
-          throw new Error('Uploadcare derivative: response did not include a uuid');
-        }
-        const fileInfo = camelizeKeys(status) as unknown as FileInfo;
-        const file = new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
-        return { url: file.cdnUrl, uuid: file.uuid, prompt: request.prompt, mode: request.mode, file };
+    // The job can finish before the CDN has ingested the file, in which case its
+    // URL still 404s — so an explicitly unready file is re-read until it is.
+    const fileInfo =
+      status.is_ready === false
+        ? await isReadyPoll(status.uuid, { ...this.uploadClientOptions, signal: request.signal })
+        : camelizeKeys<FileInfo>(status);
+    const file = new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
+    return { url: file.cdnUrl, uuid: file.uuid, prompt: request.prompt, mode: request.mode, file };
+  }
+
+  /**
+   * Poll the job to its terminal `success` status. `poll` rejects with a
+   * `CancelError` for two reasons — a caller-driven abort or its own timeout.
+   * A caller abort re-throws untouched so the generation controller still
+   * recognises the cancellation; the timeout (signal not aborted) becomes a
+   * coded, localizable domain error that names the job. Job and transport
+   * failures already carry their own shape (AiProviderError / Error) and
+   * propagate unchanged.
+   */
+  private async pollJobStatus(jobId: string, request: AiProviderRequest): Promise<UploadcareJobSuccessStatus> {
+    try {
+      return await poll<UploadcareJobSuccessStatus>({
+        check: async (signal) => {
+          const status = await this.api.getJobStatus(jobId, signal);
+          if (status.status === 'error') {
+            const code = status.error_code ?? 'unknown';
+            throw new AiProviderError(code, status.error ?? code, status.error_source);
+          }
+          // `processing` / `uploading` — falsy keeps the poll going.
+          return status.status === 'success' && status;
+        },
+        interval: this.pollIntervalMs,
+        timeout: this.pollTimeoutMs,
+        signal: request.signal,
+      });
+    } catch (err) {
+      if (err instanceof CancelError && !request.signal?.aborted) {
+        throw new AiProviderError('generation_timeout', `Uploadcare derivative: timed out waiting for job ${jobId}`);
       }
-
-      if (status.status === 'error') {
-        const code = status.error_code ?? 'unknown';
-        const message = status.error ?? code;
-        throw new AiProviderError(code, message, status.error_source);
-      }
-
-      if (performanceNow() >= deadline) {
-        throw new Error(`Uploadcare derivative: timed out waiting for job ${jobId}`);
-      }
-
-      await delay(this.pollIntervalMs, request.signal);
+      throw err;
     }
   }
 

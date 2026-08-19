@@ -1,5 +1,4 @@
-import type { FileInfo, Metadata } from '@uploadcare/upload-client';
-import type { SnakeCasedPropertiesDeep } from '../../../shared/lib/camelizeKeys';
+import type { FileInfo, Metadata, SnakeCasedPropertiesDeep } from '@uploadcare/upload-client';
 import { AiProviderError } from '../model/types';
 
 /**

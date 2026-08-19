@@ -133,7 +133,9 @@ export class GenerationController implements ReactiveController {
       ].slice(0, MAX_HISTORY);
       return result;
     } catch (err) {
-      if ((err as DOMException)?.name === 'AbortError') return null;
+      // We own this controller, so anything thrown while it is aborted is a
+      // cancellation — whatever shape the error has.
+      if (controller.signal.aborted) return null;
       this.error = (err as Error).message || 'Generation failed';
       this.errorCode = err instanceof AiProviderError ? err.errorCode : null;
       throw err;
