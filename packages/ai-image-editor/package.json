@@ -43,9 +43,9 @@
   },
   "dependencies": {
     "@lit-labs/motion": "^1.1.0",
-    "@uploadcare/cdn-url": "6.19.0-alpha.0",
-    "@uploadcare/cname-prefix": "^6.18.4",
-    "@uploadcare/upload-client": "^6.18.4",
+    "@uploadcare/cdn-url": "6.20.0-alpha.6",
+    "@uploadcare/cname-prefix": "^6.21.0",
+    "@uploadcare/upload-client": "^6.21.0",
     "lit": "^3.2.1"
   },
   "peerDependencies": {
@@ -59,7 +59,7 @@
   "devDependencies": {
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@custom-elements-manifest/to-markdown": "^0.1.0",
-    "@uploadcare/file-uploader": "1.31.2",
+    "@uploadcare/file-uploader": "1.33.1",
     "@vitest/browser-playwright": "^4.1.10",
     "lit-analyzer": "^2.0.3",
     "playwright": "^1.49.0",
