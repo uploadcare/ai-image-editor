@@ -64,6 +64,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -83,8 +84,10 @@ jobs:
         if: matrix.react != 19
         run: npm install --no-save react@${{ matrix.react }} react-dom@${{ matrix.react }}
 
+      # ubuntu-latest already ships Chromium's system libs; --with-deps shells
+      # out to apt-get, which has hung for ~60 min on a stalled Ubuntu mirror
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - run: npm run build --workspaces --if-present
 
