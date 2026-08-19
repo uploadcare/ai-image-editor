@@ -5,7 +5,7 @@ import {
   CancelError,
   camelizeKeys,
   type FileInfo,
-  info,
+  isReadyPoll,
   type Metadata,
   poll,
   UploadcareFile,
@@ -116,7 +116,9 @@ export class UploadcareDerivativeApi implements AiProvider {
    * true aspect ratio before the image decodes, and name outputs after it.
    */
   async getFileInfo(uuid: string, signal?: AbortSignal): Promise<UploadcareFile> {
-    const fileInfo = await info(uuid, { ...this.uploadClientOptions, signal });
+    // Poll until the source file is ready: an unready file's CDN URL still 404s,
+    // and the canvas would latch that load error just like a generation result.
+    const fileInfo = await isReadyPoll(uuid, { ...this.uploadClientOptions, signal });
     return new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
   }
 
@@ -167,10 +169,10 @@ export class UploadcareDerivativeApi implements AiProvider {
   }
 
   private async pollUntilDone(jobId: string, request: AiProviderRequest): Promise<AiProviderResult> {
-    const status = await this.pollJobStatus(jobId, request);
+    const frame = await this.pollJobStatus(jobId, request);
     // `pollJobStatus` only resolves once the success frame reports the file as
     // CDN-ready, so the frame is the final FileInfo — no extra readiness fetch.
-    const file = new UploadcareFile(camelizeKeys<FileInfo>(status), { baseCDN: await this.getCdnBase() });
+    const file = new UploadcareFile(camelizeKeys<FileInfo>(frame), { baseCDN: await this.getCdnBase() });
     return { url: file.cdnUrl, uuid: file.uuid, prompt: request.prompt, mode: request.mode, file };
   }
 
@@ -187,16 +189,15 @@ export class UploadcareDerivativeApi implements AiProvider {
     try {
       return await poll<UploadcareJobSuccessStatus>({
         check: async (signal) => {
-          const status = await this.api.getJobStatus(jobId, signal);
-          if (status.status === 'error') {
-            const code = status.error_code ?? 'unknown';
-            throw new AiProviderError(code, status.error ?? code, status.error_source);
+          const frame = await this.api.getJobStatus(jobId, signal);
+          if (frame.status === 'error') {
+            const code = frame.error_code ?? 'unknown';
+            throw new AiProviderError(code, frame.error ?? code, frame.error_source);
           }
           // Not done yet — a falsy result keeps the poll going. `processing` /
-          // `uploading` haven't finished; a `success` frame with `is_ready:
-          // false` has finished generating but the CDN URL would still 404, so
-          // wait for the ready frame (its `is_ready` flips true).
-          return status.status === 'success' && status.is_ready !== false && status;
+          // `uploading` haven't finished; a `success` frame is only truly done
+          // once `is_ready` is true (until then its CDN URL would still 404).
+          return frame.status === 'success' && frame.is_ready === true && frame;
         },
         interval: this.pollIntervalMs,
         timeout: this.pollTimeoutMs,

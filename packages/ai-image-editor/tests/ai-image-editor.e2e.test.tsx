@@ -45,7 +45,7 @@ function stubFetch(opts: { uuid?: string; status?: (signal?: AbortSignal) => Pro
       return jsonResponse({ type: 'job', job_id: 'job-1' });
     }
     if (opts.status) return opts.status(init?.signal ?? undefined);
-    return jsonResponse({ status: 'success', uuid: opts.uuid ?? 'result' });
+    return jsonResponse({ status: 'success', uuid: opts.uuid ?? 'result', is_ready: true });
   }) as typeof fetch;
   restoreFetch = () => {
     globalThis.fetch = real;

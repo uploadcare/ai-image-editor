@@ -85,8 +85,12 @@ export type UploadcareJobSuccessStatus = Omit<RawSuccess, 'is_ready' | 'image_in
   status: 'success';
   /** Always present on success — the uploaded file's UUID (see platform PR #1497). */
   uuid: string;
-  /** Live API sends a boolean; upload-client mistypes it as a string. */
-  is_ready?: boolean;
+  /**
+   * Whether the derivative file is ready to serve from the CDN. The success
+   * frame arrives with `is_ready: false` while the file is still being ingested,
+   * then flips true. (The live API sends a boolean; upload-client mistypes it.)
+   */
+  is_ready: boolean;
   image_info?: CorrectedImageInfo | null;
   content_info?: CorrectedContentInfo | null;
 };

@@ -116,8 +116,9 @@ const StatusResponseSchema: z.ZodType<UploadcareJobStatus> = z.discriminatedUnio
     mime_type: z.string().optional(),
     is_image: z.boolean().optional(),
     is_stored: z.boolean().optional(),
-    // The live API sends a boolean, not the string upload-client types.
-    is_ready: z.boolean().optional(),
+    // The live API sends a boolean (not the string upload-client types); always
+    // present on a success frame, `false` until the file is CDN-ready.
+    is_ready: z.boolean(),
     image_info: ImageInfoSchema.nullable().optional(),
     video_info: VideoInfoSchema.nullable().optional(),
     content_info: ContentInfoSchema.nullable().optional(),
