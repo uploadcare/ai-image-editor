@@ -332,9 +332,10 @@ export class UcAiHistory extends LitElement {
     const selected = this.selectedUuid != null && entry.file.uuid === this.selectedUuid;
     const loaded = this._loaded.has(entry.id);
     // Centred per-chip offset for the hover "fan" (18px = the rest overlap of
-    // -11px opened to a 7px gap). Driving the fan with a transform keyed off
-    // this var — instead of an animated margin — keeps the motion sub-pixel
-    // smooth (see history.css). Not applied in carousel mode.
+    // -11px opened to a 7px gap). The fan is driven off this var by the CSS
+    // `translate` property — not an animated margin, and not `transform` (which
+    // the FLIP slide owns) — so it stays sub-pixel smooth and composes with a
+    // slide that lands mid-hover (see history.css). Not applied in carousel mode.
     const fan = carousel ? 0 : (index - (count - 1) / 2) * 18;
     return html`
       <button

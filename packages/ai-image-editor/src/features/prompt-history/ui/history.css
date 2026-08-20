@@ -170,15 +170,20 @@
   color: inherit;
   /* `isolation: isolate` gives every chip its own stacking context so they
      paint in DOM order — later (newer) chips overlap earlier ones even when the
-     inner is scaled up. The hover "fan" is a `transform: translateX` (see the
-     hover block), NOT an animated margin: animating a layout property moves a
-     solid box across the pixel grid a frame at a time, so it visibly steps /
-     snaps sub-pixel; a transform is composited and interpolated smoothly. The
-     visual scale lives on `.chip__inner` so it and the fan translate stay on
-     separate elements and don't fight the FLIP `animate()` slide. */
+     inner is scaled up. The hover "fan" uses the independent `translate`
+     property (see the hover block), NOT `margin` and NOT `transform`:
+       - not `margin`, because animating a layout property steps a solid box
+         across the pixel grid;
+       - not `transform`, because the FLIP `animate()` directive owns `.chip`'s
+         `transform` for its slide, and a shared property makes the two clobber
+         each other (the fan blinks when a result lands mid-hover).
+     `translate` and `transform` are separate properties that the browser
+     composes, so the fan and the FLIP slide coexist. The visual scale lives on
+     `.chip__inner`. */
   isolation: isolate;
+  translate: 0;
   transition:
-    transform 300ms var(--uc-ai-ease-out, ease),
+    translate 300ms var(--uc-ai-ease-out, ease),
     opacity 330ms var(--uc-ai-ease-out, ease);
 }
 
@@ -213,12 +218,13 @@
     transform: scale(1.1);
   }
 
-  /* Fan the chips apart on hover via transform (each by its centred index
-     offset `--fan`, set per chip in the template) so the group stays centred
-     and the motion is composited/sub-pixel-smooth — an animated `margin` here
-     stepped across the pixel grid. */
+  /* Fan the chips apart on hover via the `translate` property (each by its
+     centred index offset `--fan`, set per chip in the template). Using
+     `translate` — not `margin` (which steps across the pixel grid) and not
+     `transform` (owned by the FLIP slide) — keeps the motion sub-pixel smooth
+     and lets it compose with a FLIP slide that lands mid-hover. */
   .strip:hover .chip:not(:disabled) {
-    transform: translateX(var(--fan, 0));
+    translate: var(--fan, 0) 0;
   }
 }
 
