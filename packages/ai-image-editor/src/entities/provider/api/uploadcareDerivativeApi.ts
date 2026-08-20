@@ -5,7 +5,6 @@ import {
   CancelError,
   camelizeKeys,
   type FileInfo,
-  info,
   isReadyPoll,
   type Metadata,
   poll,
@@ -117,7 +116,9 @@ export class UploadcareDerivativeApi implements AiProvider {
    * true aspect ratio before the image decodes, and name outputs after it.
    */
   async getFileInfo(uuid: string, signal?: AbortSignal): Promise<UploadcareFile> {
-    const fileInfo = await info(uuid, { ...this.uploadClientOptions, signal });
+    // Poll until the source file is ready: an unready file's CDN URL still 404s,
+    // and the canvas would latch that load error just like a generation result.
+    const fileInfo = await isReadyPoll(uuid, { ...this.uploadClientOptions, signal });
     return new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
   }
 
@@ -168,23 +169,18 @@ export class UploadcareDerivativeApi implements AiProvider {
   }
 
   private async pollUntilDone(jobId: string, request: AiProviderRequest): Promise<AiProviderResult> {
-    const status = await this.pollJobStatus(jobId, request);
-
-    // The job can finish before the CDN has ingested the file, in which case its
-    // URL still 404s — so an explicitly unready file is re-read until it is.
-    const fileInfo =
-      status.is_ready === false
-        ? await isReadyPoll(status.uuid, { ...this.uploadClientOptions, signal: request.signal })
-        : camelizeKeys<FileInfo>(status);
-    const file = new UploadcareFile(fileInfo, { baseCDN: await this.getCdnBase() });
+    const frame = await this.pollJobStatus(jobId, request);
+    // `pollJobStatus` only resolves once the success frame reports the file as
+    // CDN-ready, so the frame is the final FileInfo — no extra readiness fetch.
+    const file = new UploadcareFile(camelizeKeys<FileInfo>(frame), { baseCDN: await this.getCdnBase() });
     return { url: file.cdnUrl, uuid: file.uuid, prompt: request.prompt, mode: request.mode, file };
   }
 
   /**
-   * Poll the job to its terminal `success` status. `poll` rejects with a
-   * `CancelError` for two reasons — a caller-driven abort or its own timeout.
-   * A caller abort re-throws untouched so the generation controller still
-   * recognises the cancellation; the timeout (signal not aborted) becomes a
+   * Poll the job until it succeeds *and* its file is CDN-ready. `poll` rejects
+   * with a `CancelError` for two reasons — a caller-driven abort or its own
+   * timeout. A caller abort re-throws untouched so the generation controller
+   * still recognises the cancellation; the timeout (signal not aborted) becomes a
    * coded, localizable domain error that names the job. Job and transport
    * failures already carry their own shape (AiProviderError / Error) and
    * propagate unchanged.
@@ -193,13 +189,15 @@ export class UploadcareDerivativeApi implements AiProvider {
     try {
       return await poll<UploadcareJobSuccessStatus>({
         check: async (signal) => {
-          const status = await this.api.getJobStatus(jobId, signal);
-          if (status.status === 'error') {
-            const code = status.error_code ?? 'unknown';
-            throw new AiProviderError(code, status.error ?? code, status.error_source);
+          const frame = await this.api.getJobStatus(jobId, signal);
+          if (frame.status === 'error') {
+            const code = frame.error_code ?? 'unknown';
+            throw new AiProviderError(code, frame.error ?? code, frame.error_source);
           }
-          // `processing` / `uploading` — falsy keeps the poll going.
-          return status.status === 'success' && status;
+          // Not done yet — a falsy result keeps the poll going. `processing` /
+          // `uploading` haven't finished; a `success` frame is only truly done
+          // once `is_ready` is true (until then its CDN URL would still 404).
+          return frame.status === 'success' && frame.is_ready && frame;
         },
         interval: this.pollIntervalMs,
         timeout: this.pollTimeoutMs,

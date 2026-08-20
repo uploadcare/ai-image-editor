@@ -1,17 +1,15 @@
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
-import { info, isReadyPoll } from '@uploadcare/upload-client';
+import { isReadyPoll } from '@uploadcare/upload-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AiProviderError } from '../model/types';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
 
-// Keep the real UploadcareFile (used to wrap the result) but stub the `info`
-// and `isReadyPoll` network calls so both are exercised without hitting the
-// Upload API.
+// Keep the real UploadcareFile (used to wrap results) but stub the `isReadyPoll`
+// network call (used by getFileInfo) so it's exercised without the Upload API.
 vi.mock('@uploadcare/upload-client', async (importActual) => {
   const actual = await importActual<typeof import('@uploadcare/upload-client')>();
-  return { ...actual, info: vi.fn(), isReadyPoll: vi.fn() };
+  return { ...actual, isReadyPoll: vi.fn() };
 });
-const mockInfo = vi.mocked(info);
 const mockIsReadyPoll = vi.mocked(isReadyPoll);
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
@@ -27,6 +25,28 @@ function readSentBody(init: RequestInit | undefined): Record<string, unknown> {
 }
 
 /**
+ * A complete `derivative/status/` success frame minus `uuid` and `status` (which
+ * every test sets). Merged under each success fixture so the strict dev-schema
+ * validates them and the readiness poll ends — tests set only what they assert.
+ */
+const SUCCESS_FRAME_DEFAULTS = {
+  file_id: '',
+  size: 0,
+  done: 0,
+  total: 0,
+  original_filename: '',
+  filename: '',
+  mime_type: 'image/png',
+  is_image: true,
+  is_stored: false,
+  is_ready: true,
+  image_info: null,
+  video_info: null,
+  content_info: null,
+  metadata: {},
+} as const;
+
+/**
  * Builds a fetch mock that answers the generate POST with `jobResponse` and
  * then walks through `statuses` on each successive status GET.
  */
@@ -38,7 +58,11 @@ function routedFetch(jobResponse: unknown, statuses: unknown[]): ReturnType<type
     const body = statuses[Math.min(statusIndex, statuses.length - 1)];
     statusIndex += 1;
     void url;
-    return jsonResponse(body);
+    const frame =
+      body && typeof body === 'object' && 'status' in body && body.status === 'success'
+        ? { ...SUCCESS_FRAME_DEFAULTS, ...body }
+        : body;
+    return jsonResponse(frame);
   });
 }
 
@@ -174,37 +198,24 @@ describe('UploadcareDerivativeApi', () => {
     expect(result.url).toBe('https://cdn.example.com/final-uuid/');
   });
 
-  it('waits for CDN readiness when the success status reports is_ready: false', async () => {
+  it('keeps polling the status until the success frame reports is_ready: true', async () => {
     const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [
       { status: 'success', uuid: 'final-uuid', is_ready: false },
+      { status: 'success', uuid: 'final-uuid', is_ready: true, original_filename: 'ready.png' },
     ]);
-    mockIsReadyPoll.mockResolvedValue({
-      uuid: 'final-uuid',
-      originalFilename: 'ready.png',
-      isReady: true,
-    } as unknown as Awaited<ReturnType<typeof isReadyPoll>>);
-    const controller = new AbortController();
     const provider = new UploadcareDerivativeApi({
       publicKey: 'pk',
-      baseUrl: 'https://upload.example.com',
       cdnBaseUrl: 'https://cdn.example.com',
       fetch: fetchImpl,
       ...NO_DELAY,
     });
 
-    const result = await provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
+    const result = await provider.generate({ prompt: 'x', mode: 'generate' });
 
-    expect(mockIsReadyPoll).toHaveBeenCalledWith(
-      'final-uuid',
-      expect.objectContaining({
-        publicKey: 'pk',
-        baseURL: 'https://upload.example.com',
-        signal: controller.signal,
-      }),
-    );
+    // 1 POST + 2 status polls: the first `success` frame isn't CDN-ready yet.
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
     expect(result.file.originalFilename).toBe('ready.png');
     expect(result.url).toBe('https://cdn.example.com/final-uuid/');
-    mockIsReadyPoll.mockReset();
   });
 
   it('derives the CDN base from the public key when cdnBaseUrl is left at the default', async () => {
@@ -333,7 +344,7 @@ describe('UploadcareDerivativeApi', () => {
   });
 
   describe('getFileInfo', () => {
-    afterEach(() => mockInfo.mockReset());
+    afterEach(() => mockIsReadyPoll.mockReset());
 
     const fileInfoFixture = {
       uuid: 'file-uuid',
@@ -341,10 +352,10 @@ describe('UploadcareDerivativeApi', () => {
       isImage: true,
       mimeType: 'image/png',
       imageInfo: { width: 800, height: 1200, format: 'PNG' },
-    } as unknown as Awaited<ReturnType<typeof info>>;
+    } as unknown as Awaited<ReturnType<typeof isReadyPoll>>;
 
-    it('calls upload-client info() and wraps it as an UploadcareFile on the CDN base', async () => {
-      mockInfo.mockResolvedValue(fileInfoFixture);
+    it('polls isReadyPoll() and wraps the ready file as an UploadcareFile on the CDN base', async () => {
+      mockIsReadyPoll.mockResolvedValue(fileInfoFixture);
       const provider = new UploadcareDerivativeApi({
         publicKey: 'pk',
         cdnBaseUrl: 'https://cdn.example.com',
@@ -354,15 +365,15 @@ describe('UploadcareDerivativeApi', () => {
 
       const file = await provider.getFileInfo('file-uuid');
 
-      expect(mockInfo).toHaveBeenCalledWith('file-uuid', expect.objectContaining({ publicKey: 'pk' }));
+      expect(mockIsReadyPoll).toHaveBeenCalledWith('file-uuid', expect.objectContaining({ publicKey: 'pk' }));
       expect(file.uuid).toBe('file-uuid');
       expect(file.originalFilename).toBe('portrait.png');
       expect(file.cdnUrl).toBe('https://cdn.example.com/file-uuid/');
       expect(file.imageInfo).toMatchObject({ width: 800, height: 1200 });
     });
 
-    it('forwards baseUrl + abort signal to info()', async () => {
-      mockInfo.mockResolvedValue(fileInfoFixture);
+    it('forwards baseUrl + abort signal to isReadyPoll()', async () => {
+      mockIsReadyPoll.mockResolvedValue(fileInfoFixture);
       const provider = new UploadcareDerivativeApi({
         publicKey: 'pk',
         baseUrl: 'https://upload.example.com',
@@ -371,14 +382,14 @@ describe('UploadcareDerivativeApi', () => {
       });
       const controller = new AbortController();
       await provider.getFileInfo('file-uuid', controller.signal);
-      expect(mockInfo).toHaveBeenCalledWith(
+      expect(mockIsReadyPoll).toHaveBeenCalledWith(
         'file-uuid',
         expect.objectContaining({ baseURL: 'https://upload.example.com', signal: controller.signal }),
       );
     });
 
-    it('propagates info() failures', async () => {
-      mockInfo.mockRejectedValue(new Error('FileNotFound'));
+    it('propagates isReadyPoll() failures', async () => {
+      mockIsReadyPoll.mockRejectedValue(new Error('FileNotFound'));
       const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: vi.fn<typeof fetch>(), ...NO_DELAY });
       await expect(provider.getFileInfo('missing')).rejects.toThrow(/FileNotFound/);
     });

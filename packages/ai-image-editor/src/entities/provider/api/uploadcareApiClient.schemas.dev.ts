@@ -87,10 +87,10 @@ const ContentInfoSchema = z.object({
 
 /**
  * Status frames from `derivative/status/`, discriminated on `status`. The
- * `success` frame is the snake_case `FileInfo` upload-info bag: `uuid` is always
- * present, the remaining `FileInfo` fields are optional (the frame may omit
- * them) but type-checked when supplied. Objects are non-strict, so unknown
- * extra fields still validate.
+ * `success` frame is the platform's `get_upload_info()` bag: the scalar fields
+ * are required, `image_info` / `video_info` / `content_info` / `metadata` are
+ * present but nullable (per file type), and `s3_bucket` is optional (foreign
+ * buckets). Objects are non-strict, so unknown extra fields still validate.
  */
 const StatusResponseSchema: z.ZodType<UploadcareJobStatus> = z.discriminatedUnion('status', [
   z.object({ type: z.literal('job').optional(), status: z.literal('processing') }),
@@ -103,26 +103,25 @@ const StatusResponseSchema: z.ZodType<UploadcareJobStatus> = z.discriminatedUnio
     error: z.string().optional(),
   }),
   z.object({
-    type: z.literal('job').optional(),
     status: z.literal('success'),
-    // Always present on success — the uploaded file's `uuid` (see platform PR #1497).
     uuid: z.string(),
-    size: z.number().optional(),
-    done: z.number().optional(),
-    total: z.number().optional(),
-    file_id: z.string().optional(),
-    original_filename: z.string().optional(),
-    filename: z.string().optional(),
-    mime_type: z.string().optional(),
-    is_image: z.boolean().optional(),
-    is_stored: z.boolean().optional(),
-    // The live API sends a boolean, not the string upload-client types.
-    is_ready: z.boolean().optional(),
-    image_info: ImageInfoSchema.nullable().optional(),
-    video_info: VideoInfoSchema.nullable().optional(),
-    content_info: ContentInfoSchema.nullable().optional(),
+    file_id: z.string(),
+    size: z.number(),
+    done: z.number(),
+    total: z.number(),
+    original_filename: z.string(),
+    filename: z.string(),
+    mime_type: z.string(),
+    is_image: z.boolean(),
+    is_stored: z.boolean(),
+    // The live API sends a boolean (not the string upload-client types); `false`
+    // until the file is CDN-ready.
+    is_ready: z.boolean(),
+    image_info: ImageInfoSchema.nullable(),
+    video_info: VideoInfoSchema.nullable(),
+    content_info: ContentInfoSchema.nullable(),
+    metadata: z.record(z.string(), z.string()).nullable(),
     s3_bucket: z.string().optional(),
-    metadata: z.record(z.string(), z.string()).optional(),
   }),
 ]);
 

@@ -52,13 +52,30 @@ describe('uploadcare derivative API dev schema validation', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     validate('status', { type: 'job', status: 'processing' });
     validate('status', { type: 'job', status: 'error', error_source: 'x', error_code: 'y', error: 'z' });
-    validate('status', { status: 'success', uuid: 'u', original_filename: 'f.png', size: 123 });
+    validate('status', {
+      status: 'success',
+      uuid: 'u',
+      file_id: 'u',
+      size: 123,
+      done: 123,
+      total: 123,
+      original_filename: 'f.png',
+      filename: 'f.png',
+      mime_type: 'image/png',
+      is_image: true,
+      is_stored: false,
+      is_ready: true,
+      image_info: null,
+      video_info: null,
+      content_info: null,
+      metadata: {},
+    });
     expect(spy).not.toHaveBeenCalled();
   });
 
   it('reports a status response with a wrong field type', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    validate('status', { status: 'success', uuid: 42 });
+    validate('status', { status: 'success', uuid: 42, is_ready: true });
     expect(spy).toHaveBeenCalledOnce();
     expect(spy.mock.calls[0]!.join(' ')).toMatch(/status/);
   });
@@ -66,7 +83,6 @@ describe('uploadcare derivative API dev schema validation', () => {
   it('stays silent for a full FileInfo success bag', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     validate('status', {
-      type: 'job',
       status: 'success',
       uuid: 'final-uuid',
       file_id: 'final-uuid',
@@ -97,9 +113,57 @@ describe('uploadcare derivative API dev schema validation', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  // A verbatim `derivative/status/` success frame from production (no `type` on
+  // success; image file → image_info + content_info.image present, video_info null).
+  it('stays silent for a real derivative status success frame', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    validate('status', {
+      size: 1620930,
+      total: 1620930,
+      done: 1620930,
+      uuid: '2e0c4294-32e0-4999-aed1-e78221224339',
+      file_id: '2e0c4294-32e0-4999-aed1-e78221224339',
+      original_filename: 'generated.png',
+      is_image: true,
+      is_stored: false,
+      image_info: {
+        dpi: null,
+        width: 1248,
+        format: 'PNG',
+        height: 832,
+        sequence: false,
+        color_mode: 'RGB',
+        orientation: null,
+        geo_location: null,
+        datetime_original: null,
+      },
+      video_info: null,
+      content_info: {
+        mime: { mime: 'image/png', type: 'image', subtype: 'png' },
+        image: {
+          dpi: null,
+          width: 1248,
+          format: 'PNG',
+          height: 832,
+          sequence: false,
+          color_mode: 'RGB',
+          orientation: null,
+          geo_location: null,
+          datetime_original: null,
+        },
+      },
+      is_ready: true,
+      filename: 'generated.png',
+      mime_type: 'image/png',
+      metadata: {},
+      status: 'success',
+    });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it('reports a success bag with a wrong-typed FileInfo field', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    validate('status', { status: 'success', uuid: 'u', is_image: 'yes' });
+    validate('status', { status: 'success', uuid: 'u', is_ready: true, is_image: 'yes' });
     expect(spy).toHaveBeenCalledOnce();
     expect(spy.mock.calls[0]!.join(' ')).toMatch(/is_image/);
   });
