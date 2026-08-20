@@ -62,6 +62,18 @@
   background: var(--uc-ai-secondary);
 }
 
+/* Keyboard-only focus ring. The UA `outline: auto` is suppressed on `:focus`
+   (so a mouse click — or a tab/window blur that keeps the element focused —
+   never leaves a ring) and re-added on `:focus-visible`, which only matches
+   keyboard focus and clears on blur. */
+.nav:focus {
+  outline: none;
+}
+.nav:focus-visible {
+  outline: 2px solid var(--uc-ai-primary);
+  outline-offset: 2px;
+}
+
 /* On pointer devices the arrows stay hidden until the strip is hovered/focused
    (like the composer's quiet-until-hovered affordances), and the dead-end
    direction's arrow is hidden entirely rather than dimmed. Coarse-pointer
@@ -145,22 +157,47 @@
 .chip {
   display: flex;
   align-items: center;
-  padding: 2px;
   margin-right: -11px;
+  cursor: pointer;
+  /* Reset the native <button> chrome (UA background/border/padding) — the
+     visible surface is `.chip__inner`; without this the button's default
+     grey face leaks around the inner (a stray frame, most visible in dark). */
+  padding: 0;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  color: inherit;
+  /* `isolation: isolate` gives every chip its own stacking context so they
+     paint in DOM order — later (newer) chips overlap earlier ones even when the
+     inner is scaled up. The hover "fan" is a `transform: translateX` (see the
+     hover block), NOT an animated margin: animating a layout property moves a
+     solid box across the pixel grid a frame at a time, so it visibly steps /
+     snaps sub-pixel; a transform is composited and interpolated smoothly. The
+     visual scale lives on `.chip__inner` so it and the fan translate stay on
+     separate elements and don't fight the FLIP `animate()` slide. */
+  isolation: isolate;
+  transition:
+    transform 300ms var(--uc-ai-ease-out, ease),
+    opacity 330ms var(--uc-ai-ease-out, ease);
+}
+
+/* The visible chip surface: background, border, shadow, and the hover/selected
+   scale. Separate from `.chip` so its scale transform never collides with the
+   FLIP translate the directive applies to `.chip`. */
+.chip__inner {
+  display: flex;
+  align-items: center;
+  padding: 2px;
   background: var(--uc-ai-floating, var(--uc-ai-background));
   border: 1px solid transparent;
   border-radius: calc(var(--uc-ai-radius-button, 8px) + 2px);
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
-  /* scale(1) gives every chip a stacking context so they paint in DOM order —
-     later (newer) chips overlap earlier ones even when scaled. */
   transform: scale(1);
   transform-origin: center center;
   transition:
-    margin 300ms var(--uc-ai-ease-out, ease),
     border-color 225ms ease,
-    transform 270ms var(--uc-ai-ease-out, ease),
-    opacity 330ms var(--uc-ai-ease-out, ease);
+    transform 270ms var(--uc-ai-ease-out, ease);
 }
 
 .chip:disabled {
@@ -172,23 +209,33 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .chip:hover:not(:disabled) {
+  .chip:hover:not(:disabled) .chip__inner {
     transform: scale(1.1);
   }
 
-  /* On hover, spread the chips apart instead of overlapping. */
+  /* Fan the chips apart on hover via transform (each by its centred index
+     offset `--fan`, set per chip in the template) so the group stays centred
+     and the motion is composited/sub-pixel-smooth — an animated `margin` here
+     stepped across the pixel grid. */
   .strip:hover .chip:not(:disabled) {
-    margin-right: 7px;
-  }
-
-  .strip:hover .chip:not(:disabled):last-child {
-    margin-right: 0;
+    transform: translateX(var(--fan, 0));
   }
 }
 
-.chip--selected {
+.chip--selected .chip__inner {
   border-color: var(--uc-ai-primary);
   transform: scale(1.2);
+}
+
+/* Keyboard-only focus ring (see the `.nav` note). Suppress the <button>'s UA
+   outline and draw the ring on `.chip__inner` instead, so it scales with the
+   chip and hugs the visible surface rather than the unscaled hit box. */
+.chip:focus {
+  outline: none;
+}
+.chip:focus-visible .chip__inner {
+  outline: 2px solid var(--uc-ai-primary);
+  outline-offset: 2px;
 }
 
 /* Carousel chips are fixed-size snap points (overlap kept from the base rule). */
@@ -309,6 +356,14 @@
 
 .startover__btn:hover {
   background: var(--uc-ai-secondary);
+}
+
+.startover__btn:focus {
+  outline: none;
+}
+.startover__btn:focus-visible {
+  outline: 2px solid var(--uc-ai-primary);
+  outline-offset: 2px;
 }
 
 /* Invisible hover bridge to the left so moving from a chip out to the

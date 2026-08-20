@@ -316,7 +316,7 @@ export class UcAiHistory extends LitElement {
           ${repeat(
             chipEntries,
             (entry) => entry.id,
-            (entry) => this._renderChip(entry, carousel),
+            (entry, index) => this._renderChip(entry, carousel, index, chipEntries.length),
           )}
         </div>
         ${showArrows ? this._navButton('next', this.nextLabel, !canNext) : nothing}
@@ -327,10 +327,15 @@ export class UcAiHistory extends LitElement {
   /** A single result chip. In carousel mode the FLIP `animate()` is dropped so
    *  it can't fight the scroller's snap, and a `data-uuid` lets the scroll
    *  handler map the centred chip back to its entry. */
-  private _renderChip(entry: HistoryEntry, carousel: boolean): TemplateResult {
+  private _renderChip(entry: HistoryEntry, carousel: boolean, index: number, count: number): TemplateResult {
     const thumb = this._secure.resolve(cdnSquareThumbUrl(entry.url, THUMB_SIZE));
     const selected = this.selectedUuid != null && entry.file.uuid === this.selectedUuid;
     const loaded = this._loaded.has(entry.id);
+    // Centred per-chip offset for the hover "fan" (18px = the rest overlap of
+    // -11px opened to a 7px gap). Driving the fan with a transform keyed off
+    // this var — instead of an animated margin — keeps the motion sub-pixel
+    // smooth (see history.css). Not applied in carousel mode.
+    const fan = carousel ? 0 : (index - (count - 1) / 2) * 18;
     return html`
       <button
         type="button"
@@ -340,25 +345,28 @@ export class UcAiHistory extends LitElement {
         aria-pressed="${selected ? 'true' : 'false'}"
         aria-label=${entry.prompt || 'Result'}
         title=${entry.prompt}
+        style="--fan:${fan}px"
         @click=${() => this._onChipClick(entry)}
         ${carousel ? nothing : animate({ keyframeOptions: { duration: 300, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' } })}
       >
-        <span class=${classMap({ thumb: true, 'thumb--loaded': loaded })}>
-          ${
-            // Rendering the <img> preloads it; the skeleton shows until it
-            // decodes, then it fades in (see history.css).
-            thumb
-              ? html`<img
-                  class="thumb__img"
-                  src="${thumb}"
-                  alt=""
-                  aria-hidden="true"
-                  decoding="async"
-                  @load=${() => this._onThumbSettled(entry.id)}
-                  @error=${() => this._onThumbSettled(entry.id)}
-                />`
-              : nothing
-          }
+        <span class="chip__inner">
+          <span class=${classMap({ thumb: true, 'thumb--loaded': loaded })}>
+            ${
+              // Rendering the <img> preloads it; the skeleton shows until it
+              // decodes, then it fades in (see history.css).
+              thumb
+                ? html`<img
+                    class="thumb__img"
+                    src="${thumb}"
+                    alt=""
+                    aria-hidden="true"
+                    decoding="async"
+                    @load=${() => this._onThumbSettled(entry.id)}
+                    @error=${() => this._onThumbSettled(entry.id)}
+                  />`
+                : nothing
+            }
+          </span>
         </span>
       </button>
     `;

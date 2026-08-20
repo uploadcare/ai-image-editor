@@ -245,20 +245,34 @@ uc-ai-canvas {
   width: 700px;
   max-width: calc(100% - 40px);
   z-index: 5;
+  /* The strip floats inside `.stage` (overflow: hidden), so the scaled selected
+     chip and its drop shadow would be hard-clipped at the canvas edge. This
+     inset is the "history's own inset" the docked-composer gap comment refers
+     to: it reserves shadow room so the edge fades softly instead of cutting.
+     The edge offsets below are set so chip content clears ~this much. */
+  padding-block: 16px;
+  pointer-events: none;
+}
+/* Only the strip itself is interactive; the transparent inset must not swallow
+   clicks on the canvas above/below it. */
+.history-pinned uc-ai-history {
+  pointer-events: auto;
 }
 .history-pinned--canvas-top {
-  top: 20px;
+  top: 4px;
 }
 .history-pinned--canvas-bottom {
-  bottom: 20px;
+  bottom: 4px;
 }
-/* When the composer is docked the strip hugs it (proto gap), rather than the
-   larger floating inset used for canvas-edge placements with an overlay composer. */
+/* When the composer is docked the strip hugs it (proto gap): a zero edge offset
+   plus the shared inset lets the shadow reach the canvas edge and fade into the
+   toolbar gap, rather than the larger floating inset used for canvas-edge
+   placements with an overlay composer. */
 .history-pinned--docked.history-pinned--canvas-top {
-  top: 6px;
+  top: 0;
 }
 .history-pinned--docked.history-pinned--canvas-bottom {
-  bottom: 6px;
+  bottom: 0;
 }
 
 /* Auto-hide ("dock"): when `composer-auto-hide` is on and an image exists, the
