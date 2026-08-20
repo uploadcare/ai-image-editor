@@ -156,17 +156,30 @@
     // or a fake Unsplash provider that returns stock photos after a short delay —
     // lets the demo run offline, without a key or burning quota. Injecting
     // `editor.provider` wins over the pubkey-built one; clearing it falls back.
+    // The choice persists (localStorage + `?provider=` override), like the fields above.
+    const PROVIDER_STORAGE_KEY = 'uc-ai-demo-provider';
+    const providerSelect = document.getElementById('provider');
     let fakeProvider;
-    document.getElementById('provider').addEventListener('change', (e) => {
-      if (e.target.value === 'unsplash') {
+    function setProvider(kind) {
+      if (kind === 'unsplash') {
         fakeProvider ??= new UnsplashFakeProvider();
         editor.provider = fakeProvider;
-        shell.log('provider → Unsplash (fake)');
       } else {
         editor.provider = undefined;
         apply();
-        shell.log('provider → Uploadcare (real)');
       }
+    }
+    const storedProvider =
+      new URLSearchParams(location.search).get('provider') ||
+      localStorage.getItem(PROVIDER_STORAGE_KEY) ||
+      'uploadcare';
+    providerSelect.value = storedProvider === 'unsplash' ? 'unsplash' : 'uploadcare';
+    setProvider(providerSelect.value);
+    providerSelect.addEventListener('change', (e) => {
+      const kind = e.target.value;
+      localStorage.setItem(PROVIDER_STORAGE_KEY, kind);
+      setProvider(kind);
+      shell.log(`provider → ${kind === 'unsplash' ? 'Unsplash (fake)' : 'Uploadcare (real)'}`);
     });
 
     baseUrlInput.addEventListener('change', (e) => {
