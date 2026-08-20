@@ -44,6 +44,13 @@
 <body>
   <demo-shell heading="AI Image Editor — Standalone">
     <label slot="controls">
+      Provider
+      <select id="provider">
+        <option value="uploadcare" selected>Uploadcare (real)</option>
+        <option value="unsplash">Unsplash (fake)</option>
+      </select>
+    </label>
+    <label slot="controls">
       Public key
       <input id="pubkey" type="text" size="20" />
     </label>
@@ -127,6 +134,7 @@
     import '../src/index.ts';
     import { SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
     import { rememberBaseUrl, rememberPubkey, resolveBaseUrl, resolvePubkey } from './demo-env.ts';
+    import { UnsplashFakeProvider } from './UnsplashFakeProvider.ts';
 
     const shell = document.querySelector('demo-shell');
     const editor = document.querySelector('uc-ai-image-editor');
@@ -143,6 +151,23 @@
     }
 
     apply();
+
+    // Provider: the real Uploadcare backend (built from the pubkey/baseUrl above)
+    // or a fake Unsplash provider that returns stock photos after a short delay —
+    // lets the demo run offline, without a key or burning quota. Injecting
+    // `editor.provider` wins over the pubkey-built one; clearing it falls back.
+    let fakeProvider;
+    document.getElementById('provider').addEventListener('change', (e) => {
+      if (e.target.value === 'unsplash') {
+        fakeProvider ??= new UnsplashFakeProvider();
+        editor.provider = fakeProvider;
+        shell.log('provider → Unsplash (fake)');
+      } else {
+        editor.provider = undefined;
+        apply();
+        shell.log('provider → Uploadcare (real)');
+      }
+    });
 
     baseUrlInput.addEventListener('change', (e) => {
       rememberBaseUrl(e.target.value.trim());

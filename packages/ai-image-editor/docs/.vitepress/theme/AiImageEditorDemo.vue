@@ -78,7 +78,7 @@ watch(opts, () => {
 onMounted(async () => {
   // Client-only: registers <uc-ai-image-editor> (a web component) — never during SSR.
   await import('../../../src');
-  const { UnsplashFakeProvider } = await import('./UnsplashFakeProvider');
+  const { UnsplashFakeProvider } = await import('../../../demo/UnsplashFakeProvider');
 
   editor = document.createElement('uc-ai-image-editor');
   editor.provider = new UnsplashFakeProvider();
