@@ -193,10 +193,19 @@ precision highp float;
 in vec2 aQuad;          // 0..1
 uniform vec2 uResolution;
 uniform vec4 uFrame;    // left, top, right, bottom (CSS px)
+uniform float uBleed;   // px the quad overshoots the frame on every side
 out vec2 vFramePx;
 void main() {
-  vec2 px = mix(uFrame.xy, uFrame.zw, aQuad);
-  vFramePx = px - uFrame.xy;
+  // Expand the quad a hair past the frame. The dot pass fills the scissor rect
+  // (frame rounded to device px), whose edge can land ~1px outside this quad's
+  // rounded coverage; without the bleed those straddling dots stay unmasked and
+  // show as a stray strip (most visible as bright dots on the right in dark
+  // mode). The overshoot is trimmed back to the frame by the scissor, and the
+  // texture is CLAMP_TO_EDGE, so the extra fringe just repeats the edge pixel.
+  vec2 lo = uFrame.xy - uBleed;
+  vec2 hi = uFrame.zw + uBleed;
+  vec2 px = mix(lo, hi, aQuad);
+  vFramePx = px - uFrame.xy; // relative to the true frame origin → object-fit unchanged
   vec2 ndc = (px / uResolution) * 2.0 - 1.0;
   gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
 }`;
@@ -295,7 +304,7 @@ export class DotGridGLRenderer {
     ]) {
       this._dotUniforms[name] = gl.getUniformLocation(this._dotProgram, name);
     }
-    for (const name of ['uResolution', 'uFrame', 'uImage', 'uFrameSize', 'uImageSize']) {
+    for (const name of ['uResolution', 'uFrame', 'uBleed', 'uImage', 'uFrameSize', 'uImageSize']) {
       this._imgUniforms[name] = gl.getUniformLocation(this._imgProgram, name);
     }
 
@@ -374,13 +383,19 @@ export class DotGridGLRenderer {
     if (count <= 0) return;
 
     if (f.mask) {
+      // Round each frame edge to a device pixel *independently and consistently*
+      // (left/right/top/bottom), then derive width/height from those — otherwise
+      // rounding the width separately can push the scissor a pixel past the image
+      // quad and leak an unmasked dot strip at the edge. The image pass bleeds
+      // slightly past the frame (see IMG_VERT) to cover whatever this admits.
       const s = f.scale;
-      const sx = Math.round(f.frameLeft * s);
-      const sy = Math.round((f.cssH - f.frameBottom) * s); // GL y origin is bottom-left
-      const sw = Math.round((f.frameRight - f.frameLeft) * s);
-      const sh = Math.round((f.frameBottom - f.frameTop) * s);
+      const dl = Math.round(f.frameLeft * s);
+      const dr = Math.round(f.frameRight * s);
+      const dt = Math.round(f.frameTop * s);
+      const db = Math.round(f.frameBottom * s);
+      const devH = Math.round(f.cssH * s);
       gl.enable(gl.SCISSOR_TEST);
-      gl.scissor(sx, sy, Math.max(0, sw), Math.max(0, sh));
+      gl.scissor(dl, devH - db, Math.max(0, dr - dl), Math.max(0, db - dt)); // GL y origin bottom-left
     }
 
     // Per-dot clip (changes every frame as the frame mask eases).
@@ -425,6 +440,8 @@ export class DotGridGLRenderer {
       const iu = this._imgUniforms;
       gl.uniform2f(iu.uResolution, f.cssW, f.cssH);
       gl.uniform4f(iu.uFrame, f.frameLeft, f.frameTop, f.frameRight, f.frameBottom);
+      // ~1 device px of overshoot, enough to cover the scissor's rounded edge.
+      gl.uniform1f(iu.uBleed, 1 / f.scale);
       gl.uniform2f(iu.uFrameSize, f.frameRight - f.frameLeft, f.frameBottom - f.frameTop);
       gl.uniform2f(iu.uImageSize, this._texImage.naturalWidth, this._texImage.naturalHeight);
       gl.activeTexture(gl.TEXTURE0);
