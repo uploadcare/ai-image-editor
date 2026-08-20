@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.4](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.3...ai-image-editor-v0.2.4) (2026-08-20)
+
+
+### Features
+
+* **demo:** persist the provider selector across reloads ([5e3adea](https://github.com/uploadcare/ai-image-editor/commit/5e3adea2dff5a94234d0bb9b9033a4d1f3e35ac3))
+* **demo:** toggle between real Uploadcare and fake Unsplash provider ([ab16274](https://github.com/uploadcare/ai-image-editor/commit/ab16274b2056b0a82a90cd927f8b7e0f55f33627))
+
+
+### Bug Fixes
+
+* **ai-image-editor:** keep the history hover fan smooth through a result-landing slide ([b3b9758](https://github.com/uploadcare/ai-image-editor/commit/b3b9758115537741a6b68253986063e40a84106e))
+* **ai-image-editor:** polish history strip hover, selection & focus ([1078a1d](https://github.com/uploadcare/ai-image-editor/commit/1078a1d5d133f0f742fc3fca037bacf5c223ea67))
+* **ai-image-editor:** poll derivative status until is_ready before returning ([92a6dfd](https://github.com/uploadcare/ai-image-editor/commit/92a6dfd961e23ce103c4d3e857f6aaf0c582d834))
+* **ai-image-editor:** poll derivative status until is_ready before returning ([60f82f2](https://github.com/uploadcare/ai-image-editor/commit/60f82f264c987137ebdc7fdb105ace909a7a73fc))
+* **ai-image-editor:** poll source file info until ready; require is_ready ([6148960](https://github.com/uploadcare/ai-image-editor/commit/6148960847707d705b17930a55d28e46e22c3b50))
+* **ai-image-editor:** stop the shimmer leaking a dot strip at the frame edge ([946c5b1](https://github.com/uploadcare/ai-image-editor/commit/946c5b1ea170eb804e72ec26a4e6f852024914e2))
+
 ## [0.2.3](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.2...ai-image-editor-v0.2.3) (2026-08-19)
 
 
