@@ -1,4 +1,6 @@
-import type { FileInfo, Metadata, SnakeCasedPropertiesDeep } from '@uploadcare/upload-client';
+import { getAuthHeaders } from '@uploadcare/signed-uploads/client';
+import { resolveAuthToken } from '@uploadcare/upload-client';
+import type { AuthToken, FileInfo, Metadata, SnakeCasedPropertiesDeep } from '@uploadcare/upload-client';
 import { AiProviderError } from '../model/types';
 
 /**
@@ -21,6 +23,12 @@ export type UploadcareApiClientOptions = {
   baseUrl?: string;
   /** Override the global fetch — useful for tests. */
   fetch?: typeof fetch;
+  /**
+   * JWT for the `Authorization: Bearer` scheme. A plain token, or a resolver
+   * called before every request so a long-running job can rotate tokens
+   * mid-flight.
+   */
+  authToken?: AuthToken;
 };
 
 /** Parameters for a text→image generate request. */
@@ -154,6 +162,9 @@ export class UploadcareApiClient {
   private readonly publicKey: string;
   private readonly baseUrl: string;
   private readonly doFetch: typeof fetch;
+  /** Not readonly: swapped in place so a new resolver identity — which React
+   * produces on every render — does not force a new client. */
+  private authToken: AuthToken | undefined;
 
   constructor(options: UploadcareApiClientOptions) {
     if (!options.publicKey) {
@@ -162,6 +173,7 @@ export class UploadcareApiClient {
     this.publicKey = options.publicKey;
     this.baseUrl = options.baseUrl ?? 'https://upload.uploadcare.com';
     this.doFetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+    this.authToken = options.authToken;
   }
 
   /** Start a text→image generation job. Resolves to the job handle. */
@@ -201,11 +213,29 @@ export class UploadcareApiClient {
     url.searchParams.set('pub_key', this.publicKey);
     url.searchParams.set('job_id', jobId);
 
-    const response = await this.doFetch(url.href, { method: 'GET', headers: { Accept: 'application/json' }, signal });
+    const response = await this.doFetch(url.href, {
+      method: 'GET',
+      headers: { Accept: 'application/json', ...(await this.authHeaders()) },
+      signal,
+    });
 
     const data = (await readJson(response, 'generate status')) as UploadcareJobStatus;
     await devValidate('status', data);
     return data;
+  }
+
+  /**
+   * Swap the token in place. Headers are resolved per request in
+   * {@link authHeaders}, so a request already in flight keeps the token it was
+   * built with and the next one picks this up.
+   */
+  public setAuthToken(authToken: AuthToken | undefined): void {
+    this.authToken = authToken;
+  }
+
+  /** Resolved per request, so a rotating token is picked up mid-job. */
+  private async authHeaders(): Promise<Record<string, string>> {
+    return getAuthHeaders(await resolveAuthToken(this.authToken));
   }
 
   private async startJob(
@@ -216,7 +246,11 @@ export class UploadcareApiClient {
   ): Promise<UploadcareJobResponse> {
     const response = await this.doFetch(endpoint.href, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(await this.authHeaders()),
+      },
       body: JSON.stringify(body),
       signal,
     });
