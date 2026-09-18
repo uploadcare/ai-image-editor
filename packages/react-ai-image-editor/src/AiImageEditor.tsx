@@ -35,6 +35,13 @@ export type AiImageEditorProps = {
   /** @internal Not part of the public API yet (typed locally: the element strips `@internal` members from its published types). */
   composerAutoHide?: boolean;
   toolbarPlacement?: UcAiImageEditor['toolbarPlacement'];
+  /**
+   * A token for signed uploads. A function is fine as a prop: the editor caches
+   * what it returns, and a new identity on each render keeps the cached token.
+   * Call `invalidateAuthToken()` through `apiRef` to drop it.
+   */
+  authToken?: UcAiImageEditor['authToken'];
+  cacheAuthToken?: UcAiImageEditor['cacheAuthToken'];
   secureDeliveryProxyUrlResolver?: UcAiImageEditor['secureDeliveryProxyUrlResolver'];
   className?: string;
   apiRef?: Ref<UcAiImageEditor>;
