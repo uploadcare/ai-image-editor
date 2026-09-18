@@ -508,6 +508,21 @@ export class UcAiImageEditor extends LitElement {
     return this._authTokenCache.getToken;
   }
 
+  /**
+   * Drop the cached auth token, so the next request calls {@link authToken}
+   * for a new one.
+   *
+   * Assigning a different function to `authToken` does not do this on its own:
+   * a new function identity is taken to be the same function, which is what
+   * lets a parent component pass an inline one without refetching on every
+   * render. Call this when the change is real, such as when the signed-in user
+   * changes. It does nothing when `authToken` is a plain token, since there is
+   * no cache to drop.
+   */
+  public invalidateAuthToken(): void {
+    this._authTokenCache?.invalidate();
+  }
+
   /** @internal */
   public override willUpdate(changed: PropertyValues<this>): void {
     const providerConfigChanged =

@@ -153,12 +153,20 @@ describe('authToken', () => {
     return { auth };
   }
 
-  const generate = async (el: UcAiImageEditorType, prompt: string) => {
+  /**
+   * Runs one generation and waits for its requests, counted rather than
+   * observed through the canvas: after the first run the canvas already holds
+   * the result URL, so waiting on it would return immediately and the second
+   * generation would never be awaited.
+   */
+  const generate = async (el: UcAiImageEditorType, prompt: string, auth: Array<string | null>) => {
+    const before = auth.length;
     typePrompt(el, prompt);
     await el.updateComplete;
     clickSend(el);
+    // The POST that starts the job, then at least one status GET.
     await vi.waitFor(() => {
-      expect(canvasUrl(el)).toBe('https://cdn.example.com/result/');
+      expect(auth.length).toBeGreaterThanOrEqual(before + 2);
     });
     await el.updateComplete;
   };
@@ -169,7 +177,7 @@ describe('authToken', () => {
     el.authToken = 'eyJ.plain.sig';
     await el.updateComplete;
 
-    await generate(el, 'a tiger');
+    await generate(el, 'a tiger', auth);
 
     expect(auth.length).toBeGreaterThan(1);
     expect(auth.every((value) => value === 'Bearer eyJ.plain.sig')).toBe(true);
@@ -184,7 +192,7 @@ describe('authToken', () => {
     el.authToken = fetchToken;
     await el.updateComplete;
 
-    await generate(el, 'a tiger');
+    await generate(el, 'a tiger', auth);
 
     expect(auth.length).toBeGreaterThan(1);
     expect(auth.every((value) => value === 'Bearer eyJ.fetched.sig')).toBe(true);
@@ -198,28 +206,45 @@ describe('authToken', () => {
     const el = mount(STAGING);
     el.authToken = first;
     await el.updateComplete;
-    await generate(el, 'a tiger');
+    await generate(el, 'a tiger', auth);
 
     const second = vi.fn(async () => 'eyJ.second.sig');
     el.authToken = second;
     await el.updateComplete;
-    await generate(el, 'a lion');
+    await generate(el, 'a lion', auth);
 
     expect(second).not.toHaveBeenCalled();
     expect(auth.every((value) => value === 'Bearer eyJ.first.sig')).toBe(true);
   });
 
+  it('refetches after invalidateAuthToken()', async () => {
+    // The escape hatch for a sign-out, and the only recovery when a token's
+    // `exp` cannot be read and so never goes stale on its own.
+    const { auth } = stubFetchCapturingAuth();
+    const fetchToken = vi.fn(async () => 'eyJ.fetched.sig');
+    const el = mount(STAGING);
+    el.authToken = fetchToken;
+    await el.updateComplete;
+    await generate(el, 'a tiger', auth);
+    expect(fetchToken).toHaveBeenCalledTimes(1);
+
+    el.invalidateAuthToken();
+    await generate(el, 'a lion', auth);
+
+    expect(fetchToken).toHaveBeenCalledTimes(2);
+  });
+
   it('does not cache when cacheAuthToken is false', async () => {
     // What the file-uploader plugin sets: the uploader already caches, so the
     // editor must resolve through to it rather than hold its own copy.
-    stubFetchCapturingAuth();
+    const { auth } = stubFetchCapturingAuth();
     const fetchToken = vi.fn(async () => 'eyJ.fetched.sig');
     const el = mount(STAGING);
     el.cacheAuthToken = false;
     el.authToken = fetchToken;
     await el.updateComplete;
 
-    await generate(el, 'a tiger');
+    await generate(el, 'a tiger', auth);
 
     expect(fetchToken.mock.calls.length).toBeGreaterThan(1);
   });
