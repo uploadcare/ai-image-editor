@@ -1,3 +1,4 @@
+import { AuthTokenCache } from '@uploadcare/signed-uploads/client';
 import type { AuthToken, Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
@@ -230,16 +231,30 @@ export class UcAiImageEditor extends LitElement {
 
   /**
    * JWT for the Upload API `Authorization: Bearer` scheme. Either a plain token
-   * — which is what a server-rendered page passes in — or a resolver called
-   * before every request.
+   * — which is what a server-rendered page passes in — or a function returning
+   * one.
    *
-   * The `auth-token` attribute can only carry the plain-token form; set the
-   * property to pass a resolver. A resolver is called often, so wrap your
-   * endpoint in `AuthTokenCache` from `@uploadcare/signed-uploads/client` and
-   * pass its `getToken`.
+   * The editor caches what the function returns and refreshes it shortly before
+   * it expires, so the function can fetch from your backend without being
+   * called once per request. A plain token is used as given and never
+   * refreshed.
+   *
+   * The `auth-token` attribute carries the plain-token form only; a function
+   * has to be set as a DOM property.
    */
   @property({ attribute: 'auth-token' })
   public authToken?: AuthToken;
+
+  /**
+   * Whether to cache what an `authToken` function returns. Defaults to `true`.
+   *
+   * Set it to `false` when something upstream already caches — the file
+   * uploader hands its plugin an `authToken` that its own cache backs, and
+   * wrapping that again would just add a second layer with its own idea of
+   * when the token went stale. Property only.
+   */
+  @property({ attribute: false })
+  public cacheAuthToken = true;
 
   /**
    * Custom AI provider that replaces the built-in Uploadcare provider (built
@@ -473,6 +488,26 @@ export class UcAiImageEditor extends LitElement {
     }
   }
 
+  private _authTokenCache?: AuthTokenCache;
+
+  /**
+   * The token to hand the provider: a plain token as given, or a function whose
+   * result this editor caches. Swapping in a new function keeps the cached
+   * token, so an inline resolver re-created on every render costs nothing.
+   */
+  private _effectiveAuthToken(): AuthToken | undefined {
+    const { authToken } = this;
+    if (!authToken || typeof authToken === 'string') return authToken;
+    if (!this.cacheAuthToken) return authToken;
+
+    if (this._authTokenCache) {
+      this._authTokenCache.fetchToken = authToken;
+    } else {
+      this._authTokenCache = new AuthTokenCache({ fetchToken: authToken });
+    }
+    return this._authTokenCache.getToken;
+  }
+
   /** @internal */
   public override willUpdate(changed: PropertyValues<this>): void {
     const providerConfigChanged =
@@ -489,7 +524,7 @@ export class UcAiImageEditor extends LitElement {
         (this.pubkey
           ? new UploadcareDerivativeApi({
               publicKey: this.pubkey,
-              authToken: this.authToken,
+              authToken: this._effectiveAuthToken(),
               baseUrl: this.baseUrl,
               cdnBaseUrl: this.cdnCname,
               cdnCnamePrefixed: this.cdnCnamePrefixed,
@@ -499,8 +534,11 @@ export class UcAiImageEditor extends LitElement {
     // Deliberately not part of `providerConfigChanged`: an inline resolver gets
     // a new identity on every render, and rebuilding the provider would discard
     // its resolved CDN base each time.
-    if (changed.has('authToken') && this._provider instanceof UploadcareDerivativeApi) {
-      this._provider.setAuthToken(this.authToken);
+    if (
+      (changed.has('authToken') || changed.has('cacheAuthToken')) &&
+      this._provider instanceof UploadcareDerivativeApi
+    ) {
+      this._provider.setAuthToken(this._effectiveAuthToken());
     }
     if (changed.has('secureDeliveryProxyUrlResolver')) {
       this._secure.setResolver(this.secureDeliveryProxyUrlResolver);

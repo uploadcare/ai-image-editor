@@ -224,6 +224,11 @@ export class UploadcareApiClient {
     return data;
   }
 
+  /**
+   * Swap the token in place. Headers are resolved per request in
+   * {@link authHeaders}, so a request already in flight keeps the token it was
+   * built with and the next one picks this up.
+   */
   public setAuthToken(authToken: AuthToken | undefined): void {
     this.authToken = authToken;
   }
