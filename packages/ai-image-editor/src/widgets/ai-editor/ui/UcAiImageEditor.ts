@@ -1,4 +1,4 @@
-import type { Metadata, UploadcareFile } from '@uploadcare/upload-client';
+import type { AuthToken, Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
@@ -227,6 +227,19 @@ export class UcAiImageEditor extends LitElement {
   /** Uploadcare public key. Required to enable generate/edit. */
   @property()
   public pubkey = '';
+
+  /**
+   * JWT for the Upload API `Authorization: Bearer` scheme. Either a plain token
+   * — which is what a server-rendered page passes in — or a resolver called
+   * before every request.
+   *
+   * The `auth-token` attribute can only carry the plain-token form; set the
+   * property to pass a resolver. A resolver is called often, so wrap your
+   * endpoint in `AuthTokenCache` from `@uploadcare/signed-uploads/client` and
+   * pass its `getToken`.
+   */
+  @property({ attribute: 'auth-token' })
+  public authToken?: AuthToken;
 
   /**
    * Custom AI provider that replaces the built-in Uploadcare provider (built
@@ -476,11 +489,18 @@ export class UcAiImageEditor extends LitElement {
         (this.pubkey
           ? new UploadcareDerivativeApi({
               publicKey: this.pubkey,
+              authToken: this.authToken,
               baseUrl: this.baseUrl,
               cdnBaseUrl: this.cdnCname,
               cdnCnamePrefixed: this.cdnCnamePrefixed,
             })
           : undefined);
+    }
+    // Deliberately not part of `providerConfigChanged`: an inline resolver gets
+    // a new identity on every render, and rebuilding the provider would discard
+    // its resolved CDN base each time.
+    if (changed.has('authToken') && this._provider instanceof UploadcareDerivativeApi) {
+      this._provider.setAuthToken(this.authToken);
     }
     if (changed.has('secureDeliveryProxyUrlResolver')) {
       this._secure.setResolver(this.secureDeliveryProxyUrlResolver);

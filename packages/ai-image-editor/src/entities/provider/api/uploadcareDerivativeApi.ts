@@ -1,6 +1,7 @@
 import { serializeCdnUrl } from '@uploadcare/cdn-url';
 import { getPrefixedCdnBaseAsync, isPrefixedCdnBase } from '@uploadcare/cname-prefix/async';
 import {
+  type AuthToken,
   type CustomUserAgentFn,
   CancelError,
   camelizeKeys,
@@ -46,6 +47,12 @@ export type UploadcareDerivativeApiOptions = {
   pollIntervalMs?: number;
   /** Give up polling after this many ms. Defaults to 1000000 (approximately 16.7 minutes). */
   pollTimeoutMs?: number;
+  /**
+   * JWT for the `Authorization: Bearer` scheme. A plain token, or a resolver
+   * called before every request. Use `AuthTokenCache` from
+   * `@uploadcare/signed-uploads/client` to cache and refresh it.
+   */
+  authToken?: AuthToken;
 };
 
 /**
@@ -69,7 +76,12 @@ export class UploadcareDerivativeApi implements AiProvider {
   private readonly pollIntervalMs: number;
   private readonly pollTimeoutMs: number;
   /** What every upload-client call needs: credentials, endpoint, and our identity. */
-  private readonly uploadClientOptions: { publicKey: string; baseURL?: string; userAgent: CustomUserAgentFn };
+  private readonly uploadClientOptions: {
+    publicKey: string;
+    baseURL?: string;
+    userAgent: CustomUserAgentFn;
+    authToken?: AuthToken;
+  };
   private cdnBasePromise?: Promise<string>;
 
   constructor(options: UploadcareDerivativeApiOptions) {
@@ -80,6 +92,7 @@ export class UploadcareDerivativeApi implements AiProvider {
       publicKey: options.publicKey,
       baseUrl: options.baseUrl,
       fetch: options.fetch,
+      authToken: options.authToken,
     });
     this.publicKey = options.publicKey;
     this.filename = options.filename ?? 'generated.png';
@@ -92,7 +105,19 @@ export class UploadcareDerivativeApi implements AiProvider {
       publicKey: options.publicKey,
       baseURL: options.baseUrl,
       userAgent: customUserAgent,
+      // `poll`/`isReadyPoll` are the second network path and hit the Upload
+      // API directly, so they need the same credentials as `this.api`.
+      authToken: options.authToken,
     };
+  }
+
+  /**
+   * Swap the auth token without rebuilding the provider, which would drop the
+   * resolved CDN base and re-resolve it on every render.
+   */
+  setAuthToken(authToken: AuthToken | undefined): void {
+    this.uploadClientOptions.authToken = authToken;
+    this.api.setAuthToken(authToken);
   }
 
   async generate(request: AiProviderRequest): Promise<AiProviderResult> {
