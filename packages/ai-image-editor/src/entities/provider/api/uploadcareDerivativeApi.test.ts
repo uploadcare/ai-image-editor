@@ -394,4 +394,56 @@ describe('UploadcareDerivativeApi', () => {
       await expect(provider.getFileInfo('missing')).rejects.toThrow(/FileNotFound/);
     });
   });
+
+  describe('authToken', () => {
+    afterEach(() => mockIsReadyPoll.mockReset());
+
+    it('carries the token on both network paths', async () => {
+      // The two paths are independent: `generate`/`edit`/`status` go through
+      // the client's own fetch, while `getFileInfo` hands options to
+      // upload-client's isReadyPoll. Dropping either assignment would leave
+      // half the provider unauthenticated.
+      mockIsReadyPoll.mockResolvedValue({ uuid: 'file-uuid' } as unknown as Awaited<ReturnType<typeof isReadyPoll>>);
+      const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
+      const provider = new UploadcareDerivativeApi({
+        publicKey: 'pk',
+        authToken: 'eyJ.first.sig',
+        fetch: fetchImpl,
+        ...NO_DELAY,
+      });
+
+      await provider.generate({ prompt: 'x', mode: 'generate' });
+      const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
+      expect(new Headers(init.headers).get('Authorization')).toBe('Bearer eyJ.first.sig');
+
+      await provider.getFileInfo('file-uuid');
+      expect(mockIsReadyPoll).toHaveBeenCalledWith(
+        'file-uuid',
+        expect.objectContaining({ authToken: 'eyJ.first.sig' }),
+      );
+    });
+
+    it('setAuthToken swaps the token on both network paths', async () => {
+      mockIsReadyPoll.mockResolvedValue({ uuid: 'file-uuid' } as unknown as Awaited<ReturnType<typeof isReadyPoll>>);
+      const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
+      const provider = new UploadcareDerivativeApi({
+        publicKey: 'pk',
+        authToken: 'eyJ.first.sig',
+        fetch: fetchImpl,
+        ...NO_DELAY,
+      });
+
+      provider.setAuthToken('eyJ.second.sig');
+
+      await provider.generate({ prompt: 'x', mode: 'generate' });
+      const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
+      expect(new Headers(init.headers).get('Authorization')).toBe('Bearer eyJ.second.sig');
+
+      await provider.getFileInfo('file-uuid');
+      expect(mockIsReadyPoll).toHaveBeenCalledWith(
+        'file-uuid',
+        expect.objectContaining({ authToken: 'eyJ.second.sig' }),
+      );
+    });
+  });
 });
