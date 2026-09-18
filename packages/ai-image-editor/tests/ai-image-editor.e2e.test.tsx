@@ -118,6 +118,113 @@ const editorMode = (el: UcAiImageEditorType): string =>
 
 const SAMPLE_UUID = '11111111-2222-3333-4444-555555555555';
 
+describe('authToken', () => {
+  /** Like `stubFetch`, but records the Authorization header of every request. */
+  function stubFetchCapturingAuth(): { auth: Array<string | null> } {
+    const real = globalThis.fetch;
+    const auth: Array<string | null> = [];
+    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      auth.push(new Headers(init?.headers).get('Authorization'));
+      if ((init?.method ?? 'GET').toUpperCase() === 'POST') {
+        return jsonResponse({ type: 'job', job_id: 'job-1' });
+      }
+      return jsonResponse({
+        status: 'success',
+        uuid: 'result',
+        file_id: 'result',
+        size: 1,
+        done: 1,
+        total: 1,
+        original_filename: 'generated.png',
+        filename: 'generated.png',
+        mime_type: 'image/png',
+        is_image: true,
+        is_stored: false,
+        is_ready: true,
+        image_info: null,
+        video_info: null,
+        content_info: null,
+        metadata: {},
+      });
+    }) as typeof fetch;
+    restoreFetch = () => {
+      globalThis.fetch = real;
+    };
+    return { auth };
+  }
+
+  const generate = async (el: UcAiImageEditorType, prompt: string) => {
+    typePrompt(el, prompt);
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => {
+      expect(canvasUrl(el)).toBe('https://cdn.example.com/result/');
+    });
+    await el.updateComplete;
+  };
+
+  it('sends a plain token on every request', async () => {
+    const { auth } = stubFetchCapturingAuth();
+    const el = mount(STAGING);
+    el.authToken = 'eyJ.plain.sig';
+    await el.updateComplete;
+
+    await generate(el, 'a tiger');
+
+    expect(auth.length).toBeGreaterThan(1);
+    expect(auth.every((value) => value === 'Bearer eyJ.plain.sig')).toBe(true);
+  });
+
+  it('calls an authToken function once and reuses the token across requests', async () => {
+    // Standalone, the editor owns the cache: a generate makes several
+    // authenticated requests and must not ask the app for a token each time.
+    const { auth } = stubFetchCapturingAuth();
+    const fetchToken = vi.fn(async () => 'eyJ.fetched.sig');
+    const el = mount(STAGING);
+    el.authToken = fetchToken;
+    await el.updateComplete;
+
+    await generate(el, 'a tiger');
+
+    expect(auth.length).toBeGreaterThan(1);
+    expect(auth.every((value) => value === 'Bearer eyJ.fetched.sig')).toBe(true);
+    expect(fetchToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the cached token when the function identity changes', async () => {
+    // A React parent hands over a new closure on every render.
+    const { auth } = stubFetchCapturingAuth();
+    const first = vi.fn(async () => 'eyJ.first.sig');
+    const el = mount(STAGING);
+    el.authToken = first;
+    await el.updateComplete;
+    await generate(el, 'a tiger');
+
+    const second = vi.fn(async () => 'eyJ.second.sig');
+    el.authToken = second;
+    await el.updateComplete;
+    await generate(el, 'a lion');
+
+    expect(second).not.toHaveBeenCalled();
+    expect(auth.every((value) => value === 'Bearer eyJ.first.sig')).toBe(true);
+  });
+
+  it('does not cache when cacheAuthToken is false', async () => {
+    // What the file-uploader plugin sets: the uploader already caches, so the
+    // editor must resolve through to it rather than hold its own copy.
+    stubFetchCapturingAuth();
+    const fetchToken = vi.fn(async () => 'eyJ.fetched.sig');
+    const el = mount(STAGING);
+    el.cacheAuthToken = false;
+    el.authToken = fetchToken;
+    await el.updateComplete;
+
+    await generate(el, 'a tiger');
+
+    expect(fetchToken.mock.calls.length).toBeGreaterThan(1);
+  });
+});
+
 describe('<uc-ai-image-editor>', () => {
   it('registers the custom element', () => {
     expect(customElements.get('uc-ai-image-editor')).toBe(UcAiImageEditorCtor);

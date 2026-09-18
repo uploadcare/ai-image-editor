@@ -62,6 +62,38 @@ describe('AiImageEditorPlugin', () => {
     cleanup();
   });
 
+  it('hands the editor the uploader\'s cached token instead of the raw config value', async () => {
+    // The uploader already caches what an `authToken` function returns, so the
+    // editor must not wrap it again — it gets `cacheAuthToken = false` and the
+    // uploader's resolver, not the function from `<uc-config>`.
+    const { AiImageEditorPlugin } = await import('../src/plugin');
+    const { config } = await renderUploader([AiImageEditorPlugin]);
+    const fetchToken = vi.fn(async () => 'eyJ.uploader.sig');
+    (config as unknown as { authToken: unknown }).authToken = fetchToken;
+    addSource(config, 'ai-image-editor');
+    await openModal();
+    await page.getByText('Generate image').click();
+
+    await vi.waitFor(() => {
+      expect(document.querySelector('uc-ai-image-editor')).toBeTruthy();
+    });
+    const editor = document.querySelector('uc-ai-image-editor') as Element & {
+      authToken?: unknown;
+      cacheAuthToken?: boolean;
+    };
+
+    expect(editor.cacheAuthToken).toBe(false);
+    expect(typeof editor.authToken).toBe('function');
+    // Not the configured function itself: the uploader's cache stands in front.
+    expect(editor.authToken).not.toBe(fetchToken);
+
+    const resolve = editor.authToken as () => Promise<string>;
+    await expect(resolve()).resolves.toBe('eyJ.uploader.sig');
+    await expect(resolve()).resolves.toBe('eyJ.uploader.sig');
+    expect(fetchToken).toHaveBeenCalledTimes(1);
+    cleanup();
+  });
+
   it('opens the AI editor activity when the Generate image source is selected', async () => {
     const { AiImageEditorPlugin } = await import('../src/plugin');
     const { config } = await renderUploader([AiImageEditorPlugin]);
