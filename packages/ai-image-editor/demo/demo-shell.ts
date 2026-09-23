@@ -22,8 +22,8 @@ const shimmerLabLink = (page: string) =>
  */
 const CONTROL_STYLES = new CSSStyleSheet();
 CONTROL_STYLES.replaceSync(`
-  demo-shell label[slot='controls'] select,
-  demo-shell label[slot='controls'] input:not([type='checkbox']) {
+  demo-shell label[slot^='controls'] select,
+  demo-shell label[slot^='controls'] input:not([type='checkbox']) {
     width: 100%;
     box-sizing: border-box;
     padding: 6px 8px;
@@ -34,12 +34,12 @@ CONTROL_STYLES.replaceSync(`
     background: light-dark(#fff, #1e1f24);
     color: inherit;
   }
-  demo-shell label[slot='controls'] select:focus-visible,
-  demo-shell label[slot='controls'] input:focus-visible {
+  demo-shell label[slot^='controls'] select:focus-visible,
+  demo-shell label[slot^='controls'] input:focus-visible {
     outline: 2px solid light-dark(#2563eb, #60a5fa);
     outline-offset: 1px;
   }
-  demo-shell label[slot='controls'] input[type='checkbox'] {
+  demo-shell label[slot^='controls'] input[type='checkbox'] {
     width: 15px;
     height: 15px;
     margin: 0;
@@ -50,7 +50,7 @@ CONTROL_STYLES.replaceSync(`
    * in the shadow styles because :has() is not matched inside ::slotted(), and
    * document rules win over ::slotted() for slotted elements anyway.
    */
-  demo-shell label[slot='controls']:has(input[type='checkbox']) {
+  demo-shell label[slot^='controls']:has(input[type='checkbox']) {
     flex-direction: row;
     align-items: center;
     gap: 8px;
@@ -61,14 +61,28 @@ CONTROL_STYLES.replaceSync(`
     color: inherit;
   }
   /* The demos set size="20"/size="36" etc.; the grid decides the width now. */
-  demo-shell label[slot='controls'] input[size] {
+  demo-shell label[slot^='controls'] input[size] {
     min-width: 0;
   }
 `);
 
 /**
+ * Toolbar groups, in render order. The demos grew past a dozen controls, at
+ * which point one flat grid made you read every label to find the one you
+ * wanted; grouping by what a control affects (the backend, the editor's
+ * behavior, its looks) means you only scan one block. A group with nothing
+ * slotted into it hides itself, so each page shows only the groups it fills.
+ */
+const CONTROL_GROUPS = [
+  { slot: 'controls-project', title: 'Project' },
+  { slot: 'controls-editor', title: 'Editor' },
+  { slot: 'controls-appearance', title: 'Appearance' },
+] as const;
+
+/**
  * Shared chrome for the AI Image Editor demos: page heading, a toolbar with a
- * built-in theme switch (plus a `controls` slot for demo-specific inputs), a
+ * built-in theme switch (plus a `controls-*` slot per group for demo-specific
+ * inputs), a
  * stage for the demoed component, and a log panel that auto-captures the
  * editor's `uc:done` / `uc:cancel` / `uc:error` events.
  */
@@ -117,16 +131,34 @@ export class DemoShell extends LitElement {
      * screens, where the old layout was close to unusable.
      */
     .toolbar {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-      gap: 10px 16px;
-      align-items: end;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
       margin: 0 0 20px;
       padding: 16px;
       background: light-dark(#fff, #25262b);
       border: 1px solid light-dark(#e5e7eb, #33343a);
       border-radius: 12px;
       box-shadow: 0 1px 2px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.3));
+    }
+    .group[hidden] {
+      display: none;
+    }
+    .group h2 {
+      margin: 0 0 10px;
+      padding-block-end: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: light-dark(#6b7280, #8b8d95);
+      border-bottom: 1px solid light-dark(#e5e7eb, #33343a);
+    }
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 10px 16px;
+      align-items: end;
     }
     /* Label above control, so a long label never squeezes its field. */
     .toolbar label,
@@ -189,6 +221,10 @@ export class DemoShell extends LitElement {
   @state()
   private _entries: string[] = [];
 
+  /** Group slots that currently have something in them; the rest stay hidden. */
+  @state()
+  private _filledGroups: string[] = [];
+
   public override connectedCallback(): void {
     super.connectedCallback();
     if (!document.adoptedStyleSheets.includes(CONTROL_STYLES)) {
@@ -223,6 +259,17 @@ export class DemoShell extends LitElement {
     }
   };
 
+  /** A slot with no assigned controls means a group this page doesn't use. */
+  private _onGroupSlotChange(event: Event): void {
+    const slot = event.target as HTMLSlotElement;
+    const filled = slot.assignedElements().length > 0;
+    const has = this._filledGroups.includes(slot.name);
+    if (filled === has) return;
+    this._filledGroups = filled
+      ? [...this._filledGroups, slot.name]
+      : this._filledGroups.filter((name) => name !== slot.name);
+  }
+
   private _onThemeChange(event: Event): void {
     this._theme = (event.target as HTMLSelectElement).value as Theme;
     document.body.classList.remove('uc-light', 'uc-dark');
@@ -233,6 +280,24 @@ export class DemoShell extends LitElement {
 
   private get _currentPage(): string {
     return window.location.pathname.split('/').pop() || 'standalone.html';
+  }
+
+  /** Appearance always renders: the theme switch lives there, slots or not. */
+  private _isGroupShown(slot: string): boolean {
+    return slot === 'controls-appearance' || this._filledGroups.includes(slot);
+  }
+
+  private _themeControl() {
+    return html`
+      <label>
+        Theme
+        <select .value=${this._theme} @change=${this._onThemeChange}>
+          <option value="auto">auto (system)</option>
+          <option value="light">light</option>
+          <option value="dark">dark</option>
+        </select>
+      </label>
+    `;
   }
 
   protected override render() {
@@ -247,15 +312,17 @@ export class DemoShell extends LitElement {
       ${this.description ? html`<p class="description">${this.description}</p>` : nothing}
 
       <div class="toolbar">
-        <label>
-          Theme
-          <select .value=${this._theme} @change=${this._onThemeChange}>
-            <option value="auto">auto (system)</option>
-            <option value="light">light</option>
-            <option value="dark">dark</option>
-          </select>
-        </label>
-        <slot name="controls"></slot>
+        ${CONTROL_GROUPS.map(
+          (group) => html`
+            <section class="group" ?hidden=${!this._isGroupShown(group.slot)}>
+              <h2>${group.title}</h2>
+              <div class="fields">
+                ${group.slot === 'controls-appearance' ? this._themeControl() : nothing}
+                <slot name=${group.slot} @slotchange=${this._onGroupSlotChange}></slot>
+              </div>
+            </section>
+          `,
+        )}
       </div>
 
       <div class="stage"><slot></slot></div>

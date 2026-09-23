@@ -43,63 +43,63 @@
 </head>
 <body>
   <demo-shell heading="AI Image Editor — Standalone">
-    <label slot="controls">
+    <label slot="controls-editor">
       Provider
       <select id="provider">
         <option value="uploadcare" selected>Uploadcare (real)</option>
         <option value="unsplash">Unsplash (fake)</option>
       </select>
     </label>
-    <label slot="controls">
+    <label slot="controls-project">
       Public key
       <input id="pubkey" type="text" size="20" />
     </label>
-    <label slot="controls">
+    <label slot="controls-project">
       Upload API
       <input id="base-url" type="text" size="30" />
     </label>
-    <label slot="controls">
+    <label slot="controls-project">
       CDN
       <input id="cdn-cname" type="text" size="30" />
     </label>
-    <label slot="controls">
+    <label slot="controls-project">
       CDN (prefixed)
       <input id="cdn-cname-prefixed" type="text" size="30" />
     </label>
-    <label slot="controls">
+    <label slot="controls-editor">
       Source UUID (edit mode)
       <input id="source" type="text" size="36" placeholder="uuid to edit (blank = generate)" />
     </label>
-    <label slot="controls">
+    <label slot="controls-editor">
       Output filename
       <input id="output-filename" type="text" size="16" placeholder="result name (blank = keep original)" />
     </label>
-    <label slot="controls">
+    <label slot="controls-editor">
       Metadata
       <input id="metadata" type="text" size="24" placeholder="key=value, key2=value2" />
     </label>
-    <label slot="controls">
+    <label slot="controls-appearance">
       Composer placement
       <select id="composer-placement">
         <option value="bottom" selected>bottom (default)</option>
         <option value="top">top</option>
       </select>
     </label>
-    <label slot="controls">
+    <label slot="controls-appearance">
       Canvas fit
       <select id="canvas-fit">
         <option value="available" selected>available (default)</option>
         <option value="full">full</option>
       </select>
     </label>
-    <label slot="controls">
+    <label slot="controls-appearance">
       Sizing
       <select id="sizing">
         <option value="fill" selected>fill (default)</option>
         <option value="content">content</option>
       </select>
     </label>
-    <label slot="controls">
+    <label slot="controls-appearance">
       History placement
       <select id="history-placement">
         <option value="composer-above">composer-above (default)</option>
@@ -108,7 +108,7 @@
         <option value="canvas-bottom">canvas-bottom</option>
       </select>
     </label>
-    <label slot="controls">
+    <label slot="controls-appearance">
       Toolbar placement
       <select id="toolbar-placement">
         <option value="bottom">bottom (default)</option>
@@ -116,21 +116,21 @@
         <option value="none">none (host chrome)</option>
       </select>
     </label>
-    <label slot="controls">
+    <label slot="controls-editor">
       Aspect ratios
       <input id="aspect-ratios" type="text" size="16" placeholder="e.g. 16:9 1:1 4:3" />
     </label>
-    <label slot="controls">
+    <label slot="controls-editor">
       Locale
       <select id="locale"></select>
     </label>
-    <label slot="controls">
+    <label slot="controls-editor">
       <input id="presets-only" type="checkbox" /> Presets only
     </label>
-    <label slot="controls">
+    <label slot="controls-editor">
       <input id="custom-presets" type="checkbox" /> Custom presets
     </label>
-    <label slot="controls">
+    <label slot="controls-appearance">
       <input id="branded" type="checkbox" /> Brand-themed
     </label>
 

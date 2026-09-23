@@ -9,16 +9,16 @@ import { rememberAuthToken, resolveAuthToken } from './demo-env.ts';
  * is the only thing that shows it.
  *
  * Plain DOM, not a custom element: the shell styles its toolbar with
- * `demo-shell label[slot='controls'] input`, which a shadow root would hide the
- * field from.
+ * `demo-shell label[slot^='controls'] input`, which a shadow root would hide
+ * the field from.
  *
- * @param shell the `<demo-shell>` whose toolbar gets the field
+ * @param shell the `<demo-shell>` whose Project group gets the field
  * @param onChange called with the trimmed token after it has been remembered
  * @returns a function that refreshes the field from storage
  */
 export function mountAuthTokenField(shell: Element, onChange: (authToken: string) => void): () => void {
   const label = document.createElement('label');
-  label.slot = 'controls';
+  label.slot = 'controls-project';
   label.append('Auth token');
 
   const input = document.createElement('input');
