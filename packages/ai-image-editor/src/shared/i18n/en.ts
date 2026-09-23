@@ -1,4 +1,4 @@
-import type { KnownErrorCode } from '../lib/errorCodes';
+import type { AuthErrorCode, ClientErrorCode, KnownErrorCode } from '../lib/errorCodes';
 
 /** Core UI strings — every locale must provide all of these. */
 const coreLocale = {
@@ -34,7 +34,10 @@ const coreLocale = {
  * to the generic `ai-image-editor-error`. They're optional per locale (English here
  * is the default) and overridable via the `l10n` property like any other string.
  */
-const errorLocale: Record<`ai-image-editor-error-${KnownErrorCode}`, string> = {
+const errorLocale: Record<
+  `ai-image-editor-error-${Exclude<KnownErrorCode | ClientErrorCode, AuthErrorCode>}` | 'ai-image-editor-error-auth',
+  string
+> = {
   // Platform validation (POST generate/edit/outpaint, GET status)
   'ai-image-editor-error-invalid_request': 'Something went wrong with the request. Please try again.',
   'ai-image-editor-error-invalid_source': "The source image couldn't be read. Please try a different image.",
@@ -51,6 +54,10 @@ const errorLocale: Record<`ai-image-editor-error-${KnownErrorCode}`, string> = {
   // Project / key
   'ai-image-editor-error-ProjectPublicKeyInvalidError':
     "That public key isn't valid. Check the key for this project and try again.",
+  // Auth token. Every code in AUTH_ERROR_CODES resolves to this one key: an
+  // expired token and a forbidden scope look identical from the outside, and
+  // reloading is the only thing that might help (it usually mints a new token).
+  'ai-image-editor-error-auth': 'Something went wrong. Please reload the page and try again.',
   // AI gateway (job status)
   'ai-image-editor-error-content_moderated': 'This request was blocked by content moderation. Try a different prompt.',
   'ai-image-editor-error-provider_unavailable': 'The image service is busy right now. Please try again in a moment.',

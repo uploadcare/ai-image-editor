@@ -2,7 +2,8 @@ import type { Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { AspectRatio, AspectRatioValue } from '../../../entities/aspect-ratio';
 import type { AiEditorMode } from '../../../entities/mode';
-import { type AiProvider, AiProviderError, type AiProviderResult } from '../../../entities/provider';
+import { normalizeError } from '../../../entities/error';
+import type { AiProvider, AiProviderResult } from '../../../entities/provider';
 
 export type HistoryEntry = {
   id: string;
@@ -136,8 +137,11 @@ export class GenerationController implements ReactiveController {
       // We own this controller, so anything thrown while it is aborted is a
       // cancellation — whatever shape the error has.
       if (controller.signal.aborted) return null;
-      this.error = (err as Error).message || 'Generation failed';
-      this.errorCode = err instanceof AiProviderError ? err.errorCode : null;
+      // Same normalization the `uc:error` dispatch uses, so the message the UI
+      // picks and the code the host receives can never disagree.
+      const normalized = normalizeError(err);
+      this.error = normalized.message || 'Generation failed';
+      this.errorCode = normalized.code;
       throw err;
     } finally {
       if (this._abortController === controller) {

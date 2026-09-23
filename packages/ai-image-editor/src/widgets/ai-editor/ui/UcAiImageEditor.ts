@@ -25,6 +25,7 @@ import {
   type AiImageEditorLocale,
   type AiImageEditorLocaleKey,
   enLocale,
+  errorLocaleKey,
   LOCALE_LOADERS,
   translate,
 } from '../../../shared/i18n';
@@ -663,7 +664,7 @@ export class UcAiImageEditor extends LitElement {
   private _errorMessage(): string {
     const code = this._gen.errorCode;
     if (code) {
-      const key = `ai-image-editor-error-${code}` as AiImageEditorLocaleKey;
+      const key = errorLocaleKey(code) as AiImageEditorLocaleKey;
       const specific =
         (this._localeStrings as Record<string, string>)[key] ?? (enLocale as Record<string, string>)[key];
       if (specific) return specific;

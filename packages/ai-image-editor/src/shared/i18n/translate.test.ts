@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { KNOWN_ERROR_CODES } from '../lib/errorCodes';
+import { AUTH_ERROR_CODES, CLIENT_ERROR_CODES, KNOWN_ERROR_CODES } from '../lib/errorCodes';
 import { enLocale } from './en';
-import { translate } from './translate';
+import { errorLocaleKey, translate } from './translate';
 
 describe('translate', () => {
   it('returns the en locale value when no overrides are provided', () => {
@@ -29,9 +29,16 @@ describe('translate', () => {
  * to "Something went wrong" — which is exactly what these guard.
  */
 describe('per-error-code messages', () => {
-  it('gives every known error code its own message', () => {
-    const missing = KNOWN_ERROR_CODES.filter((code) => !(`ai-image-editor-error-${code}` in enLocale));
+  it('gives every known error code a message', () => {
+    const codes = [...KNOWN_ERROR_CODES, ...CLIENT_ERROR_CODES];
+    const missing = codes.filter((code) => !(errorLocaleKey(code) in enLocale));
     expect(missing).toEqual([]);
+  });
+
+  it('collapses every auth token code onto one message', () => {
+    const keys = new Set(AUTH_ERROR_CODES.map(errorLocaleKey));
+    expect([...keys]).toEqual(['ai-image-editor-error-auth']);
+    expect(translate('ai-image-editor-error-auth')).not.toBe(enLocale['ai-image-editor-error']);
   });
 
   it('resolves an invalid public key to an actionable message, not the generic one', () => {
