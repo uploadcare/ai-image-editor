@@ -938,7 +938,11 @@ export class UcAiImageEditor extends LitElement {
         });
       }
     } catch (err) {
-      const detail: ErrorDetail = { error: normalizeError(err) };
+      const error = normalizeError(err);
+      // The UI only shows a short message, and a host that doesn't listen for
+      // `uc:error` would otherwise lose the failure entirely.
+      console.error('[uc-ai-image-editor]', error.code, error.message, error);
+      const detail: ErrorDetail = { error };
       this.dispatchEvent(new CustomEvent('uc:error', { detail, bubbles: true, composed: true }));
     }
   }
