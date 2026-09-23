@@ -1,4 +1,4 @@
-import { isAuthErrorCode } from '../lib/errorCodes';
+import { errorMessageGroup } from '../lib/errorCodes';
 import { enLocale } from './en';
 
 export function translate(key: keyof typeof enLocale, overrides?: Partial<typeof enLocale>): string {
@@ -6,11 +6,13 @@ export function translate(key: keyof typeof enLocale, overrides?: Partial<typeof
 }
 
 /**
- * The locale key holding the message for an error code. Every auth token code
- * collapses onto the single `ai-image-editor-error-auth` key; the rest get
- * their own. The returned key may not exist (unknown or untranslated codes) —
- * the caller falls back to the generic `ai-image-editor-error`.
+ * The locale key holding the message for an error code: the shared key of its
+ * group when it has one, its own otherwise. The returned key often does not
+ * exist — codes with nothing useful to say, and codes the frontend has never
+ * heard of, both land on a missing key and the caller falls back to the
+ * generic `ai-image-editor-error`.
  */
 export function errorLocaleKey(code: string): string {
-  return isAuthErrorCode(code) ? 'ai-image-editor-error-auth' : `ai-image-editor-error-${code}`;
+  const group = errorMessageGroup(code);
+  return group ? `ai-image-editor-error-${group}` : `ai-image-editor-error-${code}`;
 }

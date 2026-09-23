@@ -1,4 +1,4 @@
-import type { AuthErrorCode, ClientErrorCode, KnownErrorCode } from '../lib/errorCodes';
+import type { CodeWithOwnMessage, ErrorMessageGroup } from '../lib/errorCodes';
 
 /** Core UI strings — every locale must provide all of these. */
 const coreLocale = {
@@ -29,52 +29,33 @@ const coreLocale = {
 };
 
 /**
- * Whoever sees these messages is a visitor on our customer's site: they know
- * nothing about projects, keys, plans, tokens or accounts, and can't fix any of
- * it. So a setup failure gets this one neutral line, and the code that says
- * what actually broke goes to the console and to `uc:error`.
+ * Messages for the failures the editor can explain, keyed
+ * `ai-image-editor-error-<group|code>` (see {@link ERROR_MESSAGE_GROUPS}).
+ *
+ * Written for the person using our customer's site, who knows nothing about
+ * projects, keys, tokens or jobs and can't fix any of them. A code only gets a
+ * line here when that line changes what they do next; everything else falls
+ * back to the generic `ai-image-editor-error`, since "try again" is all there
+ * is to say. They're optional per locale (English here is the default) and
+ * overridable via the `l10n` property like any other string.
  */
-const SETUP_ERROR_MESSAGE = "Image generation isn't available right now. Please try again later.";
-
-/**
- * Friendly messages for known platform/job `error_code`s, keyed
- * `ai-image-editor-error-<code>`. The editor looks these up by code and falls back
- * to the generic `ai-image-editor-error`. They're optional per locale (English here
- * is the default) and overridable via the `l10n` property like any other string.
- */
-const errorLocale: Record<
-  `ai-image-editor-error-${Exclude<KnownErrorCode | ClientErrorCode, AuthErrorCode>}` | 'ai-image-editor-error-auth',
-  string
-> = {
-  // Platform validation (POST generate/edit/outpaint, GET status)
-  'ai-image-editor-error-invalid_request': 'Something went wrong with the request. Please try again.',
-  'ai-image-editor-error-invalid_source': "The source image couldn't be read. Please try a different image.",
-  'ai-image-editor-error-source_not_found': "The source image couldn't be found.",
-  'ai-image-editor-error-source_not_image': 'The source file must be an image.',
-  'ai-image-editor-error-source_url_unavailable': "The source image couldn't be downloaded. Please try again.",
-  'ai-image-editor-error-invalid_aspect_ratio': "That aspect ratio isn't supported.",
-  'ai-image-editor-error-canvas_too_large': 'This image is too large. Try a smaller one.',
-  'ai-image-editor-error-canvas_dimension_too_small': 'This image is too small. Each side must be at least 256 pixels.',
-  'ai-image-editor-error-source_extends_beyond_canvas': "The source image doesn't fit the canvas. Try a larger canvas.",
-  'ai-image-editor-error-derivative_disabled': SETUP_ERROR_MESSAGE,
-  'ai-image-editor-error-job_id_required': 'Something went wrong. Please try again.',
-  'ai-image-editor-error-job_not_found': 'This generation has expired. Please try again.',
-  // Project / key
-  'ai-image-editor-error-ProjectPublicKeyInvalidError': SETUP_ERROR_MESSAGE,
-  // Auth token. Every code in AUTH_ERROR_CODES resolves to this one key: an
-  // expired token and a forbidden scope look identical from the outside, and
-  // reloading is the only thing that might help (it usually mints a new token).
+const errorLocale: Record<`ai-image-editor-error-${ErrorMessageGroup | CodeWithOwnMessage}`, string> = {
+  // Nothing they do will turn this on, so don't send them looking.
+  'ai-image-editor-error-setup': "Image generation isn't available right now. Please try again later.",
+  // Reloading is the one thing that might help: it usually mints a new token.
   'ai-image-editor-error-auth': 'Something went wrong. Please reload the page and try again.',
-  // AI gateway (job status)
-  'ai-image-editor-error-content_moderated': 'This request was blocked by content moderation. Try a different prompt.',
-  'ai-image-editor-error-provider_unavailable': 'The image service is busy right now. Please try again in a moment.',
-  'ai-image-editor-error-generation_timeout': 'Generation took too long and timed out. Please try again.',
-  'ai-image-editor-error-invalid_input': 'Some settings are invalid. Please adjust them and try again.',
-  'ai-image-editor-error-RequestThrottledError': 'Too many requests right now. Please wait a moment and try again.',
-  // Upload pipeline (job status)
-  'ai-image-editor-error-DownloadFileHTTPClientError': "Couldn't retrieve the generated image. Please try again.",
-  'ai-image-editor-error-DownloadFileNotFoundError': "The generated image couldn't be found. Please try again.",
-  'ai-image-editor-error-DownloadFileTaskFailedError': "Couldn't save the generated image. Please try again.",
+  'ai-image-editor-error-source': "This image can't be used. Please try a different one.",
+  // Transient: the image itself is fine, fetching it wasn't. Retrying is the
+  // advice, which is the opposite of what the shared `source` line says.
+  'ai-image-editor-error-source_url_unavailable': "That image couldn't be loaded. Please try again.",
+  'ai-image-editor-error-source_not_image': "That file isn't an image. Please choose an image.",
+  'ai-image-editor-error-invalid_aspect_ratio': "That aspect ratio isn't supported. Please pick another one.",
+  'ai-image-editor-error-source_extends_beyond_canvas':
+    "This image doesn't fit that aspect ratio. Try one closer to the image's own shape.",
+  'ai-image-editor-error-busy': 'The image service is busy right now. Please try again in a moment.',
+  'ai-image-editor-error-canvas_too_large': 'This image is too large (over 4 megapixels). Try a smaller one.',
+  'ai-image-editor-error-canvas_dimension_too_small': 'This image is too small. Each side must be at least 256 pixels.',
+  'ai-image-editor-error-content_moderated': "That prompt isn't allowed. Try describing it differently.",
 };
 
 /**

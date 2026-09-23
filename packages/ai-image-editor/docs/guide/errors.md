@@ -63,20 +63,24 @@ still shows up while debugging.
 
 The known codes come in four families. **Platform validation** covers bad
 input or setup (`invalid_source`, `canvas_too_large`, `derivative_disabled`,
-and so on). **AI gateway** covers the generation itself
-(`content_moderated`, `provider_unavailable`, `generation_timeout`).
-**Auth token** covers
+and so on). **AI gateway** covers the generation itself (`content_moderated`,
+`provider_unavailable`, `generation_timeout`). **Auth token** covers
 [signed uploads](/guide/integrating#signed-uploads): the Upload API rejecting
 the token (`AccessTokenExpiredError`, `ScopeForbiddenError`,
 `OperationsLimitExceededError`, `AccessTokenInvalidError`,
 `SignatureRequiredError`), plus `auth_token_failed` when your own `authToken`
-function throws and no request is made at all. The editor shows one message
-(`ai-image-editor-error-auth`) for the whole family, because the difference
-matters to you and not to the person generating an image. **Upload pipeline** covers persisting the result
-(`DownloadFileHTTPClientError` and friends; yes, PascalCase, because the
-backend passes those through as literal upload-service class names). The full
-list with their user-facing messages lives in the
-[localization guide](/guide/localization#error-messages).
+function throws and no request is made at all. **Upload pipeline** covers
+persisting the result (`DownloadFileHTTPClientError` and friends; yes,
+PascalCase, because the backend passes those through as literal upload-service
+class names).
+
+Your handler sees all of them. The editor's own UI does not: it shows a
+message only where the message changes what the person at the screen does
+next, and the rest read "Something went wrong. Try again." Several codes also
+share one message, since an expired token and a forbidden scope are the same
+dead end to everyone but you. The
+[localization guide](/guide/localization#error-messages) lists what maps to
+what.
 
 `AiImageEditorErrorCode` is deliberately open: the known codes are typed as
 literals (you get autocomplete for them), but the backend can introduce new
@@ -85,7 +89,9 @@ Don't treat the union as closed; keep a `default` branch.
 
 ### Enabling AI Image Editor {#derivative-disabled}
 
-`derivative_disabled` means AI generation isn't enabled for your project.
+`derivative_disabled` means AI generation isn't enabled for your project. The
+editor won't say that on screen, since a visitor can't act on it, so watch for
+the code on `uc:error` or in the console.
 During the **public beta**, AI Image Editor is available on all **paid**
 Uploadcare plans. [Upgrade your plan](https://uploadcare.com/pricing/) if
 you're on a free one, or contact support if you hit this code on a paid
@@ -119,11 +125,10 @@ editor.localeDefinitionOverride = {
 };
 ```
 
-A code with no matching key (unknown or untranslated) falls back to the
-generic `ai-image-editor-error` message. The auth token codes are the one
-exception to the per-code mapping: they all read
-`ai-image-editor-error-auth`, so overriding that one key changes the message
-for every token failure. See
+Some keys are shared by several codes (`ai-image-editor-error-auth` covers
+every token failure, `-source` an unusable input image), so overriding one
+changes the message for its whole family. A code with no key at all falls back
+to the generic `ai-image-editor-error`. See
 [Localization](/guide/localization#error-messages) for the mechanics and the
 full key list.
 

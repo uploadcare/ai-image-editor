@@ -70,14 +70,18 @@ enLocale['ai-image-editor-generate-btn'] // 'Generate'
 
 ## Error messages
 
-When a generation or edit fails, the editor maps the backend `error_code` to an
-`ai-image-editor-error-<code>` key and shows that message. The messages are
-written for the person using your site, who knows nothing about your Uploadcare
-project, so a failure they can't act on (bad key, AI generation not enabled,
-anything to do with tokens) says only that generation isn't available. If no key matches the code
-(or you haven't translated it), it falls back to the generic `ai-image-editor-error`.
-These per-code keys are **optional in every locale**, so translate only the ones
-you care about and the rest fall back gracefully:
+When a generation or edit fails, the editor shows one of the messages below,
+and falls back to the generic `ai-image-editor-error` for everything else.
+
+The list is short on purpose. These messages are read by the person using your
+site, who knows nothing about your Uploadcare project and can't fix it, so a
+code only gets its own line when that line changes what they do next. Failures
+they can't act on all read "Something went wrong. Try again." The code itself
+is never lost: it's on the `uc:error` event and in the console, where you can
+act on it.
+
+Every key is **optional in every locale**, so translate only the ones you care
+about and the rest fall back to English:
 
 ```ts
 editor.localeDefinitionOverride = {
@@ -88,46 +92,18 @@ editor.localeDefinitionOverride = {
 }
 ```
 
-**Platform validation.** The request was rejected before generation started.
+| Key | Shown for | Default |
+|---|---|---|
+| `ai-image-editor-error` | Everything without a key below, including codes this version has never heard of. | Something went wrong. Try again. |
+| `ai-image-editor-error-setup` | `derivative_disabled`, `ProjectPublicKeyInvalidError` — the project isn't set up for this. | Image generation isn't available right now. Please try again later. |
+| `ai-image-editor-error-auth` | Any [signed-uploads](/guide/integrating#signed-uploads) failure: `AccessTokenInvalidError`, `AccessTokenExpiredError`, `ScopeForbiddenError`, `OperationsLimitExceededError`, `SignatureRequiredError`, and `auth_token_failed` when your own `authToken` function throws. | Something went wrong. Please reload the page and try again. |
+| `ai-image-editor-error-source` | `invalid_source`, `source_not_found` — the image they picked can't be used. | This image can't be used. Please try a different one. |
+| `ai-image-editor-error-source_not_image` | The file they picked isn't an image. | That file isn't an image. Please choose an image. |
+| `ai-image-editor-error-source_url_unavailable` | The image couldn't be fetched — transient, so worth retrying rather than replacing. | That image couldn't be loaded. Please try again. |
+| `ai-image-editor-error-invalid_aspect_ratio` | The requested aspect ratio isn't supported at all. | That aspect ratio isn't supported. Please pick another one. |
+| `ai-image-editor-error-source_extends_beyond_canvas` | The ratio is fine, but this image can't be fitted into it. | This image doesn't fit that aspect ratio. Try one closer to the image's own shape. |
+| `ai-image-editor-error-busy` | `provider_unavailable`, `generation_timeout`, `RequestThrottledError` — the service is loaded, not broken. | The image service is busy right now. Please try again in a moment. |
+| `ai-image-editor-error-canvas_too_large` | The image is over the 4-megapixel limit. | This image is too large (over 4 megapixels). Try a smaller one. |
+| `ai-image-editor-error-canvas_dimension_too_small` | A side is under the 256px minimum. | This image is too small. Each side must be at least 256 pixels. |
+| `ai-image-editor-error-content_moderated` | The prompt was blocked by content moderation. | That prompt isn't allowed. Try describing it differently. |
 
-| Key | When it fires |
-|---|---|
-| `ai-image-editor-error-invalid_request` | The request was malformed or rejected. |
-| `ai-image-editor-error-invalid_source` | The source image couldn't be read or decoded. |
-| `ai-image-editor-error-source_not_found` | The source image (by uuid) doesn't exist. |
-| `ai-image-editor-error-source_not_image` | The source file isn't an image. |
-| `ai-image-editor-error-source_url_unavailable` | The source image couldn't be downloaded. |
-| `ai-image-editor-error-invalid_aspect_ratio` | The requested aspect ratio isn't supported. |
-| `ai-image-editor-error-canvas_too_large` | The result exceeds the 4-megapixel limit. |
-| `ai-image-editor-error-canvas_dimension_too_small` | A side is under the 256px minimum. |
-| `ai-image-editor-error-source_extends_beyond_canvas` | The source doesn't fit the target canvas. |
-| `ai-image-editor-error-derivative_disabled` | AI generation isn't enabled for the account. |
-| `ai-image-editor-error-job_id_required` | A job id was missing (internal). |
-| `ai-image-editor-error-job_not_found` | The generation job expired or doesn't exist. |
-| `ai-image-editor-error-ProjectPublicKeyInvalidError` | The `pubkey` isn't a valid project key. |
-
-**Auth token.** One key covers the whole family, because the person looking at
-the screen can't tell an expired token from a forbidden scope and can't fix
-either. The `uc:error` event and the console still carry the specific code.
-
-| Key | When it fires |
-|---|---|
-| `ai-image-editor-error-auth` | Any [signed-uploads](/guide/integrating#signed-uploads) failure: `AccessTokenInvalidError`, `AccessTokenExpiredError`, `ScopeForbiddenError`, `OperationsLimitExceededError`, `SignatureRequiredError`, or `auth_token_failed` when your own `authToken` function throws. |
-
-**AI gateway.** The job failed while the model ran.
-
-| Key | When it fires |
-|---|---|
-| `ai-image-editor-error-content_moderated` | Blocked by content moderation. |
-| `ai-image-editor-error-provider_unavailable` | The upstream image service is overloaded. |
-| `ai-image-editor-error-generation_timeout` | The job took too long and timed out. |
-| `ai-image-editor-error-invalid_input` | The model rejected the inputs or settings. |
-| `ai-image-editor-error-RequestThrottledError` | Too many requests: rate limited. |
-
-**Upload pipeline.** The result couldn't be saved.
-
-| Key | When it fires |
-|---|---|
-| `ai-image-editor-error-DownloadFileHTTPClientError` | Couldn't retrieve the generated image. |
-| `ai-image-editor-error-DownloadFileNotFoundError` | The generated image wasn't found. |
-| `ai-image-editor-error-DownloadFileTaskFailedError` | Couldn't save the generated image. |
