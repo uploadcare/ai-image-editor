@@ -1,5 +1,5 @@
-import { page } from 'vitest/browser';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { cleanup, delay, getCtxName } from './test-renderer';
 
 const TEST_IMAGE_URL =
@@ -62,7 +62,7 @@ describe('AiImageEditorPlugin', () => {
     cleanup();
   });
 
-  it('hands the editor the uploader\'s cached token instead of the raw config value', async () => {
+  it("hands the editor the uploader's cached token instead of the raw config value", async () => {
     // The uploader already caches what an `authToken` function returns, so the
     // editor must not wrap it again — it gets `cacheAuthToken = false` and the
     // uploader's resolver, not the function from `<uc-config>`.
@@ -119,7 +119,10 @@ describe('AiImageEditorPlugin', () => {
       ?.shadowRoot?.querySelector('uc-ai-prompt-row')
       ?.getAttribute('send-aria-label');
   const cancelLabel = () =>
-    document.querySelector('uc-ai-image-editor')?.shadowRoot?.querySelector('uc-ai-footer')?.getAttribute('cancel-label');
+    document
+      .querySelector('uc-ai-image-editor')
+      ?.shadowRoot?.querySelector('uc-ai-footer')
+      ?.getAttribute('cancel-label');
 
   it('feeds editor locale overrides from the uploader config (localeDefinitionOverride)', async () => {
     const { AiImageEditorPlugin } = await import('../src/plugin');
