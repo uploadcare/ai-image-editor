@@ -29,6 +29,14 @@ const coreLocale = {
 };
 
 /**
+ * Whoever sees these messages is a visitor on our customer's site: they know
+ * nothing about projects, keys, plans, tokens or accounts, and can't fix any of
+ * it. So a setup failure gets this one neutral line, and the code that says
+ * what actually broke goes to the console and to `uc:error`.
+ */
+const SETUP_ERROR_MESSAGE = "Image generation isn't available right now. Please try again later.";
+
+/**
  * Friendly messages for known platform/job `error_code`s, keyed
  * `ai-image-editor-error-<code>`. The editor looks these up by code and falls back
  * to the generic `ai-image-editor-error`. They're optional per locale (English here
@@ -45,15 +53,14 @@ const errorLocale: Record<
   'ai-image-editor-error-source_not_image': 'The source file must be an image.',
   'ai-image-editor-error-source_url_unavailable': "The source image couldn't be downloaded. Please try again.",
   'ai-image-editor-error-invalid_aspect_ratio': "That aspect ratio isn't supported.",
-  'ai-image-editor-error-canvas_too_large': 'The image is too large (max 4 megapixels). Try a smaller size.',
-  'ai-image-editor-error-canvas_dimension_too_small': 'The image is too small — each side must be at least 256px.',
+  'ai-image-editor-error-canvas_too_large': 'This image is too large. Try a smaller one.',
+  'ai-image-editor-error-canvas_dimension_too_small': 'This image is too small. Each side must be at least 256 pixels.',
   'ai-image-editor-error-source_extends_beyond_canvas': "The source image doesn't fit the canvas. Try a larger canvas.",
-  'ai-image-editor-error-derivative_disabled': "AI image generation isn't enabled for this account.",
+  'ai-image-editor-error-derivative_disabled': SETUP_ERROR_MESSAGE,
   'ai-image-editor-error-job_id_required': 'Something went wrong. Please try again.',
   'ai-image-editor-error-job_not_found': 'This generation has expired. Please try again.',
   // Project / key
-  'ai-image-editor-error-ProjectPublicKeyInvalidError':
-    "That public key isn't valid. Check the key for this project and try again.",
+  'ai-image-editor-error-ProjectPublicKeyInvalidError': SETUP_ERROR_MESSAGE,
   // Auth token. Every code in AUTH_ERROR_CODES resolves to this one key: an
   // expired token and a forbidden scope look identical from the outside, and
   // reloading is the only thing that might help (it usually mints a new token).

@@ -41,17 +41,24 @@ describe('per-error-code messages', () => {
     expect(translate('ai-image-editor-error-auth')).not.toBe(enLocale['ai-image-editor-error']);
   });
 
-  it('resolves an invalid public key to an actionable message, not the generic one', () => {
+  it('says nothing about projects, keys, accounts or tokens', () => {
+    const jargon = /\b(project|public key|account|plan|token|session|scope)\b/i;
+    const leaking = Object.entries(enLocale)
+      .filter(([key]) => key.startsWith('ai-image-editor-error'))
+      .filter(([, message]) => jargon.test(message));
+    expect(leaking).toEqual([]);
+  });
+
+  it('resolves a setup failure to its own message, not the generic one', () => {
     const message = translate('ai-image-editor-error-ProjectPublicKeyInvalidError');
     expect(message).not.toBe(enLocale['ai-image-editor-error']);
-    expect(message).toMatch(/public key/i);
   });
 
   it('still allows a locale to override a per-code message', () => {
     expect(
       translate('ai-image-editor-error-ProjectPublicKeyInvalidError', {
-        'ai-image-editor-error-ProjectPublicKeyInvalidError': 'Schlüssel ungültig.',
+        'ai-image-editor-error-ProjectPublicKeyInvalidError': 'Bild-Generierung ist nicht verfügbar.',
       }),
-    ).toBe('Schlüssel ungültig.');
+    ).toBe('Bild-Generierung ist nicht verfügbar.');
   });
 });
