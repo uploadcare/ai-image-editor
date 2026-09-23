@@ -59,6 +59,21 @@ const api = useRef<UcAiImageEditor>(null)
 the element is in the DOM, not just until the React component mounts (see
 [Preloading](#preloading)).
 
+For [signed uploads](https://uploadcare.com/docs/security/secure-uploads-auth-token/),
+pass `authToken` — a token, or a function returning one. An inline function is
+fine: the editor caches what it returns, and a new closure on each render does
+not refetch. Dropping the cached token is a method rather than a prop, so it
+goes through `apiRef`:
+
+```tsx
+<AiImageEditor pubkey="YOUR_PUBLIC_KEY" apiRef={api} authToken={fetchToken} />
+// on sign-out
+api.current?.invalidateAuthToken()
+```
+
+Set `cacheAuthToken={false}` only when something in front of the editor already
+caches — which is what the File Uploader plugin does.
+
 ## Events
 
 The element's `uc:*` events map to callbacks, and handlers receive the event's

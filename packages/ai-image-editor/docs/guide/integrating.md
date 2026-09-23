@@ -113,6 +113,36 @@ Works natively: attributes and properties bind directly, and custom events use
 <uc-ai-image-editor {pubkey} on:uc:done={onDone} />
 ```
 
+## Signed uploads
+
+If your project has [signed uploads](https://uploadcare.com/docs/security/secure-uploads-auth-token/)
+enabled, Uploadcare refuses any request without a credential — including the
+editor's. Set `authToken` to a token your backend minted, or to a function that
+fetches one:
+
+```js
+const editor = document.querySelector('uc-ai-image-editor')
+
+editor.authToken = async () => {
+  const response = await fetch('/uploadcare-token')
+  return (await response.json()).token
+}
+```
+
+The editor caches what the function returns and replaces it shortly before it
+expires, so the function is not called once per request. Assigning a different
+function keeps the cached token — which is what lets a React parent pass an
+inline one — so call `editor.invalidateAuthToken()` when the change is real,
+such as a user signing out.
+
+The `auth-token` **attribute carries the plain-token form only**: a function has
+to be set as a DOM property, and writing the attribute afterwards replaces it.
+A plain token is used as given and never refreshed, so it has to outlive the job
+it starts.
+
+Inside the [File Uploader plugin](/guide/plugin) the editor inherits the
+uploader's token and its cache, and you set nothing here.
+
 ## Bundlers & SSR
 
 There are three entry points, imported independently so you only ship what you
