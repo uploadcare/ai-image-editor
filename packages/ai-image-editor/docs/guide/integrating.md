@@ -147,8 +147,10 @@ The `auth-token` attribute carries the plain-token form only. A function has to
 be set as a DOM property, and writing the attribute afterwards replaces it. A
 plain token is used as given and never refreshed, so it has to outlive the job
 it starts: once Uploadcare rejects it as expired, the run fails like any other
-job failure, through [`uc:error`](/guide/errors). A function that throws or
-rejects surfaces the same way, with the original failure on the error's `cause`.
+job failure, through [`uc:error`](/guide/errors) with the Upload API's own code
+(`AccessTokenExpiredError`). A function that throws or rejects surfaces the same
+way, as `auth_token_failed`, with the original failure on the error's `cause`.
+The editor shows [one message](/guide/errors#error-codes) for either.
 
 Inside the [File Uploader plugin](/guide/plugin) the editor inherits the
 uploader's token and its cache, so you set nothing here.

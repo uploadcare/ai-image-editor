@@ -57,11 +57,22 @@ function report(error: AiImageEditorError) {
 }
 ```
 
-The known codes come in three families. **Platform validation** covers bad
+Every failure is also logged to the console (`[uc-ai-image-editor]`, with the
+code, the raw message and the error object), so a code you haven't wired up
+still shows up while debugging.
+
+The known codes come in four families. **Platform validation** covers bad
 input or setup (`invalid_source`, `canvas_too_large`, `derivative_disabled`,
 and so on). **AI gateway** covers the generation itself
 (`content_moderated`, `provider_unavailable`, `generation_timeout`).
-**Upload pipeline** covers persisting the result
+**Auth token** covers
+[signed uploads](/guide/integrating#signed-uploads): the Upload API rejecting
+the token (`AccessTokenExpiredError`, `ScopeForbiddenError`,
+`OperationsLimitExceededError`, `AccessTokenInvalidError`,
+`SignatureRequiredError`), plus `auth_token_failed` when your own `authToken`
+function throws and no request is made at all. The editor shows one message
+(`ai-image-editor-error-auth`) for the whole family, because the difference
+matters to you and not to the person generating an image. **Upload pipeline** covers persisting the result
 (`DownloadFileHTTPClientError` and friends; yes, PascalCase, because the
 backend passes those through as literal upload-service class names). The full
 list with their user-facing messages lives in the
@@ -109,7 +120,10 @@ editor.localeDefinitionOverride = {
 ```
 
 A code with no matching key (unknown or untranslated) falls back to the
-generic `ai-image-editor-error` message. See
+generic `ai-image-editor-error` message. The auth token codes are the one
+exception to the per-code mapping: they all read
+`ai-image-editor-error-auth`, so overriding that one key changes the message
+for every token failure. See
 [Localization](/guide/localization#error-messages) for the mechanics and the
 full key list.
 

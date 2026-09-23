@@ -71,7 +71,10 @@ enLocale['ai-image-editor-generate-btn'] // 'Generate'
 ## Error messages
 
 When a generation or edit fails, the editor maps the backend `error_code` to an
-`ai-image-editor-error-<code>` key and shows that message. If no key matches the code
+`ai-image-editor-error-<code>` key and shows that message. The messages are
+written for the person using your site, who knows nothing about your Uploadcare
+project, so a failure they can't act on (bad key, AI generation not enabled,
+anything to do with tokens) says only that generation isn't available. If no key matches the code
 (or you haven't translated it), it falls back to the generic `ai-image-editor-error`.
 These per-code keys are **optional in every locale**, so translate only the ones
 you care about and the rest fall back gracefully:
@@ -102,6 +105,14 @@ editor.localeDefinitionOverride = {
 | `ai-image-editor-error-job_id_required` | A job id was missing (internal). |
 | `ai-image-editor-error-job_not_found` | The generation job expired or doesn't exist. |
 | `ai-image-editor-error-ProjectPublicKeyInvalidError` | The `pubkey` isn't a valid project key. |
+
+**Auth token.** One key covers the whole family, because the person looking at
+the screen can't tell an expired token from a forbidden scope and can't fix
+either. The `uc:error` event and the console still carry the specific code.
+
+| Key | When it fires |
+|---|---|
+| `ai-image-editor-error-auth` | Any [signed-uploads](/guide/integrating#signed-uploads) failure: `AccessTokenInvalidError`, `AccessTokenExpiredError`, `ScopeForbiddenError`, `OperationsLimitExceededError`, `SignatureRequiredError`, or `auth_token_failed` when your own `authToken` function throws. |
 
 **AI gateway.** The job failed while the model ran.
 
