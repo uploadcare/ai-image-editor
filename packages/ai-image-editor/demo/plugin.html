@@ -33,6 +33,14 @@
       <input id="base-url" type="text" size="30" />
     </label>
     <label slot="controls">
+      CDN
+      <input id="cdn-cname" type="text" size="30" />
+    </label>
+    <label slot="controls">
+      CDN (prefixed)
+      <input id="cdn-cname-prefixed" type="text" size="30" />
+    </label>
+    <label slot="controls">
       Locale
       <select id="locale"></select>
     </label>
@@ -50,7 +58,17 @@
 
   <script type="module">
     import './demo-shell.ts';
-    import { rememberBaseUrl, rememberPubkey, resolveAuthToken, resolveBaseUrl, resolvePubkey } from './demo-env.ts';
+    import {
+      rememberBaseUrl,
+      rememberCdnCname,
+      rememberCdnCnamePrefixed,
+      rememberPubkey,
+      resolveAuthToken,
+      resolveBaseUrl,
+      resolveCdnCname,
+      resolveCdnCnamePrefixed,
+      resolvePubkey,
+    } from './demo-env.ts';
     import { mountAuthTokenField } from './auth-token-field.ts';
     import '@uploadcare/file-uploader/web/uc-file-uploader-regular.min.css';
     import * as UC from '@uploadcare/file-uploader';
@@ -79,6 +97,8 @@
     const shell = document.querySelector('demo-shell');
     const pubkeyInput = document.getElementById('pubkey');
     const baseUrlInput = document.getElementById('base-url');
+    const cdnCnameInput = document.getElementById('cdn-cname');
+    const cdnCnamePrefixedInput = document.getElementById('cdn-cname-prefixed');
     const syncAuthTokenField = mountAuthTokenField(shell, (authToken) => {
       apply();
       // The value never reaches the log: a demo log is read over shoulders and
@@ -89,15 +109,23 @@
     function apply() {
       const pubkey = resolvePubkey();
       const baseUrl = resolveBaseUrl();
+      const cdnCname = resolveCdnCname();
+      const cdnCnamePrefixed = resolveCdnCnamePrefixed();
       const authToken = resolveAuthToken();
       config.setAttribute('pubkey', pubkey);
       config.setAttribute('base-url', baseUrl);
+      // The plugin reads `cdnCname` off the uploader config and hands it to the
+      // editor, so setting it here covers both.
+      config.setAttribute('cdn-cname', cdnCname);
+      config.setAttribute('cdn-cname-prefixed', cdnCnamePrefixed);
       // Set on the uploader, which is the point of the plugin path: the editor
       // inherits this token and the uploader's cache rather than having its
       // own. A property, so it stays out of the DOM.
       config.authToken = authToken || null;
       pubkeyInput.value = pubkey;
       baseUrlInput.value = baseUrl;
+      cdnCnameInput.value = cdnCname;
+      cdnCnamePrefixedInput.value = cdnCnamePrefixed;
       syncAuthTokenField();
     }
 
@@ -110,6 +138,18 @@
       rememberBaseUrl(e.target.value.trim());
       apply();
       shell.log(`baseUrl → ${config.getAttribute('base-url')}`);
+    });
+
+    cdnCnameInput.addEventListener('change', (e) => {
+      rememberCdnCname(e.target.value.trim());
+      apply();
+      shell.log(`cdnCname → ${config.getAttribute('cdn-cname')}`);
+    });
+
+    cdnCnamePrefixedInput.addEventListener('change', (e) => {
+      rememberCdnCnamePrefixed(e.target.value.trim());
+      apply();
+      shell.log(`cdnCnamePrefixed → ${config.getAttribute('cdn-cname-prefixed')}`);
     });
 
     pubkeyInput.addEventListener('change', (e) => {
