@@ -503,6 +503,12 @@ export class UcAiImageEditor extends LitElement {
    * cache.
    */
   private readonly _resolveAuthToken = (): string | Promise<string> => {
+    // Always a function, even for a plain token, which is what lets the
+    // provider hold one thing for its lifetime. The cost: upload-client reads
+    // a function as "this can produce a fresh token" and retries once when the
+    // API reports an expired one, so an expired plain token fails on the
+    // second attempt rather than the first.
+
     const { authToken } = this;
 
     if (!authToken || typeof authToken === 'string') return authToken ?? '';

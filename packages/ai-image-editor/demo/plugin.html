@@ -33,16 +33,6 @@
       <input id="base-url" type="text" size="30" />
     </label>
     <label slot="controls">
-      Auth token
-      <input
-        id="auth-token"
-        type="text"
-        size="30"
-        placeholder="blank = send none"
-        title="For a project with signed uploads enabled. Kept in this browser only, never in the URL."
-      />
-    </label>
-    <label slot="controls">
       Locale
       <select id="locale"></select>
     </label>
@@ -60,7 +50,8 @@
 
   <script type="module">
     import './demo-shell.ts';
-    import { rememberAuthToken, rememberBaseUrl, rememberPubkey, resolveAuthToken, resolveBaseUrl, resolvePubkey } from './demo-env.ts';
+    import { rememberBaseUrl, rememberPubkey, resolveAuthToken, resolveBaseUrl, resolvePubkey } from './demo-env.ts';
+    import { mountAuthTokenField } from './auth-token-field.ts';
     import '@uploadcare/file-uploader/web/uc-file-uploader-regular.min.css';
     import * as UC from '@uploadcare/file-uploader';
     import { AiImageEditorPlugin } from '../src/plugin.ts';
@@ -88,7 +79,12 @@
     const shell = document.querySelector('demo-shell');
     const pubkeyInput = document.getElementById('pubkey');
     const baseUrlInput = document.getElementById('base-url');
-    const authTokenInput = document.getElementById('auth-token');
+    const syncAuthTokenField = mountAuthTokenField(shell, (authToken) => {
+      apply();
+      // The value never reaches the log: a demo log is read over shoulders and
+      // pasted into issues.
+      shell.log(authToken ? 'authToken set' : 'authToken cleared');
+    });
 
     function apply() {
       const pubkey = resolvePubkey();
@@ -102,7 +98,7 @@
       config.authToken = authToken || null;
       pubkeyInput.value = pubkey;
       baseUrlInput.value = baseUrl;
-      authTokenInput.value = authToken;
+      syncAuthTokenField();
     }
 
     // Apply unconditionally, not just when a value was saved: without this the
@@ -121,15 +117,6 @@
       rememberPubkey(pubkey);
       apply();
       shell.log(pubkey ? `pubkey → ${pubkey}` : 'pubkey → default placeholder');
-    });
-
-    authTokenInput.addEventListener('change', (e) => {
-      const authToken = e.target.value.trim();
-      rememberAuthToken(authToken);
-      apply();
-      // The value never reaches the log: a demo log is read over shoulders and
-      // pasted into issues.
-      shell.log(authToken ? 'authToken set' : 'authToken cleared');
     });
 
     // The plugin syncs the editor's locale (and the uploader's labels) from the
