@@ -80,7 +80,7 @@ export class UploadcareDerivativeApi implements AiProvider {
     publicKey: string;
     baseURL?: string;
     userAgent: CustomUserAgentFn;
-    authToken?: AuthToken;
+    readonly authToken?: AuthToken;
   };
   private cdnBasePromise?: Promise<string>;
 
@@ -109,15 +109,6 @@ export class UploadcareDerivativeApi implements AiProvider {
       // API directly, so they need the same credentials as `this.api`.
       authToken: options.authToken,
     };
-  }
-
-  /**
-   * Swap the auth token without rebuilding the provider, which would drop the
-   * resolved CDN base and re-resolve it on every render.
-   */
-  setAuthToken(authToken: AuthToken | undefined): void {
-    this.uploadClientOptions.authToken = authToken;
-    this.api.setAuthToken(authToken);
   }
 
   async generate(request: AiProviderRequest): Promise<AiProviderResult> {

@@ -491,22 +491,30 @@ export class UcAiImageEditor extends LitElement {
   private _authTokenCache?: AuthTokenCache;
 
   /**
-   * The token to hand the provider: a plain token as given, or a function whose
-   * result this editor caches. Swapping in a new function keeps the cached
-   * token, so an inline resolver re-created on every render costs nothing.
+   * One function for the life of the element, handed to the provider once.
+   *
+   * It reads `authToken` when it is called rather than capturing it, so a token
+   * that changes — including the new closure a React parent produces on every
+   * render — needs nothing pushed anywhere. `authToken` accepts a resolver, so
+   * this is simply that.
+   *
+   * Caching happens here: swapping the cache's `fetchToken` keeps the token a
+   * new closure would otherwise discard, and a plain token has nothing to
+   * cache.
    */
-  private _effectiveAuthToken(): AuthToken | undefined {
+  private readonly _resolveAuthToken = (): string | Promise<string> => {
     const { authToken } = this;
-    if (!authToken || typeof authToken === 'string') return authToken;
-    if (!this.cacheAuthToken) return authToken;
+
+    if (!authToken || typeof authToken === 'string') return authToken ?? '';
+    if (!this.cacheAuthToken) return authToken();
 
     if (this._authTokenCache) {
       this._authTokenCache.fetchToken = authToken;
     } else {
       this._authTokenCache = new AuthTokenCache({ fetchToken: authToken });
     }
-    return this._authTokenCache.getToken;
-  }
+    return this._authTokenCache.getToken();
+  };
 
   /**
    * Drop the cached auth token, so the next request calls {@link authToken}
@@ -539,22 +547,16 @@ export class UcAiImageEditor extends LitElement {
         (this.pubkey
           ? new UploadcareDerivativeApi({
               publicKey: this.pubkey,
-              authToken: this._effectiveAuthToken(),
+              authToken: this._resolveAuthToken,
               baseUrl: this.baseUrl,
               cdnBaseUrl: this.cdnCname,
               cdnCnamePrefixed: this.cdnCnamePrefixed,
             })
           : undefined);
     }
-    // Deliberately not part of `providerConfigChanged`: an inline resolver gets
-    // a new identity on every render, and rebuilding the provider would discard
-    // its resolved CDN base each time.
-    if (
-      (changed.has('authToken') || changed.has('cacheAuthToken')) &&
-      this._provider instanceof UploadcareDerivativeApi
-    ) {
-      this._provider.setAuthToken(this._effectiveAuthToken());
-    }
+    // `authToken` and `cacheAuthToken` are deliberately absent from
+    // `providerConfigChanged` and need nothing pushed: the provider holds
+    // `_resolveAuthToken`, which reads them when a request needs a token.
     if (changed.has('secureDeliveryProxyUrlResolver')) {
       this._secure.setResolver(this.secureDeliveryProxyUrlResolver);
     }

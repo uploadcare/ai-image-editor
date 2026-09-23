@@ -36,18 +36,6 @@ describe('UploadcareApiClient', () => {
       expect(headersOf(fetchImpl.mock.calls[0]!).get('Authorization')).toBe('Bearer eyJ');
     });
 
-    it('swaps the token in place, so a new resolver identity needs no new client', async () => {
-      // React hands a fresh closure to the component on every render; rebuilding
-      // the client (and the provider around it) on each one is what this avoids.
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'j' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl, authToken: 'first' });
-
-      client.setAuthToken('second');
-      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
-
-      expect(headersOf(fetchImpl.mock.calls[0]!).get('Authorization')).toBe('Bearer second');
-    });
-
     it('re-resolves a resolver per request, so a job can rotate tokens mid-flight', async () => {
       const fetchImpl = vi
         .fn<typeof fetch>()

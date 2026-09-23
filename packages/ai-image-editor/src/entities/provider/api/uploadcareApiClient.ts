@@ -162,9 +162,7 @@ export class UploadcareApiClient {
   private readonly publicKey: string;
   private readonly baseUrl: string;
   private readonly doFetch: typeof fetch;
-  /** Not readonly: swapped in place so a new resolver identity — which React
-   * produces on every render — does not force a new client. */
-  private authToken: AuthToken | undefined;
+  private readonly authToken: AuthToken | undefined;
 
   constructor(options: UploadcareApiClientOptions) {
     if (!options.publicKey) {
@@ -222,15 +220,6 @@ export class UploadcareApiClient {
     const data = (await readJson(response, 'generate status')) as UploadcareJobStatus;
     await devValidate('status', data);
     return data;
-  }
-
-  /**
-   * Swap the token in place. Headers are resolved per request in
-   * {@link authHeaders}, so a request already in flight keeps the token it was
-   * built with and the next one picks this up.
-   */
-  public setAuthToken(authToken: AuthToken | undefined): void {
-    this.authToken = authToken;
   }
 
   /** Resolved per request, so a rotating token is picked up mid-job. */

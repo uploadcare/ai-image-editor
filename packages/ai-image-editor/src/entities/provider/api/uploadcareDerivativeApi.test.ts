@@ -423,27 +423,30 @@ describe('UploadcareDerivativeApi', () => {
       );
     });
 
-    it('setAuthToken swaps the token on both network paths', async () => {
+    it('follows a token that changes, on both network paths', async () => {
+      // The provider holds one resolver for its lifetime; whoever owns the
+      // token changes what that resolver returns, and nothing is pushed in.
       mockIsReadyPoll.mockResolvedValue({ uuid: 'file-uuid' } as unknown as Awaited<ReturnType<typeof isReadyPoll>>);
       const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
+      let token = 'eyJ.first.sig';
       const provider = new UploadcareDerivativeApi({
         publicKey: 'pk',
-        authToken: 'eyJ.first.sig',
+        authToken: () => token,
         fetch: fetchImpl,
         ...NO_DELAY,
       });
 
-      provider.setAuthToken('eyJ.second.sig');
+      token = 'eyJ.second.sig';
 
       await provider.generate({ prompt: 'x', mode: 'generate' });
       const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
       expect(new Headers(init.headers).get('Authorization')).toBe('Bearer eyJ.second.sig');
 
+      // upload-client is handed the resolver itself and calls it per request,
+      // so what matters is what it resolves to now.
       await provider.getFileInfo('file-uuid');
-      expect(mockIsReadyPoll).toHaveBeenCalledWith(
-        'file-uuid',
-        expect.objectContaining({ authToken: 'eyJ.second.sig' }),
-      );
+      const [, pollOptions] = mockIsReadyPoll.mock.calls[0]! as [string, { authToken: () => string }];
+      expect(pollOptions.authToken()).toBe('eyJ.second.sig');
     });
   });
 });
