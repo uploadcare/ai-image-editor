@@ -115,9 +115,9 @@ Works natively: attributes and properties bind directly, and custom events use
 
 ## Signed uploads
 
-If your project has [signed uploads](https://uploadcare.com/docs/security/secure-uploads-auth-token/)
-enabled, Uploadcare refuses any request without a credential — including the
-editor's. Set `authToken` to a token your backend minted, or to a function that
+With [signed uploads](https://uploadcare.com/docs/security/secure-uploads-auth-token/)
+enabled, Uploadcare refuses any request that carries no credential, the editor's
+included. Set `authToken` to a token your backend minted, or to a function that
 fetches one:
 
 ```js
@@ -129,19 +129,29 @@ editor.authToken = async () => {
 }
 ```
 
-The editor caches what the function returns and replaces it shortly before it
-expires, so the function is not called once per request. Assigning a different
-function keeps the cached token — which is what lets a React parent pass an
-inline one — so call `editor.invalidateAuthToken()` when the change is real,
-such as a user signing out.
+Every request the editor makes carries the token: starting a generation or an
+edit, polling its status, and the file-info polling that waits for the result to
+land on the CDN.
 
-The `auth-token` **attribute carries the plain-token form only**: a function has
-to be set as a DOM property, and writing the attribute afterwards replaces it.
-A plain token is used as given and never refreshed, so it has to outlive the job
-it starts.
+The editor caches what that function returns and reads `exp` out of the token to
+replace it shortly before it expires, so the function runs once in a while
+rather than once per request. Assigning a different function keeps the cached
+token, which is why a React parent can pass an inline one. Call
+`editor.invalidateAuthToken()` when the change is real, such as a user signing
+out: it drops the cached token, and the next request calls your function again.
+Set `cacheAuthToken = false` (a property, defaulting to `true`) if something in
+front of the editor already caches, and your function is then called for every
+request.
+
+The `auth-token` attribute carries the plain-token form only. A function has to
+be set as a DOM property, and writing the attribute afterwards replaces it. A
+plain token is used as given and never refreshed, so it has to outlive the job
+it starts: once Uploadcare rejects it as expired, the run fails like any other
+job failure, through [`uc:error`](/guide/errors). A function that throws or
+rejects surfaces the same way, with the original failure on the error's `cause`.
 
 Inside the [File Uploader plugin](/guide/plugin) the editor inherits the
-uploader's token and its cache, and you set nothing here.
+uploader's token and its cache, so you set nothing here.
 
 ## Bundlers & SSR
 

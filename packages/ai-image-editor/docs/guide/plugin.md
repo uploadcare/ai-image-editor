@@ -62,7 +62,7 @@ form; as HTML attributes they're kebab-case (`base-url`, `cdn-cname`,
 | `localeName` | | Drives the editor language (lazy-loaded; see [Localization](/guide/localization)). |
 | `localeDefinitionOverride` | | Per-locale string overrides, layered onto the editor's built-ins. |
 | `secureDeliveryProxyUrlResolver` | | Signs/proxies the CDN URLs the editor renders ([secure delivery](https://uploadcare.com/docs/security/secure-delivery/)). |
-| `authToken` | | Credential for [signed uploads](https://uploadcare.com/docs/security/secure-uploads-auth-token/). Forwarded as the uploader's own cached resolver rather than the raw value, so the editor shares one token with the uploads around it instead of fetching its own. |
+| `authToken` | | Credential for [signed uploads](https://uploadcare.com/docs/security/secure-uploads-auth-token/). Forwarded as the uploader's own cached resolver rather than the raw value, so the editor shares one token with the uploads around it. |
 
 The plugin also adds one config option of its own:
 
