@@ -59,6 +59,16 @@
       <input id="base-url" type="text" size="30" />
     </label>
     <label slot="controls">
+      Auth token
+      <input
+        id="auth-token"
+        type="text"
+        size="30"
+        placeholder="blank = send none"
+        title="For a project with signed uploads enabled. Kept in this browser only, never in the URL."
+      />
+    </label>
+    <label slot="controls">
       Source UUID (edit mode)
       <input id="source" type="text" size="36" placeholder="uuid to edit (blank = generate)" />
     </label>
@@ -133,21 +143,27 @@
     import './demo-shell.ts';
     import '../src/index.ts';
     import { SUPPORTED_LOCALES } from '../src/shared/i18n/index.ts';
-    import { rememberBaseUrl, rememberPubkey, resolveBaseUrl, resolvePubkey } from './demo-env.ts';
+    import { rememberAuthToken, rememberBaseUrl, rememberPubkey, resolveAuthToken, resolveBaseUrl, resolvePubkey } from './demo-env.ts';
     import { UnsplashFakeProvider } from './UnsplashFakeProvider.ts';
 
     const shell = document.querySelector('demo-shell');
     const editor = document.querySelector('uc-ai-image-editor');
     const pubkeyInput = document.getElementById('pubkey');
     const baseUrlInput = document.getElementById('base-url');
+    const authTokenInput = document.getElementById('auth-token');
 
     function apply() {
       const pubkey = resolvePubkey();
       const baseUrl = resolveBaseUrl();
+      const authToken = resolveAuthToken();
       editor.pubkey = pubkey;
       editor.baseUrl = baseUrl;
+      // A property, not the attribute: the token stays out of the DOM, and the
+      // element never reflects it back. `undefined` sends no credential.
+      editor.authToken = authToken || undefined;
       pubkeyInput.value = pubkey;
       baseUrlInput.value = baseUrl;
+      authTokenInput.value = authToken;
     }
 
     apply();
@@ -196,6 +212,16 @@
       rememberPubkey(e.target.value.trim());
       apply();
       shell.log(`pubkey → ${editor.pubkey}`);
+    });
+    authTokenInput.addEventListener('change', (e) => {
+      const authToken = e.target.value.trim();
+      rememberAuthToken(authToken);
+      apply();
+      // The token itself never reaches the log; a demo log is read over
+      // shoulders and pasted into issues.
+      shell.log(authToken ? 'authToken set' : 'authToken cleared');
+      // A new token is a real change, not a re-render, so the cached one goes.
+      editor.invalidateAuthToken();
     });
     document.getElementById('source').addEventListener('change', (e) => {
       const uuid = e.target.value.trim();

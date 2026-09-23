@@ -15,6 +15,7 @@ export const DEFAULT_PUBKEY = 'YOUR_PUBLIC_KEY';
 
 const PUBKEY_STORAGE_KEY = 'uc-ai-demo-pubkey';
 const BASE_URL_STORAGE_KEY = 'uc-ai-demo-base-url';
+const AUTH_TOKEN_STORAGE_KEY = 'uc-ai-demo-auth-token';
 
 /** URL param wins over a remembered value, which wins over the default. */
 function resolve(param: string, storageKey: string, fallback: string): string {
@@ -33,6 +34,17 @@ function remember(storageKey: string, value: string): void {
 export const resolvePubkey = (): string => resolve('pubkey', PUBKEY_STORAGE_KEY, DEFAULT_PUBKEY);
 export const resolveBaseUrl = (): string => resolve('baseUrl', BASE_URL_STORAGE_KEY, DEFAULT_BASE_URL);
 
+/**
+ * A token for a project with signed uploads enabled. Empty means send none,
+ * which is what a project without the feature wants.
+ *
+ * Deliberately not readable from the URL, unlike the two above: a token is a
+ * bearer credential, and a link carrying one would leak it through history,
+ * bookmarks and referrers. Mint a short-lived one for the demo.
+ */
+export const resolveAuthToken = (): string => localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '';
+
 /** Persist a value typed into a demo field, or forget it when the field is cleared. */
 export const rememberPubkey = (pubkey: string): void => remember(PUBKEY_STORAGE_KEY, pubkey);
 export const rememberBaseUrl = (baseUrl: string): void => remember(BASE_URL_STORAGE_KEY, baseUrl);
+export const rememberAuthToken = (authToken: string): void => remember(AUTH_TOKEN_STORAGE_KEY, authToken);
