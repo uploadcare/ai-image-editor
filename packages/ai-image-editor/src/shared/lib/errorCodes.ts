@@ -1,4 +1,4 @@
-import type { AuthErrorCode, ServerErrorCode } from '@uploadcare/upload-client';
+import type { ServerErrorCode } from '@uploadcare/upload-client';
 
 /**
  * Codes the `derivative/*` API mints for itself. They are snake_case and live
@@ -72,12 +72,3 @@ export const CLIENT_ERROR_CODES = [
 ] as const;
 
 export type ClientErrorCode = (typeof CLIENT_ERROR_CODES)[number];
-
-/**
- * Every auth code upload-client knows about has to be listed above, or a token
- * failure it adds later would reach the screen as the generic "something went
- * wrong" with no mention of reloading. Type-level, so it fails the build rather
- * than waiting for someone to hit it.
- */
-type UnlistedAuthCode = Exclude<AuthErrorCode, KnownErrorCode>;
-export const EVERY_AUTH_CODE_IS_LISTED: [UnlistedAuthCode] extends [never] ? true : UnlistedAuthCode = true;

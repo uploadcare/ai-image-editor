@@ -661,7 +661,7 @@ export class UcAiImageEditor extends LitElement {
    *  (`ai-image-editor-error-<code>`, overridable via the locale) when one is
    *  defined, otherwise the generic error message. */
   private _errorMessage(): string {
-    const code = this._gen.errorCode;
+    const code = this._gen.error?.code;
     if (code) {
       const key = `ai-image-editor-error-${code}` as AiImageEditorLocaleKey;
       const specific =
@@ -941,7 +941,7 @@ export class UcAiImageEditor extends LitElement {
       const error = normalizeError(err);
       // The UI only shows a short message, and a host that doesn't listen for
       // `uc:error` would otherwise lose the failure entirely.
-      console.error('[uc-ai-image-editor]', error.code, error.message, error);
+      console.error('[uc-ai-image-editor]', error.code, error);
       const detail: ErrorDetail = { error };
       this.dispatchEvent(new CustomEvent('uc:error', { detail, bubbles: true, composed: true }));
     }

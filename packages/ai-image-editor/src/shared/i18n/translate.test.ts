@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CLIENT_ERROR_CODES, KNOWN_ERROR_CODES } from '../lib/errorCodes';
+import type { AuthErrorCode } from '@uploadcare/upload-client';
+import { CLIENT_ERROR_CODES, type KnownErrorCode, KNOWN_ERROR_CODES } from '../lib/errorCodes';
 import { enLocale } from './en';
 import { translate } from './translate';
 
@@ -33,6 +34,15 @@ describe('per-error-code messages', () => {
     const codes = [...KNOWN_ERROR_CODES, ...CLIENT_ERROR_CODES];
     const missing = codes.filter((code) => !(`ai-image-editor-error-${code}` in enLocale));
     expect(missing).toEqual([]);
+  });
+
+  it('knows every auth code upload-client can raise', () => {
+    // Type-level: a sixth auth code upstream leaves this unassignable, and the
+    // build fails here rather than the code reaching a visitor as the generic
+    // "something went wrong" with no mention of reloading.
+    type UnlistedAuthCode = Exclude<AuthErrorCode, KnownErrorCode>;
+    const everyAuthCodeIsListed: [UnlistedAuthCode] extends [never] ? true : UnlistedAuthCode = true;
+    expect(everyAuthCodeIsListed).toBe(true);
   });
 
   it('says the same thing for every auth token failure', () => {

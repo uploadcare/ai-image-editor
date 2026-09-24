@@ -2,7 +2,7 @@ import type { Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { AspectRatio, AspectRatioValue } from '../../../entities/aspect-ratio';
 import type { AiEditorMode } from '../../../entities/mode';
-import { normalizeError } from '../../../entities/error';
+import { type AiImageEditorError, normalizeError } from '../../../entities/error';
 import type { AiProvider, AiProviderResult } from '../../../entities/provider';
 
 export type HistoryEntry = {
@@ -40,10 +40,13 @@ export class GenerationController implements ReactiveController {
   public resultUrl: string | null = null;
   /** The last successful generation result, including its raw response. */
   public result: AiProviderResult | null = null;
-  public error: string | null = null;
-  /** Platform/job `error_code` for the last failure, if known — the editor maps
-   *  it to a localized, overridable message. Null for unknown/generic errors. */
-  public errorCode: string | null = null;
+  /**
+   * The last failure, normalized. The same object `run()` rethrows and the
+   * editor puts on `uc:error`, so the message shown and the error handed to the
+   * host cannot describe different things. Its `code` is what the editor maps
+   * to a localized, overridable message.
+   */
+  public error: AiImageEditorError | null = null;
   public history: HistoryEntry[] = [];
 
   private readonly _host: ReactiveControllerHost;
@@ -73,7 +76,6 @@ export class GenerationController implements ReactiveController {
     this.resultUrl = null;
     this.result = null;
     this.error = null;
-    this.errorCode = null;
     this._host.requestUpdate();
   }
 
@@ -94,7 +96,6 @@ export class GenerationController implements ReactiveController {
     this.resultUrl = result.url;
     this.result = result;
     this.error = null;
-    this.errorCode = null;
     this._host.requestUpdate();
   }
 
@@ -105,7 +106,6 @@ export class GenerationController implements ReactiveController {
     this._abortController = controller;
     this.busy = true;
     this.error = null;
-    this.errorCode = null;
     this._host.requestUpdate();
 
     try {
@@ -137,12 +137,11 @@ export class GenerationController implements ReactiveController {
       // We own this controller, so anything thrown while it is aborted is a
       // cancellation — whatever shape the error has.
       if (controller.signal.aborted) return null;
-      // Same normalization the `uc:error` dispatch uses, so the message the UI
-      // picks and the code the host receives can never disagree.
-      const normalized = normalizeError(err);
-      this.error = normalized.message || 'Generation failed';
-      this.errorCode = normalized.code;
-      throw err;
+      // Normalized once, here, and rethrown as the same object the editor
+      // dispatches — `normalizeError` is idempotent, so nothing downstream has
+      // to know it already happened.
+      this.error = normalizeError(err);
+      throw this.error;
     } finally {
       if (this._abortController === controller) {
         this.busy = false;

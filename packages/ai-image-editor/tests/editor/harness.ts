@@ -53,6 +53,10 @@ export const successFrame = (uuid: string): Record<string, unknown> => ({
  * `globalThis.fetch` at construction, so install a stub BEFORE setting `pubkey`.
  */
 export function installFetch(handler: typeof fetch): void {
+  // Put back a stub this test already installed, so `real` is always the real
+  // one — otherwise teardown would restore a stub and every later test in the
+  // file would run against it.
+  restoreFetch?.();
   const real = globalThis.fetch;
   globalThis.fetch = handler;
   restoreFetch = () => {
