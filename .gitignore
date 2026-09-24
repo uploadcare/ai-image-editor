@@ -6,6 +6,9 @@ dist
 .nx/cache
 .vite/
 *.tsbuildinfo
+
+# vitest writes failure screenshots here; they are run output, not fixtures
+.vitest-attachments/
 .DS_Store
 
 # next fixture build artifacts

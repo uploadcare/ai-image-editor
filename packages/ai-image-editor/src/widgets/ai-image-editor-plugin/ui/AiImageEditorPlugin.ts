@@ -250,11 +250,17 @@ export const AiImageEditorPlugin: UploaderPlugin = {
         }
         applyUploaderTheme(editor);
 
+        // The uploader already caches what an `authToken` function returns, and
+        // `getAuthToken()` hands over that cache rather than the raw config
+        // value — so the editor must not wrap it in a second one.
+        editor.cacheAuthToken = false;
+
         const refreshProviderConfig = () => {
           editor.pubkey = config.get('pubkey');
           editor.baseUrl = config.get('baseUrl');
           editor.cdnCname = config.get('cdnCname');
           editor.cdnCnamePrefixed = config.get('cdnCnamePrefixed');
+          editor.authToken = uploaderApi.getAuthToken();
           // Inherit the uploader's secure-delivery resolver so the editor's
           // rendered CDN urls are signed the same way.
           editor.secureDeliveryProxyUrlResolver = config.get('secureDeliveryProxyUrlResolver') ?? undefined;
@@ -297,6 +303,7 @@ export const AiImageEditorPlugin: UploaderPlugin = {
           config.subscribe('cdnCname', refreshProviderConfig),
           config.subscribe('cdnCnamePrefixed', refreshProviderConfig),
           config.subscribe('secureDeliveryProxyUrlResolver', refreshProviderConfig),
+          config.subscribe('authToken', refreshProviderConfig),
           config.subscribe('metadata', refreshMetadata),
           config.subscribe('localeName', refreshLocale),
           config.subscribe('localeDefinitionOverride', refreshLocale),

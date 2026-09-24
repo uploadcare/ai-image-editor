@@ -1,7 +1,7 @@
 {
   "name": "@uploadcare/react-ai-image-editor",
   "version": "0.2.4",
-  "description": "React component for Uploadcare's AI image generation and editing — typed props and events, SSR-safe, works in Next.js Server Components out of the box.",
+  "description": "React component for Uploadcare's AI image generation and editing \u2014 typed props and events, SSR-safe, works in Next.js Server Components out of the box.",
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -23,7 +23,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:next": "node scripts/test-next-fixture.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:types": "vitest run --project types"
   },
   "dependencies": {
     "@lit/react": "^1.0.8",

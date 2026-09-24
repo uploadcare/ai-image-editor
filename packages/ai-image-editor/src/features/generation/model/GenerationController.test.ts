@@ -128,7 +128,10 @@ describe('GenerationController', () => {
     const run = ctrl.run({ provider, prompt: 'x', mode: 'generate' });
     setNextError(new Error('boom'));
     await expect(run).rejects.toThrow('boom');
-    expect(ctrl.error).toBe('boom');
+    expect(ctrl.error?.message).toBe('boom');
+    // The stored error is the one thrown, so the editor's `uc:error` detail and
+    // the message on screen describe the same failure.
+    await expect(run).rejects.toBe(ctrl.error);
     expect(ctrl.busy).toBe(false);
   });
 

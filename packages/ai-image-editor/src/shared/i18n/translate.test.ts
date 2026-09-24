@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { KNOWN_ERROR_CODES } from '../lib/errorCodes';
+import type { AuthErrorCode } from '@uploadcare/upload-client';
+import { CLIENT_ERROR_CODES, type KnownErrorCode, KNOWN_ERROR_CODES } from '../lib/errorCodes';
 import { enLocale } from './en';
 import { translate } from './translate';
 
@@ -24,27 +25,60 @@ describe('translate', () => {
 });
 
 /**
- * The editor renders `ai-image-editor-error-<code>` when one exists and the generic
- * message otherwise, so a known code without an entry here would silently degrade
- * to "Something went wrong" — which is exactly what these guard.
+ * The editor renders `ai-image-editor-error-<code>` when one exists and the
+ * generic message otherwise, so a known code with no entry would silently
+ * degrade to "Something went wrong" — which is what these guard.
  */
 describe('per-error-code messages', () => {
   it('gives every known error code its own message', () => {
-    const missing = KNOWN_ERROR_CODES.filter((code) => !(`ai-image-editor-error-${code}` in enLocale));
+    const codes = [...KNOWN_ERROR_CODES, ...CLIENT_ERROR_CODES];
+    const missing = codes.filter((code) => !(`ai-image-editor-error-${code}` in enLocale));
     expect(missing).toEqual([]);
   });
 
-  it('resolves an invalid public key to an actionable message, not the generic one', () => {
-    const message = translate('ai-image-editor-error-ProjectPublicKeyInvalidError');
+  it('knows every auth code upload-client can raise', () => {
+    // Type-level: a sixth auth code upstream leaves this unassignable, and the
+    // build fails here rather than the code reaching a visitor as the generic
+    // "something went wrong" with no mention of reloading.
+    type UnlistedAuthCode = Exclude<AuthErrorCode, KnownErrorCode>;
+    const everyAuthCodeIsListed: [UnlistedAuthCode] extends [never] ? true : UnlistedAuthCode = true;
+    expect(everyAuthCodeIsListed).toBe(true);
+  });
+
+  it('says the same thing for every auth token failure', () => {
+    // They differ only in what the integrator has to fix; the visitor gets one
+    // line, and reloading is the whole of the advice.
+    const messages = new Set(
+      [
+        'AccessTokenInvalidError',
+        'AccessTokenExpiredError',
+        'ScopeForbiddenError',
+        'OperationsLimitExceededError',
+        'SignatureRequiredError',
+        'auth_token_failed',
+      ].map((code) => translate(`ai-image-editor-error-${code}` as keyof typeof enLocale)),
+    );
+    expect([...messages]).toEqual(['Something went wrong. Please reload the page and try again.']);
+  });
+
+  it('says nothing about projects, keys, accounts or tokens', () => {
+    const jargon = /\b(project|public key|account|plan|token|session|scope|job|canvas|source)\b/i;
+    const leaking = Object.entries(enLocale)
+      .filter(([key]) => key.startsWith('ai-image-editor-error'))
+      .filter(([, message]) => jargon.test(message));
+    expect(leaking).toEqual([]);
+  });
+
+  it('resolves a setup failure to its own message, not the generic one', () => {
+    const message = translate('ai-image-editor-error-derivative_disabled');
     expect(message).not.toBe(enLocale['ai-image-editor-error']);
-    expect(message).toMatch(/public key/i);
   });
 
   it('still allows a locale to override a per-code message', () => {
     expect(
-      translate('ai-image-editor-error-ProjectPublicKeyInvalidError', {
-        'ai-image-editor-error-ProjectPublicKeyInvalidError': 'Schlüssel ungültig.',
+      translate('ai-image-editor-error-derivative_disabled', {
+        'ai-image-editor-error-derivative_disabled': 'Bild-Generierung ist nicht verfügbar.',
       }),
-    ).toBe('Schlüssel ungültig.');
+    ).toBe('Bild-Generierung ist nicht verfügbar.');
   });
 });

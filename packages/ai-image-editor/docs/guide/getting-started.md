@@ -48,9 +48,9 @@ what you use:
 | `@uploadcare/ai-image-editor/errors` | Just `AiImageEditorError` and its types. Side-effect-free, so it's safe to import in server code (no element registration). |
 
 ::: tip Plugin peer dependency
-The plugin entry needs `@uploadcare/file-uploader` **≥ 1.31.2** as a peer
-dependency (it relies on `uploaderApi.replaceFile`). The standalone editor has no
-peer dependency.
+The plugin entry needs `@uploadcare/file-uploader` **≥ 1.34.0** as a peer
+dependency (it relies on `uploaderApi.replaceFile` and, for signed uploads, on
+`uploaderApi.getAuthToken`). The standalone editor has no peer dependency.
 :::
 
 ## The standalone editor
