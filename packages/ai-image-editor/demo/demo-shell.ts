@@ -1,4 +1,4 @@
-import { css, html, LitElement, nothing } from 'lit';
+import { css, html, LitElement, nothing, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
 type Theme = 'auto' | 'light' | 'dark';
@@ -73,11 +73,13 @@ CONTROL_STYLES.replaceSync(`
  * behavior, its looks) means you only scan one block. A group with nothing
  * slotted into it hides itself, so each page shows only the groups it fills.
  */
-const CONTROL_GROUPS = [
+const CONTROL_GROUPS: Array<{ slot: string; title: string; builtin?: (shell: DemoShell) => TemplateResult }> = [
   { slot: 'controls-project', title: 'Project' },
   { slot: 'controls-editor', title: 'Editor' },
-  { slot: 'controls-appearance', title: 'Appearance' },
-] as const;
+  // The theme switch is the shell's own, so this group renders even on a page
+  // that slots nothing into it.
+  { slot: 'controls-appearance', title: 'Appearance', builtin: (shell) => shell.themeControl() },
+];
 
 /**
  * Shared chrome for the AI Image Editor demos: page heading, a toolbar with a
@@ -282,12 +284,8 @@ export class DemoShell extends LitElement {
     return window.location.pathname.split('/').pop() || 'standalone.html';
   }
 
-  /** Appearance always renders: the theme switch lives there, slots or not. */
-  private _isGroupShown(slot: string): boolean {
-    return slot === 'controls-appearance' || this._filledGroups.includes(slot);
-  }
-
-  private _themeControl() {
+  /** @internal Rendered into its group by {@link CONTROL_GROUPS}. */
+  public themeControl(): TemplateResult {
     return html`
       <label>
         Theme
@@ -314,10 +312,10 @@ export class DemoShell extends LitElement {
       <div class="toolbar">
         ${CONTROL_GROUPS.map(
           (group) => html`
-            <section class="group" ?hidden=${!this._isGroupShown(group.slot)}>
+            <section class="group" ?hidden=${!(group.builtin || this._filledGroups.includes(group.slot))}>
               <h2>${group.title}</h2>
               <div class="fields">
-                ${group.slot === 'controls-appearance' ? this._themeControl() : nothing}
+                ${group.builtin?.(this) ?? nothing}
                 <slot name=${group.slot} @slotchange=${this._onGroupSlotChange}></slot>
               </div>
             </section>
