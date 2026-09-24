@@ -70,18 +70,11 @@ enLocale['ai-image-editor-generate-btn'] // 'Generate'
 
 ## Error messages
 
-When a generation or edit fails, the editor shows one of the messages below,
-and falls back to the generic `ai-image-editor-error` for everything else.
-
-The list is short on purpose. These messages are read by the person using your
-site, who knows nothing about your Uploadcare project and can't fix it, so a
-code only gets its own line when that line changes what they do next. Failures
-they can't act on all read "Something went wrong. Try again." The code itself
-is never lost: it's on the `uc:error` event and in the console, where you can
-act on it.
-
-Every key is **optional in every locale**, so translate only the ones you care
-about and the rest fall back to English:
+When a generation or edit fails, the editor maps the `error_code` to an
+`ai-image-editor-error-<code>` key and shows that message; a code it has never
+heard of falls back to the generic `ai-image-editor-error`. Every key is
+**optional in every locale**, so translate only the ones you care about and the
+rest fall back to English:
 
 ```ts
 editor.localeDefinitionOverride = {
@@ -92,18 +85,41 @@ editor.localeDefinitionOverride = {
 }
 ```
 
-| Key | Shown for | Default |
-|---|---|---|
-| `ai-image-editor-error` | Everything without a key below, including codes this version has never heard of. | Something went wrong. Try again. |
-| `ai-image-editor-error-setup` | `derivative_disabled`, `ProjectPublicKeyInvalidError` — the project isn't set up for this. | Image generation isn't available right now. Please try again later. |
-| `ai-image-editor-error-auth` | Any [signed-uploads](/guide/integrating#signed-uploads) failure: `AccessTokenInvalidError`, `AccessTokenExpiredError`, `ScopeForbiddenError`, `OperationsLimitExceededError`, `SignatureRequiredError`, and `auth_token_failed` when your own `authToken` function throws. | Something went wrong. Please reload the page and try again. |
-| `ai-image-editor-error-source` | `invalid_source`, `source_not_found` — the image they picked can't be used. | This image can't be used. Please try a different one. |
-| `ai-image-editor-error-source_not_image` | The file they picked isn't an image. | That file isn't an image. Please choose an image. |
-| `ai-image-editor-error-source_url_unavailable` | The image couldn't be fetched — transient, so worth retrying rather than replacing. | That image couldn't be loaded. Please try again. |
-| `ai-image-editor-error-invalid_aspect_ratio` | The requested aspect ratio isn't supported at all. | That aspect ratio isn't supported. Please pick another one. |
-| `ai-image-editor-error-source_extends_beyond_canvas` | The ratio is fine, but this image can't be fitted into it. | This image doesn't fit that aspect ratio. Try one closer to the image's own shape. |
-| `ai-image-editor-error-busy` | `provider_unavailable`, `generation_timeout`, `RequestThrottledError` — the service is loaded, not broken. | The image service is busy right now. Please try again in a moment. |
-| `ai-image-editor-error-canvas_too_large` | The image is over the 4-megapixel limit. | This image is too large (over 4 megapixels). Try a smaller one. |
-| `ai-image-editor-error-canvas_dimension_too_small` | A side is under the 256px minimum. | This image is too small. Each side must be at least 256 pixels. |
-| `ai-image-editor-error-content_moderated` | The prompt was blocked by content moderation. | That prompt isn't allowed. Try describing it differently. |
+Several codes deliberately read the same. These messages are for the person
+using your site, who knows nothing about your Uploadcare project and can't fix
+it, so a failure they can't act on says only "Something went wrong. Try again."
+and every token failure says the same line. The code itself is never lost: it's
+on the `uc:error` event and in the console, where you can act on it.
+
+| Key | Default message |
+|---|---|
+| `ai-image-editor-error` | Something went wrong. Try again. |
+| `ai-image-editor-error-invalid_request` | Something went wrong. Try again. |
+| `ai-image-editor-error-invalid_source` | This image can't be used. Please try a different one. |
+| `ai-image-editor-error-source_not_found` | This image can't be used. Please try a different one. |
+| `ai-image-editor-error-source_not_image` | That file isn't an image. Please choose an image. |
+| `ai-image-editor-error-source_url_unavailable` | That image couldn't be loaded. Please try again. |
+| `ai-image-editor-error-invalid_aspect_ratio` | That aspect ratio isn't supported. Please pick another one. |
+| `ai-image-editor-error-canvas_too_large` | This image is too large (over 4 megapixels). Try a smaller one. |
+| `ai-image-editor-error-canvas_dimension_too_small` | This image is too small. Each side must be at least 256 pixels. |
+| `ai-image-editor-error-source_extends_beyond_canvas` | This image doesn't fit that aspect ratio. Try one closer to the image's own shape. |
+| `ai-image-editor-error-derivative_disabled` | Image generation isn't available right now. Please try again later. |
+| `ai-image-editor-error-job_id_required` | Something went wrong. Try again. |
+| `ai-image-editor-error-job_not_found` | Something went wrong. Try again. |
+| `ai-image-editor-error-ProjectPublicKeyInvalidError` | Image generation isn't available right now. Please try again later. |
+| `ai-image-editor-error-AccessTokenInvalidError` | Something went wrong. Please reload the page and try again. |
+| `ai-image-editor-error-AccessTokenExpiredError` | Something went wrong. Please reload the page and try again. |
+| `ai-image-editor-error-ScopeForbiddenError` | Something went wrong. Please reload the page and try again. |
+| `ai-image-editor-error-OperationsLimitExceededError` | Something went wrong. Please reload the page and try again. |
+| `ai-image-editor-error-SignatureRequiredError` | Something went wrong. Please reload the page and try again. |
+| `ai-image-editor-error-auth_token_failed` | Something went wrong. Please reload the page and try again. |
+| `ai-image-editor-error-content_moderated` | That prompt isn't allowed. Try describing it differently. |
+| `ai-image-editor-error-provider_unavailable` | The image service is busy right now. Please try again in a moment. |
+| `ai-image-editor-error-generation_timeout` | The image service is busy right now. Please try again in a moment. |
+| `ai-image-editor-error-RequestThrottledError` | The image service is busy right now. Please try again in a moment. |
+| `ai-image-editor-error-invalid_input` | Something went wrong. Try again. |
+| `ai-image-editor-error-DownloadFileHTTPClientError` | Something went wrong. Try again. |
+| `ai-image-editor-error-DownloadFileNotFoundError` | Something went wrong. Try again. |
+| `ai-image-editor-error-DownloadFileTaskFailedError` | Something went wrong. Try again. |
+
 

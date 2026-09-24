@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { CODES_WITH_OWN_MESSAGE, ERROR_MESSAGE_GROUPS } from '../lib/errorCodes';
+import { CLIENT_ERROR_CODES, KNOWN_ERROR_CODES } from '../lib/errorCodes';
 import { enLocale } from './en';
-import { errorLocaleKey, translate } from './translate';
+import { translate } from './translate';
 
 describe('translate', () => {
   it('returns the en locale value when no overrides are provided', () => {
@@ -24,32 +24,31 @@ describe('translate', () => {
 });
 
 /**
- * The editor renders the message `errorLocaleKey` points at, or the generic
- * `ai-image-editor-error` when that key doesn't exist. Which codes get their
- * own line is a deliberate choice, so these pin both halves of it.
+ * The editor renders `ai-image-editor-error-<code>` when one exists and the
+ * generic message otherwise, so a known code with no entry would silently
+ * degrade to "Something went wrong" — which is what these guard.
  */
 describe('per-error-code messages', () => {
-  it('has a message for every grouped code', () => {
-    const codes = Object.values(ERROR_MESSAGE_GROUPS).flat();
-    const missing = codes.filter((code) => !(errorLocaleKey(code) in enLocale));
+  it('gives every known error code its own message', () => {
+    const codes = [...KNOWN_ERROR_CODES, ...CLIENT_ERROR_CODES];
+    const missing = codes.filter((code) => !(`ai-image-editor-error-${code}` in enLocale));
     expect(missing).toEqual([]);
   });
 
-  it('has a message for every code that keeps one of its own', () => {
-    const missing = CODES_WITH_OWN_MESSAGE.filter((code) => !(errorLocaleKey(code) in enLocale));
-    expect(missing).toEqual([]);
-  });
-
-  it('collapses a group onto one message', () => {
-    const keys = new Set(ERROR_MESSAGE_GROUPS.auth.map(errorLocaleKey));
-    expect([...keys]).toEqual(['ai-image-editor-error-auth']);
-    expect(translate('ai-image-editor-error-auth')).not.toBe(enLocale['ai-image-editor-error']);
-  });
-
-  it('leaves a code with nothing useful to add on the generic message', () => {
-    // `job_not_found` and friends have no advice beyond "try again", which is
-    // what the generic message already says.
-    expect(errorLocaleKey('job_not_found') in enLocale).toBe(false);
+  it('says the same thing for every auth token failure', () => {
+    // They differ only in what the integrator has to fix; the visitor gets one
+    // line, and reloading is the whole of the advice.
+    const messages = new Set(
+      [
+        'AccessTokenInvalidError',
+        'AccessTokenExpiredError',
+        'ScopeForbiddenError',
+        'OperationsLimitExceededError',
+        'SignatureRequiredError',
+        'auth_token_failed',
+      ].map((code) => translate(`ai-image-editor-error-${code}` as keyof typeof enLocale)),
+    );
+    expect([...messages]).toEqual(['Something went wrong. Please reload the page and try again.']);
   });
 
   it('says nothing about projects, keys, accounts or tokens', () => {
@@ -61,14 +60,14 @@ describe('per-error-code messages', () => {
   });
 
   it('resolves a setup failure to its own message, not the generic one', () => {
-    const message = translate('ai-image-editor-error-setup');
+    const message = translate('ai-image-editor-error-derivative_disabled');
     expect(message).not.toBe(enLocale['ai-image-editor-error']);
   });
 
-  it('still allows a locale to override a shared message', () => {
+  it('still allows a locale to override a per-code message', () => {
     expect(
-      translate('ai-image-editor-error-setup', {
-        'ai-image-editor-error-setup': 'Bild-Generierung ist nicht verfügbar.',
+      translate('ai-image-editor-error-derivative_disabled', {
+        'ai-image-editor-error-derivative_disabled': 'Bild-Generierung ist nicht verfügbar.',
       }),
     ).toBe('Bild-Generierung ist nicht verfügbar.');
   });

@@ -51,7 +51,7 @@ const UPLOAD_API_ERROR_CODES = [
 
 /**
  * Single source of truth for the known `uc:error` codes — shared between
- * `AiImageEditorErrorCode` (entities/error) and the `ai-image-editor-error-*`
+ * `AiImageEditorErrorCode` (entities/error) and the `ai-image-editor-error-<code>`
  * locale keys (shared/i18n). It is not a closed contract: unknown codes still
  * flow through as plain strings. Frontend-originated codes (e.g. the React
  * wrapper's `engine_load_failed`) deliberately stay out of this list.
@@ -74,69 +74,10 @@ export const CLIENT_ERROR_CODES = [
 export type ClientErrorCode = (typeof CLIENT_ERROR_CODES)[number];
 
 /**
- * Codes that share one user-facing message, keyed by the message's locale
- * suffix (`ai-image-editor-error-<group>`).
- *
- * A code earns a message only when that message changes what the person at the
- * screen does next. Codes that differ only in what the integrator has to fix
- * read the same from the outside, so they collapse into one line; codes in no
- * group and with no message of their own fall back to the generic
- * `ai-image-editor-error`, because "try again" is the whole of the advice.
+ * Every auth code upload-client knows about has to be listed above, or a token
+ * failure it adds later would reach the screen as the generic "something went
+ * wrong" with no mention of reloading. Type-level, so it fails the build rather
+ * than waiting for someone to hit it.
  */
-export const ERROR_MESSAGE_GROUPS = {
-  /** The token was rejected, or the app couldn't produce one. */
-  auth: [
-    'AccessTokenInvalidError',
-    'AccessTokenExpiredError',
-    'ScopeForbiddenError',
-    'OperationsLimitExceededError',
-    'SignatureRequiredError',
-    'auth_token_failed',
-  ],
-  /** The project isn't set up for this; waiting is all the visitor can do. */
-  setup: ['ProjectPublicKeyInvalidError', 'derivative_disabled'],
-  /**
-   * The image they picked can't be used — a different one might be. Kept apart
-   * from `source_url_unavailable` (retry, don't replace) and `source_not_image`
-   * (the file isn't an image at all), which lead somewhere else.
-   */
-  source: ['invalid_source', 'source_not_found'],
-  /** Nothing is broken, the service is loaded — worth retrying in a moment. */
-  busy: ['provider_unavailable', 'generation_timeout', 'RequestThrottledError'],
-} as const satisfies Record<string, readonly (KnownErrorCode | ClientErrorCode)[]>;
-
-export type ErrorMessageGroup = keyof typeof ERROR_MESSAGE_GROUPS;
-
-/**
- * Every auth code upload-client knows about has to be in the `auth` group, or a
- * token failure it adds later would reach the screen as "something went wrong"
- * with no mention of reloading. Type-level, so it fails the build rather than
- * waiting for someone to hit it.
- */
-type UngroupedAuthCode = Exclude<AuthErrorCode, (typeof ERROR_MESSAGE_GROUPS)['auth'][number]>;
-export type EveryAuthCodeIsGrouped = [UngroupedAuthCode] extends [never] ? true : UngroupedAuthCode;
-const EVERY_AUTH_CODE_IS_GROUPED: EveryAuthCodeIsGrouped = true;
-
-// Referenced so the assertion above can't be dropped as dead code.
-export const AUTH_GROUP_IS_COMPLETE = EVERY_AUTH_CODE_IS_GROUPED;
-
-/** The few codes specific enough to keep a message of their own. */
-export const CODES_WITH_OWN_MESSAGE = [
-  'canvas_too_large',
-  'canvas_dimension_too_small',
-  'content_moderated',
-  'source_not_image',
-  'source_url_unavailable',
-  // Two different problems with the shape: one ratio the service won't take at
-  // all, versus a ratio it would take but this image can't be cropped into.
-  'invalid_aspect_ratio',
-  'source_extends_beyond_canvas',
-] as const satisfies readonly KnownErrorCode[];
-
-export type CodeWithOwnMessage = (typeof CODES_WITH_OWN_MESSAGE)[number];
-
-/** The group a code belongs to, or `undefined` when it has no shared message. */
-export const errorMessageGroup = (code: string): ErrorMessageGroup | undefined =>
-  (Object.keys(ERROR_MESSAGE_GROUPS) as ErrorMessageGroup[]).find((group) =>
-    (ERROR_MESSAGE_GROUPS[group] as readonly string[]).includes(code),
-  );
+type UnlistedAuthCode = Exclude<AuthErrorCode, KnownErrorCode>;
+export const EVERY_AUTH_CODE_IS_LISTED: [UnlistedAuthCode] extends [never] ? true : UnlistedAuthCode = true;

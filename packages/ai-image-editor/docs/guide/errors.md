@@ -74,13 +74,12 @@ persisting the result (`DownloadFileHTTPClientError` and friends; yes,
 PascalCase, because the backend passes those through as literal upload-service
 class names).
 
-Your handler sees all of them. The editor's own UI does not: it shows a
-message only where the message changes what the person at the screen does
-next, and the rest read "Something went wrong. Try again." Several codes also
-share one message, since an expired token and a forbidden scope are the same
-dead end to everyone but you. The
-[localization guide](/guide/localization#error-messages) lists what maps to
-what.
+Your handler sees all of them. The editor's own UI is blunter: a code gets its
+own wording only where that wording changes what the person at the screen does
+next, and the rest read "Something went wrong. Try again." An expired token and
+a forbidden scope also read alike, being the same dead end to everyone but you.
+The [localization guide](/guide/localization#error-messages) lists every code
+and the message it shows.
 
 `AiImageEditorErrorCode` is deliberately open: the known codes are typed as
 literals (you get autocomplete for them), but the backend can introduce new
@@ -125,9 +124,9 @@ editor.localeDefinitionOverride = {
 };
 ```
 
-Some keys are shared by several codes (`ai-image-editor-error-auth` covers
-every token failure, `-source` an unusable input image), so overriding one
-changes the message for its whole family. A code with no key at all falls back
+Each code has its own key, so overriding one changes that code alone — several
+share the same default text, and changing one of those leaves the others as
+they were. A code with no key (one this version has never heard of) falls back
 to the generic `ai-image-editor-error`. See
 [Localization](/guide/localization#error-messages) for the mechanics and the
 full key list.
