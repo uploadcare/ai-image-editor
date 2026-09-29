@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.4...ai-image-editor-v0.2.5) (2026-09-29)
+
+
+### Features
+
+* **ai-image-editor:** authenticate the derivative API with a JWT ([#85](https://github.com/uploadcare/ai-image-editor/issues/85)) ([fa1cce9](https://github.com/uploadcare/ai-image-editor/commit/fa1cce9c3ab5ee684ac3fcc657654eb8732a5a06))
+
 ## [0.2.4](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.3...ai-image-editor-v0.2.4) (2026-08-20)
 
 
