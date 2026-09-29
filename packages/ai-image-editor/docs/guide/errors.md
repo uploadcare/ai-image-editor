@@ -93,6 +93,28 @@ literals (you get autocomplete for them), but the backend can introduce new
 ones at any time, so any other string flows through rather than breaking.
 Don't treat the union as closed; keep a `default` branch.
 
+### When your auth token function fails {#auth-token-errors}
+
+A throw from an [`authToken`](/guide/integrating#signed-uploads) function never
+reaches the backend, so there is no server code to report. It arrives as
+`code: 'auth_token_failed'`, with the `AuthTokenResolverError` from
+`@uploadcare/signed-uploads` on `cause` and whatever your function threw on
+`cause.cause`:
+
+```js
+editor.addEventListener('uc:error', (e) => {
+  if (e.detail.error.code === 'auth_token_failed') {
+    // Your endpoint, not ours. The original failure is on the cause chain.
+    signInAgain();
+  }
+});
+```
+
+Branch on it when a failed token means the session is gone and the user should
+go back through your login rather than retry. Inside File Uploader the editor
+uses the uploader's token, so this is only yours to handle when you set the
+editor's own.
+
 ### Enabling AI Image Editor {#derivative-disabled}
 
 `derivative_disabled` means AI generation isn't enabled for your project. The
