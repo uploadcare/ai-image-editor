@@ -116,9 +116,7 @@ Works natively: attributes and properties bind directly, and custom events use
 ## Signed uploads
 
 With [signed uploads](https://uploadcare.com/docs/security/secure-uploads/)
-enabled, Uploadcare rejects Upload API requests that carry no credential, which
-includes the file-info polling the editor does and any upload the file uploader
-makes alongside it. Set `authToken` to a token your backend minted, or to a function that
+enabled, Uploadcare rejects requests that carry no credential. Set `authToken` to a token your backend minted, or to a function that
 fetches one:
 
 ```js
@@ -137,9 +135,7 @@ editor.authToken = async () => {
 
 The editor sends the token on every request it makes: starting a generation or
 an edit, polling its status, and the file-info polling that waits for the result
-to land on the CDN. The `derivative/*` endpoints behind the first three do not
-check it today, so what a token gates in practice is the Upload API side;
-sending it everywhere means nothing changes here when they do.
+to land on the CDN.
 
 The editor caches what that function returns and reads `exp` out of the token to
 replace it shortly before it expires, so the function runs once in a while
