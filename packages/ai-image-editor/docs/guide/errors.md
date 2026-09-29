@@ -70,10 +70,12 @@ the token (`AccessTokenExpiredError`, `ScopeForbiddenError`,
 `OperationsLimitExceededError`, `AccessTokenInvalidError`,
 `SignatureRequiredError`), plus `auth_token_failed` when your own `authToken`
 function throws and no request is made at all. **Upload pipeline** covers
-persisting the result (`DownloadFileHTTPClientError` and friends). The case
-tells you the origin: snake_case codes are minted by the generation API, and
-PascalCase ones are Upload API errors passed through as literal class names,
-which is why the auth, throttling and upload-pipeline codes all look like that.
+persisting the result (`DownloadFileHTTPClientError` and friends). PascalCase
+means the Upload API reported it, passed through as a literal class name, which
+is why the auth, throttling and upload-pipeline codes all look like that.
+snake_case covers the rest: the codes the generation API mints, plus the two the
+frontend raises on its own, `auth_token_failed` here and `engine_load_failed` in
+the React wrapper.
 
 Your handler sees all of them. The editor's own UI is blunter: a code gets its
 own wording where that changes what the person at the screen does next (pick
@@ -95,8 +97,8 @@ Don't treat the union as closed; keep a `default` branch.
 
 `derivative_disabled` means AI generation isn't enabled for your project. The
 editor won't say so on screen, since a visitor can't act on it: they see
-"Image generation isn't available right now." Watch for the code on `uc:error`
-or in the console instead.
+"Image generation isn't available right now. Please try again later." Watch for
+the code on `uc:error` or in the console instead.
 During the **public beta**, AI Image Editor is available on all **paid**
 Uploadcare plans. [Upgrade your plan](https://uploadcare.com/pricing/) if
 you're on a free one, or contact support if you hit this code on a paid
