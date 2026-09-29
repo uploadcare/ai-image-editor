@@ -115,9 +115,8 @@ Works natively: attributes and properties bind directly, and custom events use
 
 ## Signed uploads
 
-With [signed uploads](https://uploadcare.com/docs/security/secure-uploads-auth-token/)
-enabled, Uploadcare refuses any request that carries no credential, the editor's
-included. Set `authToken` to a token your backend minted, or to a function that
+With [signed uploads](https://uploadcare.com/docs/security/secure-uploads/)
+enabled, Uploadcare rejects requests that carry no credential. Set `authToken` to a token your backend minted, or to a function that
 fetches one:
 
 ```js
@@ -125,16 +124,18 @@ const editor = document.querySelector('uc-ai-image-editor')
 
 editor.authToken = async () => {
   const response = await fetch('/uploadcare-token')
-  // `fetch` does not throw on a 500, so check: a function that returns nothing
-  // sends no header, and the request fails as unsigned.
+  // `fetch` does not throw on a 500, and a resolver that returns nothing sends
+  // no header at all, so the request would go out unsigned. Check both.
   if (!response.ok) throw new Error(`token endpoint: ${response.status}`)
-  return (await response.json()).token
+  const { token } = await response.json()
+  if (!token) throw new Error('token endpoint returned no token')
+  return token
 }
 ```
 
-Every request the editor makes carries the token: starting a generation or an
-edit, polling its status, and the file-info polling that waits for the result to
-land on the CDN.
+The editor sends the token on every request it makes: starting a generation or
+an edit, polling its status, and the file-info polling that waits for the result
+to land on the CDN.
 
 The editor caches what that function returns and reads `exp` out of the token to
 replace it shortly before it expires, so the function runs once in a while
