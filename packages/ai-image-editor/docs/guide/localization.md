@@ -70,7 +70,7 @@ enLocale['ai-image-editor-generate-btn'] // 'Generate'
 
 ## Error messages
 
-When a generation or edit fails, the editor maps the `error_code` to an
+When a generation or edit fails, the editor maps the error's `code` to an
 `ai-image-editor-error-<code>` key and shows that message; a code it has never
 heard of falls back to the generic `ai-image-editor-error`. Every key is
 **optional in every locale**, so translate only the ones you care about and the
