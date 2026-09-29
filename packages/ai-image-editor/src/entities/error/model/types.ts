@@ -1,12 +1,12 @@
-import type { KnownErrorCode } from '../../../shared/lib/errorCodes';
+import type { ClientErrorCode, KnownErrorCode } from '../../../shared/lib/errorCodes';
 
 /**
- * The known error codes (see {@link KNOWN_ERROR_CODES} in shared/lib), plus an
- * escape hatch: the backend can introduce codes the frontend hasn't heard of,
- * and frontend-originated failures use their own codes (e.g. the React
- * wrapper's `engine_load_failed`).
+ * The known error codes (see {@link KNOWN_ERROR_CODES} and
+ * {@link CLIENT_ERROR_CODES} in shared/lib), plus an escape hatch: the backend
+ * can introduce codes the frontend hasn't heard of, and other frontend
+ * packages use their own (e.g. the React wrapper's `engine_load_failed`).
  */
-export type AiImageEditorErrorCode = KnownErrorCode | (string & {});
+export type AiImageEditorErrorCode = KnownErrorCode | ClientErrorCode | (string & {});
 
 export type AiImageEditorErrorOptions = {
   code?: AiImageEditorErrorCode;

@@ -1,3 +1,5 @@
+import { AuthTokenResolverError } from '@uploadcare/signed-uploads/client';
+import { UploadError } from '@uploadcare/upload-client';
 import { describe, expect, it } from 'vitest';
 import { AiProviderError } from '../../provider';
 import { normalizeError } from './normalize';
@@ -11,6 +13,20 @@ describe('normalizeError', () => {
     expect(normalized.code).toBe('content_moderated');
     expect(normalized.source).toBe('gateway');
     expect(normalized.message).toBe('Blocked by moderation');
+    expect(normalized.cause).toBe(original);
+  });
+
+  it('codes a failing authToken function so the UI can name the cause', () => {
+    const original = new AuthTokenResolverError(new Error('/token 500'));
+    const normalized = normalizeError(original);
+    expect(normalized.code).toBe('auth_token_failed');
+    expect(normalized.cause).toBe(original);
+  });
+
+  it('carries the Upload API error code through', () => {
+    const original = new UploadError('Access token expired', 'AccessTokenExpiredError');
+    const normalized = normalizeError(original);
+    expect(normalized.code).toBe('AccessTokenExpiredError');
     expect(normalized.cause).toBe(original);
   });
 

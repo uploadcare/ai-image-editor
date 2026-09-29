@@ -26,6 +26,21 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'types',
+          // Type-only: compiled by tsc against the element's published
+          // `.d.ts`, never executed. Build `@uploadcare/ai-image-editor` first.
+          include: ['tests/types/**/*.test-d.tsx'],
+          typecheck: {
+            enabled: true,
+            only: true,
+            include: ['tests/types/**/*.test-d.tsx'],
+            tsconfig: './tsconfig.types-test.json',
+          },
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'e2e',
           include: ['tests/e2e/**/*.test.{ts,tsx}'],
           browser: {

@@ -15,6 +15,43 @@ describe('UploadcareApiClient', () => {
     expect(() => new UploadcareApiClient({ publicKey: '' })).toThrow(/publicKey/);
   });
 
+  describe('authToken', () => {
+    const headersOf = (call: unknown) => new Headers((call as [string, RequestInit])[1].headers);
+
+    it('sends no Authorization header when unset', async () => {
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'j' }));
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+
+      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
+
+      expect(headersOf(fetchImpl.mock.calls[0]!).has('Authorization')).toBe(false);
+    });
+
+    it('sends a plain token as a bearer header', async () => {
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'j' }));
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl, authToken: 'eyJ' });
+
+      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
+
+      expect(headersOf(fetchImpl.mock.calls[0]!).get('Authorization')).toBe('Bearer eyJ');
+    });
+
+    it('re-resolves a resolver per request, so a job can rotate tokens mid-flight', async () => {
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(jsonResponse({ type: 'job', job_id: 'j' }))
+        .mockResolvedValueOnce(jsonResponse({ type: 'status', status: 'pending' }));
+      const authToken = vi.fn().mockResolvedValueOnce('first').mockResolvedValueOnce('second');
+      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl, authToken });
+
+      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
+      await client.getJobStatus('j');
+
+      expect(headersOf(fetchImpl.mock.calls[0]!).get('Authorization')).toBe('Bearer first');
+      expect(headersOf(fetchImpl.mock.calls[1]!).get('Authorization')).toBe('Bearer second');
+    });
+  });
+
   describe('generate', () => {
     it('POSTs pub_key + prompt + aspect_ratio + filename and returns the job', async () => {
       const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'job-1' }));

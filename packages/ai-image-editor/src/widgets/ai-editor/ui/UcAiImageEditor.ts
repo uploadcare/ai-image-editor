@@ -1,4 +1,5 @@
-import type { Metadata, UploadcareFile } from '@uploadcare/upload-client';
+import { AuthTokenCache } from '@uploadcare/signed-uploads/client';
+import type { AuthToken, Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
@@ -227,6 +228,33 @@ export class UcAiImageEditor extends LitElement {
   /** Uploadcare public key. Required to enable generate/edit. */
   @property()
   public pubkey = '';
+
+  /**
+   * JWT for the Upload API `Authorization: Bearer` scheme. Either a plain token
+   * — which is what a server-rendered page passes in — or a function returning
+   * one.
+   *
+   * The editor caches what the function returns and refreshes it shortly before
+   * it expires, so the function can fetch from your backend without being
+   * called once per request. A plain token is used as given and never
+   * refreshed.
+   *
+   * The `auth-token` attribute carries the plain-token form only; a function
+   * has to be set as a DOM property.
+   */
+  @property({ attribute: 'auth-token' })
+  public authToken?: AuthToken;
+
+  /**
+   * Whether to cache what an `authToken` function returns. Defaults to `true`.
+   *
+   * Set it to `false` when something upstream already caches — the file
+   * uploader hands its plugin an `authToken` that its own cache backs, and
+   * wrapping that again would just add a second layer with its own idea of
+   * when the token went stale. Property only.
+   */
+  @property({ attribute: false })
+  public cacheAuthToken = true;
 
   /**
    * Custom AI provider that replaces the built-in Uploadcare provider (built
@@ -460,6 +488,55 @@ export class UcAiImageEditor extends LitElement {
     }
   }
 
+  private _authTokenCache?: AuthTokenCache;
+
+  /**
+   * One function for the life of the element, handed to the provider once.
+   *
+   * It reads `authToken` when it is called rather than capturing it, so a token
+   * that changes — including the new closure a React parent produces on every
+   * render — needs nothing pushed anywhere. `authToken` accepts a resolver, so
+   * this is simply that.
+   *
+   * Caching happens here: swapping the cache's `fetchToken` keeps the token a
+   * new closure would otherwise discard, and a plain token has nothing to
+   * cache.
+   */
+  private readonly _resolveAuthToken = (): string | Promise<string> => {
+    // Always a function, even for a plain token, which is what lets the
+    // provider hold one thing for its lifetime. The cost: upload-client reads
+    // a function as "this can produce a fresh token" and retries once when the
+    // API reports an expired one, so an expired plain token fails on the
+    // second attempt rather than the first.
+
+    const { authToken } = this;
+
+    if (!authToken || typeof authToken === 'string') return authToken ?? '';
+    if (!this.cacheAuthToken) return authToken();
+
+    if (this._authTokenCache) {
+      this._authTokenCache.fetchToken = authToken;
+    } else {
+      this._authTokenCache = new AuthTokenCache({ fetchToken: authToken });
+    }
+    return this._authTokenCache.getToken();
+  };
+
+  /**
+   * Drop the cached auth token, so the next request calls {@link authToken}
+   * for a new one.
+   *
+   * Assigning a different function to `authToken` does not do this on its own:
+   * a new function identity is taken to be the same function, which is what
+   * lets a parent component pass an inline one without refetching on every
+   * render. Call this when the change is real, such as when the signed-in user
+   * changes. It does nothing when `authToken` is a plain token, since there is
+   * no cache to drop.
+   */
+  public invalidateAuthToken(): void {
+    this._authTokenCache?.invalidate();
+  }
+
   /** @internal */
   public override willUpdate(changed: PropertyValues<this>): void {
     const providerConfigChanged =
@@ -476,12 +553,16 @@ export class UcAiImageEditor extends LitElement {
         (this.pubkey
           ? new UploadcareDerivativeApi({
               publicKey: this.pubkey,
+              authToken: this._resolveAuthToken,
               baseUrl: this.baseUrl,
               cdnBaseUrl: this.cdnCname,
               cdnCnamePrefixed: this.cdnCnamePrefixed,
             })
           : undefined);
     }
+    // `authToken` and `cacheAuthToken` are deliberately absent from
+    // `providerConfigChanged` and need nothing pushed: the provider holds
+    // `_resolveAuthToken`, which reads them when a request needs a token.
     if (changed.has('secureDeliveryProxyUrlResolver')) {
       this._secure.setResolver(this.secureDeliveryProxyUrlResolver);
     }
@@ -580,7 +661,7 @@ export class UcAiImageEditor extends LitElement {
    *  (`ai-image-editor-error-<code>`, overridable via the locale) when one is
    *  defined, otherwise the generic error message. */
   private _errorMessage(): string {
-    const code = this._gen.errorCode;
+    const code = this._gen.error?.code;
     if (code) {
       const key = `ai-image-editor-error-${code}` as AiImageEditorLocaleKey;
       const specific =
@@ -857,7 +938,11 @@ export class UcAiImageEditor extends LitElement {
         });
       }
     } catch (err) {
-      const detail: ErrorDetail = { error: normalizeError(err) };
+      const error = normalizeError(err);
+      // The UI only shows a short message, and a host that doesn't listen for
+      // `uc:error` would otherwise lose the failure entirely.
+      console.error('[uc-ai-image-editor]', error.code, error);
+      const detail: ErrorDetail = { error };
       this.dispatchEvent(new CustomEvent('uc:error', { detail, bubbles: true, composed: true }));
     }
   }

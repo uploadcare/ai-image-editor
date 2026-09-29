@@ -4,38 +4,25 @@ import type { ChangeDetail, DoneDetail, ErrorDetail, UcAiImageEditor } from '@up
 // value import from the side-effect-free subpath: the main entry registers
 // custom elements at module scope and must never load during SSR
 import { AiImageEditorError } from '@uploadcare/ai-image-editor/errors';
+import type { LitElement } from 'lit';
 import React, { type FC, type ReactNode, type Ref, useEffect, useMemo, useRef } from 'react';
 
 import { useLazyAiImageEditor } from './internal/useLazyAiImageEditor';
 
 /**
- * Props mirror the public `<uc-ai-image-editor>` API via indexed-access types, so they
- * track the element automatically. Keep this in sync when the element's public
- * properties change.
+ * Every public option of `<uc-ai-image-editor>`, minus what it inherits from
+ * `LitElement` and its one method. Derived rather than listed, so an option
+ * added to the element cannot go missing here. The element's published types
+ * already exclude `@internal` members, so nothing private leaks through.
+ *
+ * `invalidateAuthToken()` is reached through {@link AiImageEditorProps.apiRef}.
  */
-export type AiImageEditorProps = {
+type ElementOptions = Omit<UcAiImageEditor, keyof LitElement | 'invalidateAuthToken'>;
+
+export type AiImageEditorProps = Partial<ElementOptions> & {
   pubkey: string;
-  /** Edit an existing image by uuid (use this OR `sourceFileInfo`). */
-  sourceUuid?: UcAiImageEditor['sourceUuid'];
-  /** Edit an existing image from its UploadcareFile (use this OR `sourceUuid`). */
-  sourceFileInfo?: UcAiImageEditor['sourceFileInfo'];
-  aspectRatios?: UcAiImageEditor['aspectRatios'];
-  presets?: UcAiImageEditor['presets'];
-  presetsOnly?: UcAiImageEditor['presetsOnly'];
-  metadata?: UcAiImageEditor['metadata'];
-  outputFilename?: UcAiImageEditor['outputFilename'];
-  baseUrl?: UcAiImageEditor['baseUrl'];
-  cdnCname?: UcAiImageEditor['cdnCname'];
-  cdnCnamePrefixed?: UcAiImageEditor['cdnCnamePrefixed'];
-  localeName?: UcAiImageEditor['localeName'];
-  localeDefinitionOverride?: UcAiImageEditor['localeDefinitionOverride'];
-  composerPlacement?: UcAiImageEditor['composerPlacement'];
-  canvasFit?: UcAiImageEditor['canvasFit'];
-  historyPlacement?: UcAiImageEditor['historyPlacement'];
   /** @internal Not part of the public API yet (typed locally: the element strips `@internal` members from its published types). */
   composerAutoHide?: boolean;
-  toolbarPlacement?: UcAiImageEditor['toolbarPlacement'];
-  secureDeliveryProxyUrlResolver?: UcAiImageEditor['secureDeliveryProxyUrlResolver'];
   className?: string;
   apiRef?: Ref<UcAiImageEditor>;
   /**

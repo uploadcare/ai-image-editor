@@ -1,4 +1,4 @@
-import type { KnownErrorCode } from '../lib/errorCodes';
+import type { ClientErrorCode, KnownErrorCode } from '../lib/errorCodes';
 
 /** Core UI strings — every locale must provide all of these. */
 const coreLocale = {
@@ -29,38 +29,60 @@ const coreLocale = {
 };
 
 /**
- * Friendly messages for known platform/job `error_code`s, keyed
- * `ai-image-editor-error-<code>`. The editor looks these up by code and falls back
- * to the generic `ai-image-editor-error`. They're optional per locale (English here
- * is the default) and overridable via the `l10n` property like any other string.
+ * A message per known `error_code`, keyed `ai-image-editor-error-<code>`. The
+ * editor looks one up by code and falls back to the generic
+ * `ai-image-editor-error` for a code it has never heard of. They're optional
+ * per locale (English here is the default) and overridable via the `l10n`
+ * property like any other string.
+ *
+ * Written for the person using our customer's site, who knows nothing about
+ * projects, keys, tokens or jobs and can't fix any of them. Several codes
+ * therefore read the same: an expired token and a forbidden scope are one dead
+ * end from the outside, and a code with no advice beyond "try again" says just
+ * that. The text is repeated per code rather than shared behind a lookup, so
+ * this table is the whole story.
  */
-const errorLocale: Record<`ai-image-editor-error-${KnownErrorCode}`, string> = {
-  // Platform validation (POST generate/edit/outpaint, GET status)
-  'ai-image-editor-error-invalid_request': 'Something went wrong with the request. Please try again.',
-  'ai-image-editor-error-invalid_source': "The source image couldn't be read. Please try a different image.",
-  'ai-image-editor-error-source_not_found': "The source image couldn't be found.",
-  'ai-image-editor-error-source_not_image': 'The source file must be an image.',
-  'ai-image-editor-error-source_url_unavailable': "The source image couldn't be downloaded. Please try again.",
-  'ai-image-editor-error-invalid_aspect_ratio': "That aspect ratio isn't supported.",
-  'ai-image-editor-error-canvas_too_large': 'The image is too large (max 4 megapixels). Try a smaller size.',
-  'ai-image-editor-error-canvas_dimension_too_small': 'The image is too small — each side must be at least 256px.',
-  'ai-image-editor-error-source_extends_beyond_canvas': "The source image doesn't fit the canvas. Try a larger canvas.",
-  'ai-image-editor-error-derivative_disabled': "AI image generation isn't enabled for this account.",
-  'ai-image-editor-error-job_id_required': 'Something went wrong. Please try again.',
-  'ai-image-editor-error-job_not_found': 'This generation has expired. Please try again.',
-  // Project / key
+const errorLocale: Record<`ai-image-editor-error-${KnownErrorCode | ClientErrorCode}`, string> = {
+  // Platform validation (POST generate/edit, GET status)
+  'ai-image-editor-error-invalid_request': 'Something went wrong. Try again.',
+  'ai-image-editor-error-invalid_source': "This image can't be used. Please try a different one.",
+  'ai-image-editor-error-source_not_found': "This image can't be used. Please try a different one.",
+  'ai-image-editor-error-source_not_image': "That file isn't an image. Please choose an image.",
+  // Transient: the image itself is fine, fetching it wasn't, so this one asks
+  // for a retry where its neighbours ask for a different image.
+  'ai-image-editor-error-source_url_unavailable': "That image couldn't be loaded. Please try again.",
+  'ai-image-editor-error-invalid_aspect_ratio': "That aspect ratio isn't supported. Please pick another one.",
+  'ai-image-editor-error-canvas_too_large': 'This image is too large (over 4 megapixels). Try a smaller one.',
+  'ai-image-editor-error-canvas_dimension_too_small': 'This image is too small. Each side must be at least 256 pixels.',
+  'ai-image-editor-error-source_extends_beyond_canvas':
+    "This image doesn't fit that aspect ratio. Try one closer to the image's own shape.",
+  // Nothing the visitor does will turn this on, so don't send them looking.
+  'ai-image-editor-error-derivative_disabled': "Image generation isn't available right now. Please try again later.",
+  'ai-image-editor-error-job_id_required': 'Something went wrong. Try again.',
+  'ai-image-editor-error-job_not_found': 'Something went wrong. Try again.',
+  // Project / key: a setup problem, and it reads like the one above because it
+  // is the same dead end for everyone but the integrator.
   'ai-image-editor-error-ProjectPublicKeyInvalidError':
-    "That public key isn't valid. Check the key for this project and try again.",
+    "Image generation isn't available right now. Please try again later.",
+  // Auth token. All six read the same: reloading is the only thing that might
+  // help (it usually mints a new token), and the specific code is on
+  // `uc:error` and in the console for whoever can act on it.
+  'ai-image-editor-error-AccessTokenInvalidError': 'Something went wrong. Please reload the page and try again.',
+  'ai-image-editor-error-AccessTokenExpiredError': 'Something went wrong. Please reload the page and try again.',
+  'ai-image-editor-error-ScopeForbiddenError': 'Something went wrong. Please reload the page and try again.',
+  'ai-image-editor-error-OperationsLimitExceededError': 'Something went wrong. Please reload the page and try again.',
+  'ai-image-editor-error-SignatureRequiredError': 'Something went wrong. Please reload the page and try again.',
+  'ai-image-editor-error-auth_token_failed': 'Something went wrong. Please reload the page and try again.',
   // AI gateway (job status)
-  'ai-image-editor-error-content_moderated': 'This request was blocked by content moderation. Try a different prompt.',
+  'ai-image-editor-error-content_moderated': "That prompt isn't allowed. Try describing it differently.",
   'ai-image-editor-error-provider_unavailable': 'The image service is busy right now. Please try again in a moment.',
-  'ai-image-editor-error-generation_timeout': 'Generation took too long and timed out. Please try again.',
-  'ai-image-editor-error-invalid_input': 'Some settings are invalid. Please adjust them and try again.',
-  'ai-image-editor-error-RequestThrottledError': 'Too many requests right now. Please wait a moment and try again.',
+  'ai-image-editor-error-generation_timeout': 'The image service is busy right now. Please try again in a moment.',
+  'ai-image-editor-error-RequestThrottledError': 'The image service is busy right now. Please try again in a moment.',
+  'ai-image-editor-error-invalid_input': 'Something went wrong. Try again.',
   // Upload pipeline (job status)
-  'ai-image-editor-error-DownloadFileHTTPClientError': "Couldn't retrieve the generated image. Please try again.",
-  'ai-image-editor-error-DownloadFileNotFoundError': "The generated image couldn't be found. Please try again.",
-  'ai-image-editor-error-DownloadFileTaskFailedError': "Couldn't save the generated image. Please try again.",
+  'ai-image-editor-error-DownloadFileHTTPClientError': 'Something went wrong. Try again.',
+  'ai-image-editor-error-DownloadFileNotFoundError': 'Something went wrong. Try again.',
+  'ai-image-editor-error-DownloadFileTaskFailedError': 'Something went wrong. Try again.',
 };
 
 /**

@@ -113,6 +113,48 @@ Works natively: attributes and properties bind directly, and custom events use
 <uc-ai-image-editor {pubkey} on:uc:done={onDone} />
 ```
 
+## Signed uploads
+
+With [signed uploads](https://uploadcare.com/docs/security/secure-uploads-auth-token/)
+enabled, Uploadcare refuses any request that carries no credential, the editor's
+included. Set `authToken` to a token your backend minted, or to a function that
+fetches one:
+
+```js
+const editor = document.querySelector('uc-ai-image-editor')
+
+editor.authToken = async () => {
+  const response = await fetch('/uploadcare-token')
+  return (await response.json()).token
+}
+```
+
+Every request the editor makes carries the token: starting a generation or an
+edit, polling its status, and the file-info polling that waits for the result to
+land on the CDN.
+
+The editor caches what that function returns and reads `exp` out of the token to
+replace it shortly before it expires, so the function runs once in a while
+rather than once per request. Assigning a different function keeps the cached
+token, which is why a React parent can pass an inline one. Call
+`editor.invalidateAuthToken()` when the change is real, such as a user signing
+out: it drops the cached token, and the next request calls your function again.
+Set `cacheAuthToken = false` (a property, defaulting to `true`) if something in
+front of the editor already caches, and your function is then called for every
+request.
+
+The `auth-token` attribute carries the plain-token form only. A function has to
+be set as a DOM property, and writing the attribute afterwards replaces it. A
+plain token is used as given and never refreshed, so it has to outlive the job
+it starts: once Uploadcare rejects it as expired, the run fails like any other
+job failure, through [`uc:error`](/guide/errors) with the Upload API's own code
+(`AccessTokenExpiredError`). A function that throws or rejects surfaces the same
+way, as `auth_token_failed`, with the original failure on the error's `cause`.
+The editor shows [one message](/guide/errors#error-codes) for either.
+
+Inside the [File Uploader plugin](/guide/plugin) the editor inherits the
+uploader's token and its cache, so you set nothing here.
+
 ## Bundlers & SSR
 
 There are three entry points, imported independently so you only ship what you

@@ -61,7 +61,7 @@ All `uc:*` events and their payloads are listed in the [API reference][docs-api]
 
 Or as a [File Uploader plugin][docs-plugin], assuming a working
 [File Uploader](https://uploadcare.com/docs/file-uploader/) setup
-(`@uploadcare/file-uploader` **≥ 1.31.2**) — the plugin reads its settings
+(`@uploadcare/file-uploader` **≥ 1.34.0**) — the plugin reads its settings
 from the uploader config:
 
 ```bash
