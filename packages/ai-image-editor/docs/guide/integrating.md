@@ -125,6 +125,9 @@ const editor = document.querySelector('uc-ai-image-editor')
 
 editor.authToken = async () => {
   const response = await fetch('/uploadcare-token')
+  // `fetch` does not throw on a 500, so check: a function that returns nothing
+  // sends no header, and the request fails as unsigned.
+  if (!response.ok) throw new Error(`token endpoint: ${response.status}`)
   return (await response.json()).token
 }
 ```

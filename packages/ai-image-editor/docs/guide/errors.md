@@ -70,16 +70,23 @@ the token (`AccessTokenExpiredError`, `ScopeForbiddenError`,
 `OperationsLimitExceededError`, `AccessTokenInvalidError`,
 `SignatureRequiredError`), plus `auth_token_failed` when your own `authToken`
 function throws and no request is made at all. **Upload pipeline** covers
-persisting the result (`DownloadFileHTTPClientError` and friends; yes,
-PascalCase, because the backend passes those through as literal upload-service
-class names).
+persisting the result (`DownloadFileHTTPClientError` and friends). PascalCase
+means the Upload API reported it, passed through as a literal class name, which
+is why the auth, throttling and upload-pipeline codes all look like that.
+snake_case covers the rest: the codes the generation API mints, plus the two the
+frontend raises on its own, `auth_token_failed` here and `engine_load_failed` in
+the React wrapper.
 
 Your handler sees all of them. The editor's own UI is blunter: a code gets its
-own wording only where that wording changes what the person at the screen does
-next, and the rest read "Something went wrong. Try again." An expired token and
-a forbidden scope also read alike, being the same dead end to everyone but you.
-The [localization guide](/guide/localization#error-messages) lists every code
-and the message it shows.
+own wording where that changes what the person at the screen does next (pick
+another image, a different aspect ratio, a different prompt), and the ones they
+cannot act on share a line. Every token failure reads alike, an expired token
+and a forbidden scope being the same dead end to everyone but you, and a setup
+problem they cannot fix says only that generation is unavailable. The
+[localization guide](/guide/localization#error-messages) lists each code that
+has a message, with the text it shows. Codes with no entry there, including
+`unknown` and the React wrapper's `engine_load_failed`, fall back to the
+generic message.
 
 `AiImageEditorErrorCode` is deliberately open: the known codes are typed as
 literals (you get autocomplete for them), but the backend can introduce new
@@ -89,8 +96,9 @@ Don't treat the union as closed; keep a `default` branch.
 ### Enabling AI Image Editor {#derivative-disabled}
 
 `derivative_disabled` means AI generation isn't enabled for your project. The
-editor won't say that on screen, since a visitor can't act on it, so watch for
-the code on `uc:error` or in the console.
+editor won't say so on screen, since a visitor can't act on it: they see
+"Image generation isn't available right now. Please try again later." Watch for
+the code on `uc:error` or in the console instead.
 During the **public beta**, AI Image Editor is available on all **paid**
 Uploadcare plans. [Upgrade your plan](https://uploadcare.com/pricing/) if
 you're on a free one, or contact support if you hit this code on a paid
