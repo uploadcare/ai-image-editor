@@ -111,9 +111,13 @@ editor.addEventListener('uc:error', (e) => {
 ```
 
 Branch on it when a failed token means the session is gone and the user should
-go back through your login rather than retry. Inside File Uploader the editor
-uses the uploader's token, so this is only yours to handle when you set the
-editor's own.
+go back through your login rather than retry.
+
+Inside File Uploader you do not set the token, the editor is handed the
+uploader's. You can still get this error there: the editor calls that resolver
+itself, so if the uploader's token function throws while a generation is
+running, it surfaces as `auth_token_failed` on the editor's `uc:error` like any
+other. Worth a listener either way.
 
 ### Enabling AI Image Editor {#derivative-disabled}
 
