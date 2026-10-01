@@ -43,6 +43,15 @@ If you rename the placeholder, rename it on **both** sides — the plugin and
 every guide that uses it. A mismatch doesn't fail the build: substitution
 simply no-ops and the literal `%…%` ships to readers.
 
+## Shared runtime dependencies are not bundled
+
+`lit`, `@uploadcare/file-uploader`, `@uploadcare/signed-uploads` and
+`@uploadcare/upload-client` are `external` in `packages/ai-image-editor/vite.config.ts`,
+so the editor and File Uploader resolve one shared copy. Bundling the auth
+packages again would give the plugin two `AuthTokenResolverError` classes:
+`instanceof` fails across them and the editor wraps the uploader's error a
+second time, pushing the original one level deeper on `cause`.
+
 ## Docs layout
 
 `docs/` is a VitePress site published to GitHub Pages: hand-written guides in
