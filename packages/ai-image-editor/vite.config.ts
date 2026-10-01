@@ -47,7 +47,16 @@ export default defineConfig(({ command, mode }) => {
         fileName: (format, entryName) => `${entryName}.${format === 'es' ? 'js' : 'cjs'}`,
       },
       rollupOptions: {
-        external: ['lit', /^lit\//, '@uploadcare/file-uploader'],
+        // Not bundled, so the editor shares one copy with File Uploader: the
+        // plugin gets the uploader's token function, and a second bundled copy
+        // of `AuthTokenResolverError` fails `instanceof` and wraps it again.
+        external: [
+          'lit',
+          /^lit\//,
+          '@uploadcare/file-uploader',
+          /^@uploadcare\/signed-uploads(\/|$)/,
+          /^@uploadcare\/upload-client(\/|$)/,
+        ],
         output: {
           globals: {
             lit: 'lit',
