@@ -113,19 +113,25 @@ Works natively: attributes and properties bind directly, and custom events use
 <uc-ai-image-editor {pubkey} on:uc:done={onDone} />
 ```
 
-## Signed uploads
+## Signed AI image generation {#signed-ai-generation}
 
-With [signed uploads](https://uploadcare.com/docs/security/secure-uploads/)
-enabled, Uploadcare rejects requests that carry no credential. Set `authToken` to a token your backend minted, or to a function that
-fetches one:
+Inside the [File Uploader plugin](/guide/plugin) the editor uses the uploader's
+token, so you set nothing here.
+
+With **Signed AI image generation** turned on in your project's
+[uploading settings](https://app.uploadcare.com/projects/-/settings/#uploading-signed-ai-generation),
+Uploadcare rejects editor requests that carry no
+[auth token](https://uploadcare.com/docs/security/secure-uploads/#credentials). Your backend
+[issues the token](https://uploadcare.com/docs/security/secure-uploads/#issue). Set
+`authToken` to the token, or to a function that fetches one:
 
 ```js
 const editor = document.querySelector('uc-ai-image-editor')
 
 editor.authToken = async () => {
   const response = await fetch('/uploadcare-token')
-  // `fetch` does not throw on a 500, and a resolver that returns nothing sends
-  // no header at all, so the request would go out unsigned. Check both.
+  // `fetch` does not throw on a 500, and a token function that returns nothing
+  // sends no header, so the request would go out unsigned. Check both.
   if (!response.ok) throw new Error(`token endpoint: ${response.status}`)
   const { token } = await response.json()
   if (!token) throw new Error('token endpoint returned no token')
@@ -133,31 +139,16 @@ editor.authToken = async () => {
 }
 ```
 
-The editor sends the token on every request it makes: starting a generation or
-an edit, polling its status, and the file-info polling that waits for the result
-to land on the CDN.
+The editor sends the token with every request, caches it and refreshes it before
+it expires. See `authToken`, `cacheAuthToken` and `invalidateAuthToken()` in the
+[API reference](/api/components) for the details.
 
-The editor caches what that function returns and reads `exp` out of the token to
-replace it shortly before it expires, so the function runs once in a while
-rather than once per request. Assigning a different function keeps the cached
-token, which is why a React parent can pass an inline one. Call
-`editor.invalidateAuthToken()` when the change is real, such as a user signing
-out: it drops the cached token, and the next request calls your function again.
-Set `cacheAuthToken = false` (a property, defaulting to `true`) if something in
-front of the editor already caches, and your function is then called for every
-request.
+<Warning>**Warning:** Turn the setting on only after the editor sends a token.
+It applies immediately, so an editor without one starts failing.</Warning>
 
-The `auth-token` attribute carries the plain-token form only. A function has to
-be set as a DOM property, and writing the attribute afterwards replaces it. A
-plain token is used as given and never refreshed, so it has to outlive the job
-it starts: once Uploadcare rejects it as expired, the run fails like any other
-job failure, through [`uc:error`](/guide/errors) with the Upload API's own code
-(`AccessTokenExpiredError`). A function that throws or rejects surfaces the same
-way, as `auth_token_failed`, with the original failure on the error's `cause`.
-The editor shows [one message](/guide/errors#error-codes) for either.
-
-Inside the [File Uploader plugin](/guide/plugin) the editor inherits the
-uploader's token and its cache, so you set nothing here.
+Token failures arrive on [`uc:error`](/guide/errors): `AccessTokenExpiredError` when Uploadcare
+rejects the token, or `auth_token_failed` when your function throws. See
+[auth token errors](/guide/errors#auth-token-errors).
 
 ## Bundlers & SSR
 
