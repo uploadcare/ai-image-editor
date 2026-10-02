@@ -34,11 +34,12 @@ describe('<uc-ai-image-editor> authToken', () => {
     await el.updateComplete;
   };
 
-  it('sends no Authorization header without an authToken', async () => {
+  it.each([undefined, null, ''])('sends no Authorization header when authToken is %p', async (value) => {
     // The common case: a project without signing. The provider gets no token
     // function, so nothing has to stand in for a missing token.
     const { auth } = stubFetchCapturingAuth();
     const el = mount(STAGING);
+    el.authToken = value as unknown as undefined;
     await el.updateComplete;
 
     await generate(el, 'a tiger', auth);
