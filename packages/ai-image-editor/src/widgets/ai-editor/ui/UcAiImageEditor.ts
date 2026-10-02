@@ -495,16 +495,27 @@ export class UcAiImageEditor extends LitElement {
   private _authTokenCache?: AuthTokenCache;
 
   /**
-   * The token for `authToken`, which the provider's function passes in when a
-   * request needs one. That function reads the property at call time, so a
-   * token that changes, including the new closure a React parent produces on
-   * every render, needs nothing pushed anywhere.
+   * One function for the life of the element, handed to the provider once.
+   *
+   * It reads `authToken` when it is called rather than capturing it, so a token
+   * that changes — including the new closure a React parent produces on every
+   * render — needs nothing pushed anywhere. `authToken` accepts a resolver, so
+   * this is simply that.
    *
    * Caching happens here: swapping the cache's `fetchToken` keeps the token a
    * new closure would otherwise discard, and a plain token has nothing to
    * cache.
    */
-  private _resolveAuthToken(authToken: AuthToken | undefined): string | Promise<string> {
+  private readonly _resolveAuthToken = (): string | Promise<string> => {
+    // A function even for a plain token, so the provider holds one thing while
+    // a token is set. The cost: upload-client reads a function as "this can
+    // produce a fresh token" and retries once when the API reports an expired
+    // one, so an expired plain token fails on the second attempt rather than
+    // the first. Without a token the provider gets no function at all (see
+    // `willUpdate`).
+
+    const { authToken } = this;
+
     // Only a job that started with a token and is still running when the
     // token is unset gets here; the provider is rebuilt without one.
     if (!authToken) return Promise.reject(new Error('`authToken` was unset while a request still needed it'));
@@ -517,7 +528,7 @@ export class UcAiImageEditor extends LitElement {
       this._authTokenCache = new AuthTokenCache({ fetchToken: authToken });
     }
     return this._authTokenCache.getToken();
-  }
+  };
 
   /**
    * Drop the cached auth token, so the next request calls {@link authToken}
@@ -554,12 +565,7 @@ export class UcAiImageEditor extends LitElement {
         (this.pubkey
           ? new UploadcareDerivativeApi({
               publicKey: this.pubkey,
-              // A function even for a plain token, so the provider holds one
-              // thing while a token is set. The cost: upload-client reads a
-              // function as "this can produce a fresh token" and retries once
-              // when the API reports an expired one, so an expired plain token
-              // fails on the second attempt rather than the first.
-              authToken: this.authToken ? () => this._resolveAuthToken(this.authToken) : undefined,
+              authToken: this.authToken ? this._resolveAuthToken : undefined,
               baseUrl: this.baseUrl,
               cdnBaseUrl: this.cdnCname,
               cdnCnamePrefixed: this.cdnCnamePrefixed,
@@ -567,7 +573,8 @@ export class UcAiImageEditor extends LitElement {
           : undefined);
     }
     // Beyond `authTokenToggled`, `authToken` and `cacheAuthToken` need nothing
-    // pushed: the provider's function reads them when a request needs a token.
+    // pushed: the provider holds `_resolveAuthToken`, which reads them when a
+    // request needs a token.
     if (changed.has('secureDeliveryProxyUrlResolver')) {
       this._secure.setResolver(this.secureDeliveryProxyUrlResolver);
     }
