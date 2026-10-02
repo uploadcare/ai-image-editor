@@ -239,6 +239,10 @@ export class UcAiImageEditor extends LitElement {
    * called once per request. A plain token is used as given and never
    * refreshed.
    *
+   * Leave it unset to send requests without a token. A function that returns
+   * nothing (`null`, `undefined` or `''`) fails the request with
+   * `auth_token_failed`.
+   *
    * The `auth-token` attribute carries the plain-token form only; a function
    * has to be set as a DOM property.
    */
