@@ -67,7 +67,7 @@ The known codes come in four families:
 |---|---|---|
 | Platform validation | `invalid_source`, `canvas_too_large`, `derivative_disabled` | Bad input or project setup |
 | AI gateway | `content_moderated`, `provider_unavailable`, `generation_timeout` | The generation itself |
-| Auth token | `AccessTokenExpiredError`, `ScopeForbiddenError`, `OperationsLimitExceededError`, `AccessTokenInvalidError`, `SignatureRequiredError`, `auth_token_failed` | [Signed AI image generation](/guide/integrating#signed-ai-generation) or signed uploads refused the token, or your `authToken` function threw (`auth_token_failed`) |
+| Auth token | `AccessTokenExpiredError`, `ScopeForbiddenError`, `OperationsLimitExceededError`, `AccessTokenInvalidError`, `auth_token_failed` | [Signed AI image generation](/guide/integrating#signed-ai-generation) or signed uploads refused the token, or your `authToken` function threw (`auth_token_failed`) |
 | Upload pipeline | `DownloadFileHTTPClientError` and friends | Saving the result |
 
 PascalCase codes come from Upload API; snake_case codes come from the editor.
@@ -93,14 +93,15 @@ reaches the backend, so there is no server code to report. It arrives as
 ```js
 editor.addEventListener('uc:error', (e) => {
   if (e.detail.error.code === 'auth_token_failed') {
-    // Your endpoint, not ours. The original failure is on the cause chain.
-    signInAgain();
+    // Your token endpoint failed; nothing was sent to Uploadcare.
+    console.warn('could not get a token', e.detail.error.cause?.cause);
   }
 });
 ```
 
-Branch on it when a failed token means the session is gone and the user should
-go back through your login rather than retry.
+To tell a lost session from a dead endpoint, include your endpoint's HTTP status
+in what the function throws, then check it on `cause.cause`: a 401 means the
+user has to sign in again, while a 500 or a network error is worth retrying.
 
 Inside File Uploader you don't set the token: the editor uses the uploader's
 token function and its cache. You can still get this error there. If that
@@ -146,7 +147,7 @@ editor.localeDefinitionOverride = {
 };
 ```
 
-Each code has its own key, so overriding one changes that code alone — several
+Each code has its own key, so overriding one changes that code alone: several
 share the same default text, and changing one of those leaves the others as
 they were. A code with no key (one this version has never heard of) falls back
 to the generic `ai-image-editor-error`. See

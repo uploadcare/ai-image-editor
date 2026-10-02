@@ -60,7 +60,7 @@ the element is in the DOM, not just until the React component mounts (see
 [Preloading](#preloading)).
 
 For [Signed AI image generation](/guide/integrating#signed-ai-generation) and
-[signed uploads](https://uploadcare.com/docs/security/secure-uploads-auth-token/),
+[signed uploads](https://uploadcare.com/docs/security/secure-uploads/),
 pass `authToken`: a token, or a function returning one. An inline function is
 fine, since the editor caches what it returns and a new closure on each render
 does not refetch. Dropping the cached token is a method rather than a prop, so

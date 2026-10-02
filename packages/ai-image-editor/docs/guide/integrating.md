@@ -8,7 +8,7 @@ title: Integrating into your app
 no framework at all. Two rules apply everywhere.
 
 Object and function values (`metadata`, `presets`, `sourceFileInfo`,
-`outputFilename`, `localeDefinitionOverride`, `aspectRatios`) must be set as
+`outputFilename`, `localeDefinitionOverride`, `aspectRatios`, and an `authToken` function) must be set as
 **DOM properties**, not string attributes.
 
 The `uc:*` events (`uc:done`, `uc:cancel`, `uc:change`, `uc:error`) are plain
@@ -130,8 +130,8 @@ const editor = document.querySelector('uc-ai-image-editor')
 
 editor.authToken = async () => {
   const response = await fetch('/uploadcare-token')
-  // `fetch` does not throw on a 500, and a token function that returns nothing
-  // sends no header, so the request would go out unsigned. Check both.
+  // `fetch` does not throw on a 500, and a body without a token gives
+  // `undefined`. Check both, so a failure says what actually went wrong.
   if (!response.ok) throw new Error(`token endpoint: ${response.status}`)
   const { token } = await response.json()
   if (!token) throw new Error('token endpoint returned no token')
@@ -146,8 +146,9 @@ it expires. See `authToken`, `cacheAuthToken` and `invalidateAuthToken()` in the
 <Warning>**Warning:** Turn the setting on only after the editor sends a token.
 It applies immediately, so an editor without one starts failing.</Warning>
 
-Token failures arrive on [`uc:error`](/guide/errors): `AccessTokenExpiredError` when Uploadcare
-rejects the token, or `auth_token_failed` when your function throws. See
+Token failures arrive on [`uc:error`](/guide/errors): an Upload API code (`AccessTokenExpiredError`, `ScopeForbiddenError`,
+`OperationsLimitExceededError`, `AccessTokenInvalidError`) when Uploadcare
+refuses the token, or `auth_token_failed` when your function throws. See
 [auth token errors](/guide/errors#auth-token-errors).
 
 ## Bundlers & SSR
