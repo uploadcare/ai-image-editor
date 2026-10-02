@@ -503,15 +503,19 @@ export class UcAiImageEditor extends LitElement {
    * cache.
    */
   private readonly _resolveAuthToken = (): string | Promise<string> => {
-    // Always a function, even for a plain token, which is what lets the
-    // provider hold one thing for its lifetime. The cost: upload-client reads
-    // a function as "this can produce a fresh token" and retries once when the
-    // API reports an expired one, so an expired plain token fails on the
-    // second attempt rather than the first.
+    // A function even for a plain token, so the provider holds one thing while
+    // a token is set. The cost: upload-client reads a function as "this can
+    // produce a fresh token" and retries once when the API reports an expired
+    // one, so an expired plain token fails on the second attempt rather than
+    // the first. Without a token the provider gets no function at all (see
+    // `willUpdate`).
 
     const { authToken } = this;
 
-    if (!authToken || typeof authToken === 'string') return authToken ?? '';
+    // Only a job that started with a token and is still running when the
+    // token is unset gets here; the provider is rebuilt without one.
+    if (!authToken) return Promise.reject(new Error('`authToken` was unset while a request still needed it'));
+    if (typeof authToken === 'string') return authToken;
     if (!this.cacheAuthToken) return authToken();
 
     if (this._authTokenCache) {
@@ -539,12 +543,16 @@ export class UcAiImageEditor extends LitElement {
 
   /** @internal */
   public override willUpdate(changed: PropertyValues<this>): void {
+    // A token appearing or disappearing changes whether the provider signs
+    // requests at all; swapping one token for another does not.
+    const authTokenToggled = changed.has('authToken') && !changed.get('authToken') !== !this.authToken;
     const providerConfigChanged =
       changed.has('provider') ||
       changed.has('pubkey') ||
       changed.has('baseUrl') ||
       changed.has('cdnCname') ||
-      changed.has('cdnCnamePrefixed');
+      changed.has('cdnCnamePrefixed') ||
+      authTokenToggled;
     if (providerConfigChanged) {
       // An injected provider wins; otherwise build the default Uploadcare one
       // from `pubkey` (and stay disabled until a pubkey is set).
@@ -553,16 +561,16 @@ export class UcAiImageEditor extends LitElement {
         (this.pubkey
           ? new UploadcareDerivativeApi({
               publicKey: this.pubkey,
-              authToken: this._resolveAuthToken,
+              authToken: this.authToken ? this._resolveAuthToken : undefined,
               baseUrl: this.baseUrl,
               cdnBaseUrl: this.cdnCname,
               cdnCnamePrefixed: this.cdnCnamePrefixed,
             })
           : undefined);
     }
-    // `authToken` and `cacheAuthToken` are deliberately absent from
-    // `providerConfigChanged` and need nothing pushed: the provider holds
-    // `_resolveAuthToken`, which reads them when a request needs a token.
+    // Beyond `authTokenToggled`, `authToken` and `cacheAuthToken` need nothing
+    // pushed: the provider holds `_resolveAuthToken`, which reads them when a
+    // request needs a token.
     if (changed.has('secureDeliveryProxyUrlResolver')) {
       this._secure.setResolver(this.secureDeliveryProxyUrlResolver);
     }

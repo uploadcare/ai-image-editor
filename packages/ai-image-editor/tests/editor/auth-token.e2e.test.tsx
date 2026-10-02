@@ -34,6 +34,35 @@ describe('<uc-ai-image-editor> authToken', () => {
     await el.updateComplete;
   };
 
+  it('sends no Authorization header without an authToken', async () => {
+    // The common case: a project without signing. The provider gets no token
+    // function, so nothing has to stand in for a missing token.
+    const { auth } = stubFetchCapturingAuth();
+    const el = mount(STAGING);
+    await el.updateComplete;
+
+    await generate(el, 'a tiger', auth);
+
+    expect(auth.length).toBeGreaterThan(1);
+    expect(auth.every((value) => value === null)).toBe(true);
+  });
+
+  it('signs once authToken is set and stops once it is unset', async () => {
+    const { auth } = stubFetchCapturingAuth();
+    const el = mount(STAGING);
+    el.authToken = 'eyJ.plain.sig';
+    await el.updateComplete;
+    await generate(el, 'a tiger', auth);
+    const signed = auth.length;
+
+    el.authToken = undefined;
+    await el.updateComplete;
+    await generate(el, 'a lion', auth);
+
+    expect(auth.slice(0, signed).every((value) => value === 'Bearer eyJ.plain.sig')).toBe(true);
+    expect(auth.slice(signed).every((value) => value === null)).toBe(true);
+  });
+
   it('sends a plain token on every request', async () => {
     const { auth } = stubFetchCapturingAuth();
     const el = mount(STAGING);
