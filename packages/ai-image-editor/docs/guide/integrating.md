@@ -139,12 +139,15 @@ editor.authToken = async () => {
 }
 ```
 
-The editor sends the token with every request, caches it and refreshes it before
-it expires. See `authToken`, `cacheAuthToken` and `invalidateAuthToken()` in the
+The editor sends the token with every request. What a token function returns is
+cached and refreshed before it expires; a plain token is used as given, so it
+has to outlive the generation it starts. See `authToken`, `cacheAuthToken` and `invalidateAuthToken()` in the
 [API reference](/api/components) for the details.
 
-<Warning>**Warning:** Turn the setting on only after the editor sends a token.
-It applies immediately, so an editor without one starts failing.</Warning>
+::: warning
+Turn the setting on only after the editor sends a token. It applies
+immediately, so an editor without one starts failing.
+:::
 
 Token failures arrive on [`uc:error`](/guide/errors): an Upload API code (`AccessTokenExpiredError`, `ScopeForbiddenError`,
 `OperationsLimitExceededError`, `AccessTokenInvalidError`) when Uploadcare
