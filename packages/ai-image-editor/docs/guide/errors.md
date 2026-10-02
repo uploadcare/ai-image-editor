@@ -61,32 +61,21 @@ Every failure is also logged to the console (`[uc-ai-image-editor]`, with the
 code, the raw message and the error object), so a code you haven't wired up
 still shows up while debugging.
 
-The known codes come in four families. **Platform validation** covers bad
-input or setup (`invalid_source`, `canvas_too_large`, `derivative_disabled`,
-and so on). **AI gateway** covers the generation itself (`content_moderated`,
-`provider_unavailable`, `generation_timeout`). **Auth token** covers
-[signed uploads](/guide/integrating#signed-uploads): the Upload API rejecting
-the token (`AccessTokenExpiredError`, `ScopeForbiddenError`,
-`OperationsLimitExceededError`, `AccessTokenInvalidError`,
-`SignatureRequiredError`), plus `auth_token_failed` when your own `authToken`
-function throws and no request is made at all. **Upload pipeline** covers
-persisting the result (`DownloadFileHTTPClientError` and friends). PascalCase
-means the Upload API reported it, passed through as a literal class name, which
-is why the auth, throttling and upload-pipeline codes all look like that.
-snake_case covers the rest: the codes the generation API mints, plus the two the
-frontend raises on its own, `auth_token_failed` here and `engine_load_failed` in
-the React wrapper.
+The known codes come in four families:
 
-Your handler sees all of them. The editor's own UI is blunter: a code gets its
-own wording where that changes what the person at the screen does next (pick
-another image, a different aspect ratio, a different prompt), and the ones they
-cannot act on share a line. Every token failure reads alike, an expired token
-and a forbidden scope being the same dead end to everyone but you, and a setup
-problem they cannot fix says only that generation is unavailable. The
-[localization guide](/guide/localization#error-messages) lists each code that
-has a message, with the text it shows. Codes with no entry there, including
-`unknown` and the React wrapper's `engine_load_failed`, fall back to the
-generic message.
+| Family | Example codes | What went wrong |
+|---|---|---|
+| Platform validation | `invalid_source`, `canvas_too_large`, `derivative_disabled` | Bad input or project setup |
+| AI gateway | `content_moderated`, `provider_unavailable`, `generation_timeout` | The generation itself |
+| Auth token | `AccessTokenExpiredError`, `ScopeForbiddenError`, `OperationsLimitExceededError`, `AccessTokenInvalidError`, `auth_token_failed` | [Signed AI image generation](/guide/integrating#signed-ai-generation) or signed uploads refused the token, or your `authToken` function threw (`auth_token_failed`) |
+| Upload pipeline | `DownloadFileHTTPClientError` and friends | Saving the result |
+
+PascalCase codes come from Upload API; snake_case codes come from the editor.
+
+Your handler gets every code. The on-screen message is less specific: codes the
+user can act on get their own wording, and the rest, including every token
+failure, share a generic one. The [localization guide](/guide/localization#error-messages) lists each
+message.
 
 `AiImageEditorErrorCode` is deliberately open: the known codes are typed as
 literals (you get autocomplete for them), but the backend can introduce new
@@ -95,7 +84,7 @@ Don't treat the union as closed; keep a `default` branch.
 
 ### When your auth token function fails {#auth-token-errors}
 
-A throw from an [`authToken`](/guide/integrating#signed-uploads) function never
+A throw from an [`authToken`](/guide/integrating#signed-ai-generation) function never
 reaches the backend, so there is no server code to report. It arrives as
 `code: 'auth_token_failed'`, with the `AuthTokenResolverError` from
 `@uploadcare/signed-uploads` on `cause` and whatever your function threw on
@@ -104,20 +93,20 @@ reaches the backend, so there is no server code to report. It arrives as
 ```js
 editor.addEventListener('uc:error', (e) => {
   if (e.detail.error.code === 'auth_token_failed') {
-    // Your endpoint, not ours. The original failure is on the cause chain.
-    signInAgain();
+    // Your token endpoint failed; nothing was sent to Uploadcare.
+    console.warn('could not get a token', e.detail.error.cause?.cause);
   }
 });
 ```
 
-Branch on it when a failed token means the session is gone and the user should
-go back through your login rather than retry.
+To tell a lost session from a dead endpoint, include your endpoint's HTTP status
+in what the function throws, then check it on `cause.cause`: a 401 means the
+user has to sign in again, while a 500 or a network error is worth retrying.
 
-Inside File Uploader you do not set the token, the editor is handed the
-uploader's. You can still get this error there: the editor calls that resolver
-itself, so if the uploader's token function throws while a generation is
-running, it surfaces as `auth_token_failed` on the editor's `uc:error` like any
-other. Worth a listener either way.
+Inside File Uploader you don't set the token: the editor uses the uploader's
+token function and its cache. You can still get this error there. If that
+function throws while a generation is running, it surfaces as
+`auth_token_failed` on the editor's `uc:error`, so listen for it either way.
 
 ### Enabling AI Image Editor {#derivative-disabled}
 
@@ -158,7 +147,7 @@ editor.localeDefinitionOverride = {
 };
 ```
 
-Each code has its own key, so overriding one changes that code alone — several
+Each code has its own key, so overriding one changes that code alone: several
 share the same default text, and changing one of those leaves the others as
 they were. A code with no key (one this version has never heard of) falls back
 to the generic `ai-image-editor-error`. See
