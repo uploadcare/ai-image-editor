@@ -139,9 +139,11 @@ editor.authToken = async () => {
 }
 ```
 
-The editor sends the token with every request. What a token function returns is
-cached and refreshed before it expires; a plain token is used as given, so it
-has to outlive the generation it starts. See `authToken`, `cacheAuthToken` and `invalidateAuthToken()` in the
+The editor sends the token with every request. What a token function returns
+is cached and refreshed 30 seconds before it expires, unless you set
+`cacheAuthToken` to `false`, in which case your function is called for every
+request and nothing is refreshed. A plain token is used as given and never
+refreshed either, so it has to outlive the generation it starts. See `authToken`, `cacheAuthToken` and `invalidateAuthToken()` in the
 [API reference](/api/components) for the details.
 
 ::: warning
