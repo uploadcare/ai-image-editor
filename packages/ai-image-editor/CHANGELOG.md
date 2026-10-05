@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.6](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.5...ai-image-editor-v0.2.6) (2026-10-05)
+
+
+### Features
+
+* **ai-image-editor:** hand the API client a token provider ([#92](https://github.com/uploadcare/ai-image-editor/issues/92)) ([fbabaef](https://github.com/uploadcare/ai-image-editor/commit/fbabaefd2dc0d47776cd840c4868f65b60ed1892))
+
+
+### Bug Fixes
+
+* **ai-image-editor:** share signed-uploads and upload-client with File Uploader ([#91](https://github.com/uploadcare/ai-image-editor/issues/91)) ([cc0c951](https://github.com/uploadcare/ai-image-editor/commit/cc0c951b6f188b14ae35612a9c6c97be281d03a3))
+
 ## [0.2.5](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.4...ai-image-editor-v0.2.5) (2026-09-29)
 
 
