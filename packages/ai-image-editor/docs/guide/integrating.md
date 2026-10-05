@@ -143,7 +143,13 @@ The editor sends the token with every request. What a token function returns
 is cached and refreshed 30 seconds before it expires, unless you set
 `cacheAuthToken` to `false`, in which case your function is called for every
 request and nothing is refreshed. A plain token is used as given and never
-refreshed either, so it has to outlive the generation it starts. See `authToken`, `cacheAuthToken` and `invalidateAuthToken()` in the
+refreshed either, so it has to outlive the generation it starts. `authToken`
+also takes a `{ getToken, invalidate }` object in place of the function, for
+when you keep the cache yourself: the editor then adds none of its own,
+whatever `cacheAuthToken` says, and calls your `invalidate()` on a refused
+token. That is the shape the File Uploader plugin passes through, which is why
+the editor inside the uploader shares the uploader's cache. See `authToken`,
+`cacheAuthToken` and `invalidateAuthToken()` in the
 [API reference](/api/components) for the details.
 
 ::: warning
@@ -153,7 +159,10 @@ immediately, so an editor without one starts failing.
 
 Token failures arrive on [`uc:error`](/guide/errors): an Upload API code (`AccessTokenExpiredError`, `ScopeForbiddenError`,
 `OperationsLimitExceededError`, `AccessTokenInvalidError`) when Uploadcare
-refuses the token, or `auth_token_failed` when your function throws. See
+refuses the token, or `auth_token_failed` when your function throws. An expired
+or spent token reaches you only after the editor has already fetched a new one
+and retried the request once, which it can do whenever `authToken` is a
+function rather than a plain token. See
 [auth token errors](/guide/errors#auth-token-errors).
 
 ## Bundlers & SSR
