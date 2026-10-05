@@ -145,11 +145,14 @@ is cached and refreshed 30 seconds before it expires, unless you set
 request and nothing is refreshed. A plain token is used as given and never
 refreshed either, so it has to outlive the generation it starts. `authToken`
 also takes a `{ getToken, invalidate }` object in place of the function, for
-when you keep the cache yourself: the editor then adds none of its own,
-whatever `cacheAuthToken` says, and `invalidateAuthToken()` forwards to your
-`invalidate()`. That is the shape the File Uploader plugin passes through,
-which is why the editor inside the uploader shares the uploader's cache, and
-why invalidating through either one reaches the same token. See `authToken`,
+when you keep the cache yourself. An
+[`AuthTokenCache`](https://github.com/uploadcare/uploadcare-js-api-clients/tree/master/packages/signed-uploads#caching-the-token-in-the-browser)
+instance is already this shape, so you can pass one straight in. The editor
+then adds none of its own, whatever `cacheAuthToken` says, and
+`invalidateAuthToken()` forwards to your `invalidate()`. That is the shape the
+File Uploader plugin passes through, which is why the editor inside the
+uploader shares the uploader's cache, and why invalidating through either one
+reaches the same token. See `authToken`,
 `cacheAuthToken` and `invalidateAuthToken()` in the
 [API reference](/api/components) for the details.
 

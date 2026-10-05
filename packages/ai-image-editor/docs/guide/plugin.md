@@ -62,7 +62,7 @@ form; as HTML attributes they're kebab-case (`base-url`, `cdn-cname`,
 | `localeName` | | Drives the editor language (lazy-loaded; see [Localization](/guide/localization)). |
 | `localeDefinitionOverride` | | Per-locale string overrides, layered onto the editor's built-ins. |
 | `secureDeliveryProxyUrlResolver` | | Signs/proxies the CDN URLs the editor renders ([secure delivery](https://uploadcare.com/docs/security/secure-delivery/)). |
-| `authToken` | | Credential for **[Signed Uploads](https://uploadcare.com/docs/security/secure-uploads/)** and **[Signed AI image generation](/guide/integrating#signed-ai-generation)**, two separate settings in the [uploading settings](https://app.uploadcare.com/projects/-/settings/#uploading-signed-ai-generation). Forwarded as the uploader's own `{ getToken, invalidate }` provider rather than the raw value, so the editor shares one token, and one cache, with the uploads around it. |
+| `authToken` | | Credential for **[Signed Uploads](https://uploadcare.com/docs/security/secure-uploads/)** and **[Signed AI image generation](/guide/integrating#signed-ai-generation)**, two separate settings in the [uploading settings](https://app.uploadcare.com/projects/-/settings/#uploading-signed-ai-generation). Forwarded as the uploader's own `{ getToken, invalidate }` provider, the shape an [`AuthTokenCache`](https://github.com/uploadcare/uploadcare-js-api-clients/tree/master/packages/signed-uploads#caching-the-token-in-the-browser) instance has, rather than the raw value, so the editor shares one token, and one cache, with the uploads around it. |
 
 The plugin also adds one config option of its own:
 
