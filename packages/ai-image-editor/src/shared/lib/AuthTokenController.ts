@@ -21,10 +21,15 @@ export class AuthTokenController {
   private _cache?: AuthTokenCache;
 
   /**
-   * Handed to the API client as `authToken`. The object form, so
-   * upload-client can drop a token the Upload API refuses and retry with a
-   * new one: that is what recovers a generation whose token ran out of
-   * operations.
+   * Handed to the API client as `authToken`. The object form, so whoever
+   * holds it can drop a token the Upload API refuses rather than only read
+   * one.
+   *
+   * Nothing here acts on a refusal by itself: the editor's own requests are
+   * one-shot fetches that raise the error and stop, so recovering a spent
+   * token takes an `invalidateAuthToken()` call from the host or the
+   * integrator. upload-client's retry applies to uploads, which this client
+   * does not make.
    */
   public readonly provider: AuthTokenProvider = {
     getToken: () => this._resolve(),
@@ -55,9 +60,7 @@ export class AuthTokenController {
 
   private _resolve(): string | Promise<string> {
     // Resolves even a plain token, so the provider holds one thing while a
-    // token is set. The cost: upload-client reads a provider as "this can
-    // produce a fresh token" and retries once when the API refuses one, so an
-    // expired plain token fails on the second attempt rather than the first.
+    // token is set.
     const { authToken, cacheAuthToken } = this._source;
 
     // Only a job that started with a token and is still running when the
