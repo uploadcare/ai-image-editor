@@ -143,8 +143,26 @@ The editor sends the token with every request. What a token function returns
 is cached and refreshed 30 seconds before it expires, unless you set
 `cacheAuthToken` to `false`, in which case your function is called for every
 request and nothing is refreshed. A plain token is used as given and never
-refreshed either, so it has to outlive the generation it starts. See `authToken`, `cacheAuthToken` and `invalidateAuthToken()` in the
+refreshed either, so it has to outlive the generation it starts. `authToken`
+also takes a `{ getToken, invalidate }` object in place of the function, for
+when you keep the cache yourself. An
+[`AuthTokenCache`](https://github.com/uploadcare/uploadcare-js-api-clients/tree/master/packages/signed-uploads#caching-the-token-in-the-browser)
+instance is already this shape, so you can pass one straight in. The editor
+then adds none of its own, whatever `cacheAuthToken` says, and
+`invalidateAuthToken()` forwards to your `invalidate()`. That is the shape the
+File Uploader plugin passes through, which is why the editor inside the
+uploader shares the uploader's cache, and why invalidating through either one
+reaches the same token. See `authToken`,
+`cacheAuthToken` and `invalidateAuthToken()` in the
 [API reference](/api/components) for the details.
+
+Nothing drops a token on its own when Uploadcare refuses it. The editor's
+generation, edit and status requests are plain one-shot requests: they raise
+the error and stop, so a token that expired or spent its last operation keeps
+being sent until something replaces it. Call `editor.invalidateAuthToken()`
+from your error handler to make the next request fetch a new one. (Uploads
+through the File Uploader are a separate path and do retry once by
+themselves.)
 
 ::: warning
 Turn the setting on only after the editor sends a token. It applies
@@ -153,7 +171,8 @@ immediately, so an editor without one starts failing.
 
 Token failures arrive on [`uc:error`](/guide/errors): an Upload API code (`AccessTokenExpiredError`, `ScopeForbiddenError`,
 `OperationsLimitExceededError`, `AccessTokenInvalidError`) when Uploadcare
-refuses the token, or `auth_token_failed` when your function throws. See
+refuses the token, or `auth_token_failed` when your function throws. Each
+arrives on the first refusal, since the editor does not retry. See
 [auth token errors](/guide/errors#auth-token-errors).
 
 ## Bundlers & SSR
