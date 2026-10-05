@@ -141,4 +141,33 @@ describe('<uc-ai-image-editor> authToken', () => {
 
     expect(fetchToken.mock.calls.length).toBeGreaterThan(1);
   });
+
+  it('accepts a provider and lets it own the caching', async () => {
+    // What the File Uploader plugin hands over: the uploader's cache, which
+    // the editor must use rather than wrap in a second one.
+    const { auth } = stubFetchCapturingAuth();
+    const getToken = vi.fn(async () => 'eyJ.from.provider');
+    const invalidate = vi.fn();
+    const el = mount(STAGING);
+    el.authToken = { getToken, invalidate };
+    await el.updateComplete;
+
+    await generate(el, 'a tiger', auth);
+
+    expect(auth.every((value) => value === 'Bearer eyJ.from.provider')).toBe(true);
+    // Called per request: the provider decides what to cache, not the editor.
+    expect(getToken.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it('forwards invalidateAuthToken() to a provider', async () => {
+    const getToken = vi.fn(async () => 'eyJ.from.provider');
+    const invalidate = vi.fn();
+    const el = mount(STAGING);
+    el.authToken = { getToken, invalidate };
+    await el.updateComplete;
+
+    el.invalidateAuthToken();
+
+    expect(invalidate).toHaveBeenCalledTimes(1);
+  });
 });
