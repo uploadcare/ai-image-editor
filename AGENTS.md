@@ -31,6 +31,30 @@ Note: the wrapper type-checks against the built `dist/` types of
 `@uploadcare/ai-image-editor`, so run its `build` after editing the element before
 type-checking the wrapper.
 
+## The `authToken` contract
+
+`authToken` accepts three things, and each means something different:
+
+- a **token string**, used as given and never refreshed, so it has to outlive
+  the job it starts;
+- a **function**, called when a token is needed and cached by
+  `AuthTokenController` unless `cacheAuthToken` is `false`;
+- a **provider** (`{ getToken, invalidate? }`), which owns its own caching and
+  is passed through untouched. This is what the File Uploader plugin hands
+  over, and what the editor gives `UploadcareDerivativeApi` so upload-client
+  can drop a refused token and retry once.
+
+Two invariants that are easy to break:
+
+- **Unset is not the same as empty.** No `authToken` means requests go
+  unsigned; a function that returns `null`, `undefined` or `''` is a failure
+  (`auth_token_failed`), not a request without a header. Leave the option
+  unset for unsigned requests.
+- **The provider handed to the API client is built once** and reads `authToken`
+  when it is called. Passing the current value instead would rebuild the client
+  on every token change, and `willUpdate` only rebuilds when a token appears or
+  disappears.
+
 ## Never hardcode a version in the guides
 
 **CDN examples use the `%AI_IMAGE_EDITOR_VERSION%` placeholder**, substituted

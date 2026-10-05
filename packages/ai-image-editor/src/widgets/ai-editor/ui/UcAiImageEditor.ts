@@ -1,4 +1,3 @@
-import { AuthTokenCache } from '@uploadcare/signed-uploads/client';
 import type { AuthToken, Metadata, UploadcareFile } from '@uploadcare/upload-client';
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
@@ -29,6 +28,7 @@ import {
   translate,
 } from '../../../shared/i18n';
 import { afterNextPaint } from '../../../shared/lib/afterNextPaint';
+import { AuthTokenController } from '../../../shared/lib/AuthTokenController';
 import { cdnPreviewUrl } from '../../../shared/lib/cdn';
 import { HistoryStorageController } from '../../../shared/lib/HistoryStorageController';
 import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
@@ -238,6 +238,10 @@ export class UcAiImageEditor extends LitElement {
    * it expires, so the function can fetch from your backend without being
    * called once per request. A plain token is used as given and never
    * refreshed.
+   *
+   * Leave it unset to send requests without a token. A function that returns
+   * nothing (`null`, `undefined` or `''`) fails the request with
+   * `auth_token_failed`.
    *
    * The `auth-token` attribute carries the plain-token form only; a function
    * has to be set as a DOM property.
@@ -488,39 +492,7 @@ export class UcAiImageEditor extends LitElement {
     }
   }
 
-  private _authTokenCache?: AuthTokenCache;
-
-  /**
-   * One function for the life of the element, handed to the provider once.
-   *
-   * It reads `authToken` when it is called rather than capturing it, so a token
-   * that changes — including the new closure a React parent produces on every
-   * render — needs nothing pushed anywhere. `authToken` accepts a resolver, so
-   * this is simply that.
-   *
-   * Caching happens here: swapping the cache's `fetchToken` keeps the token a
-   * new closure would otherwise discard, and a plain token has nothing to
-   * cache.
-   */
-  private readonly _resolveAuthToken = (): string | Promise<string> => {
-    // Always a function, even for a plain token, which is what lets the
-    // provider hold one thing for its lifetime. The cost: upload-client reads
-    // a function as "this can produce a fresh token" and retries once when the
-    // API reports an expired one, so an expired plain token fails on the
-    // second attempt rather than the first.
-
-    const { authToken } = this;
-
-    if (!authToken || typeof authToken === 'string') return authToken ?? '';
-    if (!this.cacheAuthToken) return authToken();
-
-    if (this._authTokenCache) {
-      this._authTokenCache.fetchToken = authToken;
-    } else {
-      this._authTokenCache = new AuthTokenCache({ fetchToken: authToken });
-    }
-    return this._authTokenCache.getToken();
-  };
+  private readonly _authTokens = new AuthTokenController(this);
 
   /**
    * Drop the cached auth token, so the next request calls {@link authToken}
@@ -534,17 +506,21 @@ export class UcAiImageEditor extends LitElement {
    * no cache to drop.
    */
   public invalidateAuthToken(): void {
-    this._authTokenCache?.invalidate();
+    this._authTokens.invalidate();
   }
 
   /** @internal */
   public override willUpdate(changed: PropertyValues<this>): void {
+    // A token appearing or disappearing changes whether the provider signs
+    // requests at all; swapping one token for another does not.
+    const authTokenToggled = changed.has('authToken') && !changed.get('authToken') !== !this.authToken;
     const providerConfigChanged =
       changed.has('provider') ||
       changed.has('pubkey') ||
       changed.has('baseUrl') ||
       changed.has('cdnCname') ||
-      changed.has('cdnCnamePrefixed');
+      changed.has('cdnCnamePrefixed') ||
+      authTokenToggled;
     if (providerConfigChanged) {
       // An injected provider wins; otherwise build the default Uploadcare one
       // from `pubkey` (and stay disabled until a pubkey is set).
@@ -553,16 +529,16 @@ export class UcAiImageEditor extends LitElement {
         (this.pubkey
           ? new UploadcareDerivativeApi({
               publicKey: this.pubkey,
-              authToken: this._resolveAuthToken,
+              authToken: this.authToken ? this._authTokens.provider : undefined,
               baseUrl: this.baseUrl,
               cdnBaseUrl: this.cdnCname,
               cdnCnamePrefixed: this.cdnCnamePrefixed,
             })
           : undefined);
     }
-    // `authToken` and `cacheAuthToken` are deliberately absent from
-    // `providerConfigChanged` and need nothing pushed: the provider holds
-    // `_resolveAuthToken`, which reads them when a request needs a token.
+    // Beyond `authTokenToggled`, `authToken` and `cacheAuthToken` need nothing
+    // pushed: the provider holds `_resolveAuthToken`, which reads them when a
+    // request needs a token.
     if (changed.has('secureDeliveryProxyUrlResolver')) {
       this._secure.setResolver(this.secureDeliveryProxyUrlResolver);
     }

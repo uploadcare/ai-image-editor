@@ -34,6 +34,36 @@ describe('<uc-ai-image-editor> authToken', () => {
     await el.updateComplete;
   };
 
+  it.each([undefined, null, ''])('sends no Authorization header when authToken is %p', async (value) => {
+    // The common case: a project without signing. The provider gets no token
+    // function, so nothing has to stand in for a missing token.
+    const { auth } = stubFetchCapturingAuth();
+    const el = mount(STAGING);
+    el.authToken = value as unknown as undefined;
+    await el.updateComplete;
+
+    await generate(el, 'a tiger', auth);
+
+    expect(auth.length).toBeGreaterThan(1);
+    expect(auth.every((value) => value === null)).toBe(true);
+  });
+
+  it('signs once authToken is set and stops once it is unset', async () => {
+    const { auth } = stubFetchCapturingAuth();
+    const el = mount(STAGING);
+    el.authToken = 'eyJ.plain.sig';
+    await el.updateComplete;
+    await generate(el, 'a tiger', auth);
+    const signed = auth.length;
+
+    el.authToken = undefined;
+    await el.updateComplete;
+    await generate(el, 'a lion', auth);
+
+    expect(auth.slice(0, signed).every((value) => value === 'Bearer eyJ.plain.sig')).toBe(true);
+    expect(auth.slice(signed).every((value) => value === null)).toBe(true);
+  });
+
   it('sends a plain token on every request', async () => {
     const { auth } = stubFetchCapturingAuth();
     const el = mount(STAGING);
@@ -110,5 +140,34 @@ describe('<uc-ai-image-editor> authToken', () => {
     await generate(el, 'a tiger', auth);
 
     expect(fetchToken.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it('accepts a provider and lets it own the caching', async () => {
+    // What the File Uploader plugin hands over: the uploader's cache, which
+    // the editor must use rather than wrap in a second one.
+    const { auth } = stubFetchCapturingAuth();
+    const getToken = vi.fn(async () => 'eyJ.from.provider');
+    const invalidate = vi.fn();
+    const el = mount(STAGING);
+    el.authToken = { getToken, invalidate };
+    await el.updateComplete;
+
+    await generate(el, 'a tiger', auth);
+
+    expect(auth.every((value) => value === 'Bearer eyJ.from.provider')).toBe(true);
+    // Called per request: the provider decides what to cache, not the editor.
+    expect(getToken.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it('forwards invalidateAuthToken() to a provider', async () => {
+    const getToken = vi.fn(async () => 'eyJ.from.provider');
+    const invalidate = vi.fn();
+    const el = mount(STAGING);
+    el.authToken = { getToken, invalidate };
+    await el.updateComplete;
+
+    el.invalidateAuthToken();
+
+    expect(invalidate).toHaveBeenCalledTimes(1);
   });
 });
