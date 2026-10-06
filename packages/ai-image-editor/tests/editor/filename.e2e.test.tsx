@@ -30,7 +30,7 @@ describe('<uc-ai-image-editor> result filename', () => {
     const el = mount(STAGING);
     // A fresh uuid with no persisted lineage → counter starts at 1.
     el.sourceFileInfo = {
-      uuid: 'resolver-test-uuid-0001',
+      uuid: '00000000-0000-4000-8000-000000000001',
       originalFilename: 'cat.png',
       imageInfo: null,
     } as unknown as UploadcareFile;

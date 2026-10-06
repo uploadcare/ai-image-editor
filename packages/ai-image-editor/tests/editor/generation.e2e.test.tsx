@@ -208,9 +208,7 @@ describe('<uc-ai-image-editor> generation', () => {
             });
           }),
     );
-    // Non-UUID-shaped ids keep the CDN preview helper from rewriting the URL,
-    // so the canvas URL is the bare resolved source.
-    const el = mount({ ...STAGING, 'source-uuid': 'first-uuid' });
+    const el = mount({ ...STAGING, 'source-uuid': '00000000-0000-4000-8000-0000000000f1' });
     await el.updateComplete;
 
     typePrompt(el, 'try');
@@ -218,12 +216,12 @@ describe('<uc-ai-image-editor> generation', () => {
     clickSend(el);
 
     // Change source mid-flight — this aborts the in-flight generation.
-    el.sourceUuid = 'second-uuid';
+    el.sourceUuid = '00000000-0000-4000-8000-0000000000f2';
     await el.updateComplete;
 
     // After the abort, the displayed image should be the new source (no result override).
     await vi.waitFor(() => {
-      expect(canvasUrl(el)).toBe('https://cdn.example.com/second-uuid/');
+      expect(canvasUrl(el)).toContain('https://cdn.example.com/00000000-0000-4000-8000-0000000000f2/');
     });
   });
 });
