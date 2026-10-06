@@ -76,6 +76,31 @@ packages again would give the plugin two `AuthTokenResolverError` classes:
 `instanceof` fails across them and the editor wraps the uploader's error a
 second time, pushing the original one level deeper on `cause`.
 
+## Tests talk to the Uploadcare API emulator
+
+`@uploadcare/api-emulator` (a devDependency of `packages/ai-image-editor`)
+stands in for the Upload API and CDN; tests should not hand-write Uploadcare
+responses.
+
+- **Specs** (happy-dom) inject `emulatorFetch()` from
+  `src/entities/provider/api/emulator.testing.ts` as the client's `fetch`, and
+  call `resetSession()` before each test. `getFileInfo` goes through
+  upload-client's own transport, so those specs start a real emulator server
+  (`@uploadcare/api-emulator/listen`) and pass its origin as `baseUrl`.
+- **Browser e2e** get the emulator from `tests/emulator.ts`: browser commands
+  that `page.route` Uploadcare's hosts (and `cdn.example.com`, the tests' CDN
+  cname) to `handle()`, with a fresh session before every test
+  (`tests/setup.ts`). The editor tests use `DERIVATIVE_INSTANT_PUBLIC_KEY` so a
+  generation finishes on its first poll instead of after the editor's 1.5s
+  interval several times over.
+- Bearer tokens must be real: mint them with `mintAuthToken()` (specs) or
+  `commands.mintAuthToken()` (e2e).
+- A hand-written stub is still right for what the emulator can't do (a bare
+  non-JSON failure, a poll that hangs or never finishes); say why next to it.
+
+The dependency is a TEMPORARY `file:` link to an unreleased checkout until the
+package ships; swap it for a version range then and drop the TEMPORARY comments.
+
 ## Docs layout
 
 `docs/` is a VitePress site published to GitHub Pages: hand-written guides in

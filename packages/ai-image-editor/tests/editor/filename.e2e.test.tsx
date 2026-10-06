@@ -1,11 +1,11 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { describe, expect, it, vi } from 'vitest';
-import { clickSend, editorMode, mount, SAMPLE_UUID, STAGING, stubFetch, typePrompt } from './harness';
+import { clickSend, editorMode, mount, recordRequests, SAMPLE_UUID, STAGING, typePrompt } from './harness';
 
 /** What the result is named: the source's name, a resolver, or a fixed string. */
 describe('<uc-ai-image-editor> result filename', () => {
   it('names the result after the source file in edit mode (preserves the original name)', async () => {
-    const stub = stubFetch({ uuid: 'edited' });
+    const stub = recordRequests();
     const el = mount(STAGING);
     // Inject the source's file info (as the plugin does) — it carries the uuid
     // (→ edit mode) and its originalFilename is the default output name.
@@ -26,7 +26,7 @@ describe('<uc-ai-image-editor> result filename', () => {
   });
 
   it('names the result via the outputFilename resolver (original + counter)', async () => {
-    const stub = stubFetch({ uuid: 'r1' });
+    const stub = recordRequests();
     const el = mount(STAGING);
     // A fresh uuid with no persisted lineage → counter starts at 1.
     el.sourceFileInfo = {
@@ -46,7 +46,7 @@ describe('<uc-ai-image-editor> result filename', () => {
   });
 
   it('uses a static outputFilename string verbatim', async () => {
-    const stub = stubFetch({ uuid: 'r1' });
+    const stub = recordRequests();
     const el = mount(STAGING);
     el.outputFilename = 'my-art.png';
     await el.updateComplete;
