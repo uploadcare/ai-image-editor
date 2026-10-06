@@ -91,8 +91,8 @@ responses.
   `setupEmulator()` from `@uploadcare/api-emulator/browser` (MSW and
   `@mswjs/interceptors` underneath, both devDependencies here):
   `tests/setup.ts` emulates Uploadcare's hosts and `cdn.example.com` (the
-  tests' CDN cname), passes every other origin through, and resets the session
-  before every test. Signing stays
+  tests' CDN cname), fails any other Uploadcare host, passes every
+  non-Uploadcare origin through, and resets the session before every test. Signing stays
   Node-side in `tests/commands.ts` (`commands.mintAuthToken()`). The editor
   tests use `DERIVATIVE_INSTANT_PUBLIC_KEY` so a
   generation finishes on its first poll instead of after the editor's 1.5s
