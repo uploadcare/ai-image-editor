@@ -10,7 +10,7 @@ import { cleanup } from '../test-renderer';
  * Shared setup for the `<uc-ai-image-editor>` browser tests, which are split by
  * subject (mounting, generation, history, layout, …) and all need the same
  * three things: the elements registered, the Upload API (the emulator, see
- * `tests/emulator.ts`), and a mounted editor. Importing this module registers
+ * `tests/setup.ts`), and a mounted editor. Importing this module registers
  * the custom elements and the teardown for whichever test file pulls it in.
  */
 export { UcAiImageEditor };
@@ -27,7 +27,7 @@ afterEach(() => {
   cleanup();
 });
 
-/** The page's own fetch, which `tests/emulator.ts` answers from the emulator. */
+/** The page's own fetch, which `tests/setup.ts` answers from the emulator. */
 const realFetch = globalThis.fetch.bind(globalThis);
 
 /**
