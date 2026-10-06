@@ -296,7 +296,7 @@ describe('UploadcareDerivativeApi', () => {
       const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, baseUrl: uploadOrigin });
       const controller = new AbortController();
       controller.abort();
-      await expect(provider.getFileInfo(SEEDED_IMAGE_UUID, controller.signal)).rejects.toThrow();
+      await expect(provider.getFileInfo(SEEDED_IMAGE_UUID, controller.signal)).rejects.toThrow(/cancel/i);
     });
 
     it('propagates a lookup failure', async () => {
