@@ -1,4 +1,7 @@
+// TEMPORARY: file: dependency, see tests/emulator.ts.
+import { CONTENT_MODERATED_PROMPT } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
+import { enLocale } from '../../src/shared/i18n/en';
 import {
   canvasUrl,
   clickPrimary,
@@ -89,6 +92,28 @@ describe('<uc-ai-image-editor> generation', () => {
     expect(onDone).toHaveBeenCalledTimes(1);
     expect(onDone.mock.calls[0]![0].detail.file.uuid).toBe(results[0]);
     expect(onDone.mock.calls[0]![0].detail.uuid).toBe(results[0]);
+  });
+
+  it('reports a refused run with uc:error and its message, and keeps the prompt', async () => {
+    const el = mount(STAGING);
+    await el.updateComplete;
+    const onError = vi.fn();
+    el.addEventListener('uc:error', onError);
+
+    typePrompt(el, CONTENT_MODERATED_PROMPT);
+    await el.updateComplete;
+    clickSend(el);
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    await el.updateComplete;
+
+    expect(onError.mock.calls[0]![0].detail.error.code).toBe('content_moderated');
+    expect(el.shadowRoot!.querySelector('.error-box')?.textContent?.trim()).toBe(
+      enLocale['ai-image-editor-error-content_moderated'],
+    );
+    expect(canvasUrl(el)).toBeNull();
+    expect(editorMode(el)).toBe('generate');
+    const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
+    expect(input.value).toBe(CONTENT_MODERATED_PROMPT);
   });
 
   it.skip('fires uc:change as the current result appears and clears', async () => {
