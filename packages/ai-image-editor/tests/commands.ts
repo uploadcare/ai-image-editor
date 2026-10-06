@@ -9,7 +9,7 @@ import type { BrowserCommand } from 'vitest/node';
 const mintAuthToken: BrowserCommand<[id?: string]> = async (_context, id = 'token') =>
   generateAuthToken(SIGNED_UPLOADS_SECRET_KEY, { lifetime: 600_000, tokenId: id });
 
-/** Node-side browser commands: signing needs the secret, which stays out of the page. */
+/** Node-side browser command: `@uploadcare/signed-uploads/server` signs with `node:crypto`, so tokens are minted outside the page. */
 export const emulatorCommands = { mintAuthToken };
 
 declare module 'vitest/browser' {
