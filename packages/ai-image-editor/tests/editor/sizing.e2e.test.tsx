@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { delay } from '../test-renderer';
 import type { UcAiImageEditorType } from './harness';
-import { canvasUrl, clickSend, mount, recordRequests, STAGING, typePrompt } from './harness';
+import { canvasUrl, clickSend, mount, STAGING, typePrompt } from './harness';
 
 /** How the host sizes itself: fill vs content, the clamp, and the CDN rendition it picks. */
 describe('<uc-ai-image-editor> sizing', () => {
@@ -89,7 +89,6 @@ describe('<uc-ai-image-editor> sizing', () => {
   });
 
   it('re-picks a sharper CDN preview when the host grows, keeping it when it shrinks', async () => {
-    recordRequests();
     const el = mount({ ...STAGING, style: 'width: 500px; height: 480px' });
     await el.updateComplete;
     typePrompt(el, 'a tiger');

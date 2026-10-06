@@ -83,7 +83,6 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
   });
 
   it('records the aspect ratio on a history entry and restores it when re-selected', async () => {
-    recordRequests();
     const el = mount({ ...STAGING, 'aspect-ratios': '16:9 1:1' });
     await el.updateComplete;
 
