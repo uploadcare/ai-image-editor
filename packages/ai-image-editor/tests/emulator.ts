@@ -68,7 +68,11 @@ const useEmulator: BrowserCommand<[]> = async ({ page }) => {
         body: body && new Uint8Array(body),
       }),
     );
-    if (!response) return route.abort();
+    if (!response) {
+      // The page only sees a generic network failure, so name the gap here.
+      console.warn(`The emulator does not implement ${method} ${request.url()}`);
+      return route.abort();
+    }
     await route.fulfill({
       status: response.status,
       headers: { ...Object.fromEntries(response.headers), ...cors },
