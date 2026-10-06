@@ -19,8 +19,21 @@ import { setupWorker } from 'msw/browser';
  */
 const UPLOADCARE = /^https:\/\/(?:[\w-]+\.)*(?:uploadcare\.com|ucarecdn\.com|ucarecd\.net|cdn\.example\.com)\//;
 
-/** `handle` routes by path alone, so the host check is here. */
-const answer = (request: Request) => (UPLOADCARE.test(request.url) ? handle(request) : undefined);
+/**
+ * `handle` routes by path alone, so the host check is here. An Uploadcare URL the emulator has no route for fails
+ * as a network error (and names the gap in the console) rather than reaching the real API.
+ */
+const answer = async (request: Request): Promise<Response | undefined> => {
+  if (!UPLOADCARE.test(request.url)) {
+    return undefined;
+  }
+  const response = await handle(request);
+  if (!response) {
+    console.warn(`The emulator does not implement ${request.method} ${request.url}`);
+    return Response.error();
+  }
+  return response;
+};
 
 let started: Promise<void> | undefined;
 
