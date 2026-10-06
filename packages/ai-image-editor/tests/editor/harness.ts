@@ -1,4 +1,4 @@
-// TEMPORARY: file: dependency, see tests/emulator.ts.
+// TEMPORARY: file: dependency, see tests/commands.ts.
 import { DERIVATIVE_INSTANT_PUBLIC_KEY } from '@uploadcare/api-emulator';
 import { afterEach } from 'vitest';
 import { page } from 'vitest/browser';

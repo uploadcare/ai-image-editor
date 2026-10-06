@@ -1,6 +1,6 @@
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
-import { emulatorCommands } from './tests/emulator';
+import { emulatorCommands } from './tests/commands';
 
 export default defineConfig({
   test: {

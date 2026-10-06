@@ -1,4 +1,4 @@
-// TEMPORARY: file: dependency, see tests/emulator.ts.
+// TEMPORARY: file: dependency, see tests/commands.ts.
 import { CONTENT_MODERATED_PROMPT } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
 import { enLocale } from '../../src/shared/i18n/en';
