@@ -87,11 +87,12 @@ responses.
   call `resetSession()` before each test. `getFileInfo` goes through
   upload-client's own transport, so those specs start a real emulator server
   (`@uploadcare/api-emulator/listen`) and pass its origin as `baseUrl`.
-- **Browser e2e** run the emulator in the page (`tests/emulator.ts`): an MSW
-  Service Worker answers `fetch` and `<img>` loads, `@mswjs/interceptors`'
-  `XMLHttpRequestInterceptor` answers the uploader's XHR, both from `handle()`
-  for Uploadcare's hosts (and `cdn.example.com`, the tests' CDN cname);
-  `tests/setup.ts` resets the session before every test. Signing stays
+- **Browser e2e** run the emulator in the page with
+  `setupEmulator()` from `@uploadcare/api-emulator/browser` (MSW and
+  `@mswjs/interceptors` underneath, both devDependencies here):
+  `tests/setup.ts` emulates Uploadcare's hosts and `cdn.example.com` (the
+  tests' CDN cname), passes every other origin through, and resets the session
+  before every test. Signing stays
   Node-side in `tests/commands.ts` (`commands.mintAuthToken()`). The editor
   tests use `DERIVATIVE_INSTANT_PUBLIC_KEY` so a
   generation finishes on its first poll instead of after the editor's 1.5s
