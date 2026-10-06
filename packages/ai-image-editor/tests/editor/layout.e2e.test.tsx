@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { canvasUrl, clickSend, editorMode, mount, recordRequests, SAMPLE_UUID, STAGING, typePrompt } from './harness';
+import { canvasUrl, clickSend, editorMode, mount, SAMPLE_UUID, STAGING, typePrompt } from './harness';
 
 /**
  * Where the composer, history strip and toolbar sit for a given placement, and
@@ -82,7 +82,6 @@ describe('<uc-ai-image-editor> layout', () => {
   });
 
   it('places the history strip per history-placement (overlay composer)', async () => {
-    recordRequests();
     const el = mount(STAGING);
     el.canvasFit = 'full'; // relative history rides an overlay composer
     await el.updateComplete;
@@ -120,7 +119,6 @@ describe('<uc-ai-image-editor> layout', () => {
   });
 
   it('pins the history over the canvas when the composer is docked-out', async () => {
-    recordRequests();
     const el = mount(STAGING); // docked at the bottom by default
     await el.updateComplete;
     typePrompt(el, 'a tiger');
