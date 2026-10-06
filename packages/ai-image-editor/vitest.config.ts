@@ -1,5 +1,6 @@
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
+import { emulatorCommands } from './tests/emulator';
 
 export default defineConfig({
   test: {
@@ -17,11 +18,13 @@ export default defineConfig({
         test: {
           name: 'e2e',
           include: ['tests/**/*.test.{ts,tsx}'],
+          setupFiles: ['tests/setup.ts'],
           browser: {
             provider: playwright(),
             instances: [{ browser: 'chromium' }],
             enabled: true,
             headless: true,
+            commands: emulatorCommands,
           },
         },
       },

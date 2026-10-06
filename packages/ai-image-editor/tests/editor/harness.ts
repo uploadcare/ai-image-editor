@@ -1,3 +1,5 @@
+// TEMPORARY: file: dependency, see tests/emulator.ts.
+import { DERIVATIVE_INSTANT_PUBLIC_KEY } from '@uploadcare/api-emulator';
 import { afterEach } from 'vitest';
 import { page } from 'vitest/browser';
 import type { UcAiImageEditor as UcAiImageEditorType } from '../../src/index';
@@ -7,9 +9,9 @@ import { cleanup } from '../test-renderer';
 /**
  * Shared setup for the `<uc-ai-image-editor>` browser tests, which are split by
  * subject (mounting, generation, history, layout, …) and all need the same
- * three things: the elements registered, a stubbed Upload API, and a mounted
- * editor. Importing this module registers the custom elements and the teardown
- * for whichever test file pulls it in.
+ * three things: the elements registered, the Upload API (the emulator, see
+ * `tests/emulator.ts`), and a mounted editor. Importing this module registers
+ * the custom elements and the teardown for whichever test file pulls it in.
  */
 export { UcAiImageEditor };
 export type { UcAiImageEditorType };
@@ -25,64 +27,49 @@ afterEach(() => {
   cleanup();
 });
 
-export const jsonResponse = (body: unknown): Response =>
-  new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
-
-/** A finished job frame, as `derivative/status/` returns it. */
-export const successFrame = (uuid: string): Record<string, unknown> => ({
-  status: 'success',
-  uuid,
-  file_id: uuid,
-  size: 1,
-  done: 1,
-  total: 1,
-  original_filename: 'generated.png',
-  filename: 'generated.png',
-  mime_type: 'image/png',
-  is_image: true,
-  is_stored: false,
-  is_ready: true,
-  image_info: null,
-  video_info: null,
-  content_info: null,
-  metadata: {},
-});
+/** The page's own fetch, which `tests/emulator.ts` answers from the emulator. */
+const realFetch = globalThis.fetch.bind(globalThis);
 
 /**
  * Swap `globalThis.fetch` for the rest of the test. The provider binds
- * `globalThis.fetch` at construction, so install a stub BEFORE setting `pubkey`.
+ * `globalThis.fetch` at construction, so install it BEFORE setting `pubkey`.
  */
 export function installFetch(handler: typeof fetch): void {
-  // Put back a stub this test already installed, so `real` is always the real
-  // one — otherwise teardown would restore a stub and every later test in the
-  // file would run against it.
   restoreFetch?.();
-  const real = globalThis.fetch;
   globalThis.fetch = handler;
   restoreFetch = () => {
-    globalThis.fetch = real;
+    globalThis.fetch = realFetch;
   };
 }
 
 /**
- * Drive the internal UploadcareDerivativeApi: the generate POST returns a job,
- * the status GET returns success (or a custom handler). Captures the POST
- * bodies for assertions.
+ * Record what the editor sends to (and gets back from) the derivative API, which
+ * the emulator answers. Install BEFORE setting `pubkey`, like `installFetch`.
  */
-export function stubFetch(opts: { uuid?: string; status?: (signal?: AbortSignal) => Promise<Response> } = {}): {
+export function recordRequests(): {
+  /** Every derivative POST body, in order. */
   generateBodies: Array<Record<string, unknown>>;
+  /** The Authorization header of every request, in order. */
+  auth: Array<string | null>;
+  /** The uuid of every finished result, in order. */
+  results: string[];
 } {
   const generateBodies: Array<Record<string, unknown>> = [];
-  installFetch((async (_input: RequestInfo | URL, init?: RequestInit) => {
-    const method = (init?.method ?? 'GET').toUpperCase();
-    if (method === 'POST') {
-      generateBodies.push(JSON.parse((init?.body as string) ?? '{}'));
-      return jsonResponse({ type: 'job', job_id: 'job-1' });
-    }
-    if (opts.status) return opts.status(init?.signal ?? undefined);
-    return jsonResponse(successFrame(opts.uuid ?? 'result'));
-  }) as typeof fetch);
-  return { generateBodies };
+  const auth: Array<string | null> = [];
+  const results: string[] = [];
+  installFetch(async (input, init) => {
+    const response = await realFetch(input, init);
+    // Recorded once answered, so a test waiting on a count waits for the answer too.
+    auth.push(new Headers(init?.headers).get('Authorization'));
+    if (init?.method === 'POST') generateBodies.push(JSON.parse(init.body as string));
+    const frame = await response
+      .clone()
+      .json()
+      .catch(() => null);
+    if (frame?.status === 'success' && frame.is_ready) results.push(frame.uuid);
+    return response;
+  });
+  return { generateBodies, auth, results };
 }
 
 export function mount(attrs: Record<string, string> = {}): UcAiImageEditorType {
@@ -98,9 +85,11 @@ export function mount(attrs: Record<string, string> = {}): UcAiImageEditorType {
   return el;
 }
 
-export const STAGING = { pubkey: 'demopublickey', 'cdn-cname': 'https://cdn.example.com' };
+/** Generations finish on their first status poll, so a test doesn't sit through the editor's 1.5s interval. */
+export const STAGING = { pubkey: DERIVATIVE_INSTANT_PUBLIC_KEY, 'cdn-cname': 'https://cdn.example.com' };
 
-export const SAMPLE_UUID = '11111111-2222-3333-4444-555555555555';
+/** An image every fresh emulator session already holds. */
+export const SAMPLE_UUID = '49b4c5a1-31b3-4349-ba07-d97a2d883c37';
 
 export function typePrompt(el: UcAiImageEditorType, value: string): void {
   const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;

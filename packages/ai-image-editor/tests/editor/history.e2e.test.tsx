@@ -6,9 +6,9 @@ import {
   editorMode,
   historyEl,
   mount,
+  recordRequests,
   SAMPLE_UUID,
   STAGING,
-  stubFetch,
   typePrompt,
 } from './harness';
 
@@ -18,7 +18,7 @@ import {
  */
 describe('<uc-ai-image-editor> history', () => {
   it('populates the history strip after a successful generation', async () => {
-    stubFetch();
+    recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     typePrompt(el, 'a tiger');
@@ -30,7 +30,7 @@ describe('<uc-ai-image-editor> history', () => {
   });
 
   it('shows the generated result as a selectable history chip', async () => {
-    stubFetch();
+    recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     typePrompt(el, 'a tiger');
@@ -112,7 +112,7 @@ describe('<uc-ai-image-editor> history', () => {
   });
 
   it.skip('returns to generate mode after Start over (from the history strip)', async () => {
-    stubFetch({ uuid: 'result' });
+    recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     typePrompt(el, 'a tiger');

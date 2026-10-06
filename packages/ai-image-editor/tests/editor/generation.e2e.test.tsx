@@ -4,11 +4,12 @@ import {
   clickPrimary,
   clickSend,
   editorMode,
+  installFetch,
   mount,
   primaryBtn,
+  recordRequests,
   SAMPLE_UUID,
   STAGING,
-  stubFetch,
   typePrompt,
 } from './harness';
 
@@ -18,33 +19,33 @@ import {
  */
 describe('<uc-ai-image-editor> generation', () => {
   it('auto-enters edit mode after the first successful generation', async () => {
-    stubFetch({ uuid: 'result' });
+    const { results } = recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     expect(editorMode(el)).toBe('generate');
     typePrompt(el, 'a tiger');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(canvasUrl(el)).toBe('https://cdn.example.com/result/'));
+    await vi.waitFor(() => expect(canvasUrl(el)).toContain(`https://cdn.example.com/${results[0]}/`));
     await el.updateComplete;
     expect(editorMode(el)).toBe('edit');
   });
 
   it('clears the prompt after a successful generation', async () => {
-    stubFetch({ uuid: 'result' });
+    const { results } = recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
     typePrompt(el, 'a tiger');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(canvasUrl(el)).toBe('https://cdn.example.com/result/'));
+    await vi.waitFor(() => expect(canvasUrl(el)).toContain(`https://cdn.example.com/${results[0]}/`));
     await el.updateComplete;
     expect(input.value).toBe('');
   });
 
   it('generates via the send button, then the primary commits the result with uc:done', async () => {
-    stubFetch({ uuid: 'result' });
+    const { results } = recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
 
@@ -55,7 +56,7 @@ describe('<uc-ai-image-editor> generation', () => {
     await el.updateComplete;
     clickSend(el);
     await vi.waitFor(() => {
-      expect(canvasUrl(el)).toBe('https://cdn.example.com/result/');
+      expect(canvasUrl(el)).toContain(`https://cdn.example.com/${results[0]}/`);
     });
     await el.updateComplete;
 
@@ -66,13 +67,13 @@ describe('<uc-ai-image-editor> generation', () => {
     clickPrimary(el);
     expect(onDone).toHaveBeenCalledTimes(1);
     const detail = onDone.mock.calls[0]![0].detail;
-    expect(detail.url).toBe('https://cdn.example.com/result/');
-    expect(detail.file.uuid).toBe('result');
-    expect(detail.file.cdnUrl).toBe('https://cdn.example.com/result/');
+    expect(detail.url).toBe(`https://cdn.example.com/${results[0]}/`);
+    expect(detail.file.uuid).toBe(results[0]);
+    expect(detail.file.cdnUrl).toBe(`https://cdn.example.com/${results[0]}/`);
   });
 
   it('includes the UploadcareFile and its uuid in uc:done after a generation', async () => {
-    stubFetch({ uuid: 'result-123' });
+    const { results } = recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     const onDone = vi.fn();
@@ -81,17 +82,17 @@ describe('<uc-ai-image-editor> generation', () => {
     typePrompt(el, 'make it pop');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(canvasUrl(el)).toBe('https://cdn.example.com/result-123/'));
+    await vi.waitFor(() => expect(canvasUrl(el)).toContain(`https://cdn.example.com/${results[0]}/`));
     await el.updateComplete;
 
     clickPrimary(el);
     expect(onDone).toHaveBeenCalledTimes(1);
-    expect(onDone.mock.calls[0]![0].detail.file.uuid).toBe('result-123');
-    expect(onDone.mock.calls[0]![0].detail.uuid).toBe('result-123');
+    expect(onDone.mock.calls[0]![0].detail.file.uuid).toBe(results[0]);
+    expect(onDone.mock.calls[0]![0].detail.uuid).toBe(results[0]);
   });
 
   it.skip('fires uc:change as the current result appears and clears', async () => {
-    stubFetch({ uuid: 'result' });
+    const { results } = recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     const onChange = vi.fn();
@@ -104,8 +105,8 @@ describe('<uc-ai-image-editor> generation', () => {
       expect(onChange).toHaveBeenCalledTimes(1);
     });
     const first = onChange.mock.calls[0]![0].detail;
-    expect(first.result.url).toBe('https://cdn.example.com/result/');
-    expect(first.result.file.uuid).toBe('result');
+    expect(first.result.url).toBe(`https://cdn.example.com/${results[0]}/`);
+    expect(first.result.file.uuid).toBe(results[0]);
 
     // Start over clears the current result -> uc:change with null.
     await el.updateComplete;
@@ -152,25 +153,36 @@ describe('<uc-ai-image-editor> generation', () => {
   });
 
   it('applies an async secure-delivery resolver to the canvas preview', async () => {
-    stubFetch({ uuid: 'result' });
+    const { results } = recordRequests();
     const el = mount(STAGING);
     el.secureDeliveryProxyUrlResolver = async (url: string) => `https://signed.example/${encodeURIComponent(url)}`;
     await el.updateComplete;
     typePrompt(el, 'a tiger');
     await el.updateComplete;
     clickSend(el);
-    const raw = 'https://cdn.example.com/result/';
-    await vi.waitFor(() => expect(canvasUrl(el)).toBe(`https://signed.example/${encodeURIComponent(raw)}`));
+    await vi.waitFor(() =>
+      expect(canvasUrl(el)).toContain(
+        `https://signed.example/${encodeURIComponent(`https://cdn.example.com/${results[0]}/`)}`,
+      ),
+    );
   });
 
   it('aborts in-flight generation and shows the new source when source changes', async () => {
-    // Status hangs until the request is aborted.
-    stubFetch({
-      status: (signal) =>
-        new Promise((_res, rej) => {
-          signal?.addEventListener('abort', () => rej(new DOMException('Aborted', 'AbortError')), { once: true });
-        }),
-    });
+    // The job must still be running when the source changes, so the status
+    // poll hangs until it is aborted — a race the emulator, which answers at
+    // once, can't hold open. The job POST is answered here too: the emulator
+    // would refuse these made-up sources before the poll ever started.
+    installFetch(async (_input, init) =>
+      init?.method === 'POST'
+        ? new Response(JSON.stringify({ type: 'job', job_id: 'job-1' }), {
+            headers: { 'Content-Type': 'application/json' },
+          })
+        : new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), {
+              once: true,
+            });
+          }),
+    );
     // Non-UUID-shaped ids keep the CDN preview helper from rewriting the URL,
     // so the canvas URL is the bare resolved source.
     const el = mount({ ...STAGING, 'source-uuid': 'first-uuid' });

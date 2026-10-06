@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { clickSend, editorMode, mount, SAMPLE_UUID, STAGING, stubFetch, typePrompt } from './harness';
+import { clickSend, editorMode, mount, recordRequests, SAMPLE_UUID, STAGING, typePrompt } from './harness';
 
 /** The ratio picker: what it offers per mode, what it sends, what it restores. */
 describe('<uc-ai-image-editor> aspect ratio', () => {
   it('renders the aspect-ratio picker in generate mode (no Auto) and sends the selected ratio', async () => {
-    const stub = stubFetch();
+    const stub = recordRequests();
     const el = mount({ ...STAGING, 'aspect-ratios': '16:9 1:1' });
     await el.updateComplete;
 
@@ -28,7 +28,7 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
   });
 
   it('defaults edit mode to "Auto" and omits aspect_ratio (preserving the source AR)', async () => {
-    const stub = stubFetch({ uuid: 'edited' });
+    const stub = recordRequests();
     const el = mount(STAGING);
     el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
@@ -61,7 +61,7 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
   });
 
   it('sends an explicit ratio when the user reshapes in edit mode', async () => {
-    const stub = stubFetch({ uuid: 'edited' });
+    const stub = recordRequests();
     const el = mount({ ...STAGING, 'aspect-ratios': '1:1' });
     el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
@@ -83,7 +83,7 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
   });
 
   it('records the aspect ratio on a history entry and restores it when re-selected', async () => {
-    stubFetch({ uuid: 'r1' });
+    recordRequests();
     const el = mount({ ...STAGING, 'aspect-ratios': '16:9 1:1' });
     await el.updateComplete;
 
