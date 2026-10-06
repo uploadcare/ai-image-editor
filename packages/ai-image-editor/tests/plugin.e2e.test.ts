@@ -13,6 +13,7 @@ type UploadCtxProvider = HTMLElement & {
     initFlow: () => void;
     removeAllFiles: () => void;
     getOutputCollectionState: () => { allEntries: OutputEntry[] };
+    l10n: (key: string) => string;
   };
 };
 
@@ -158,6 +159,10 @@ describe('AiImageEditorPlugin', () => {
     // Switching localeName lazy-loads and applies the German strings.
     (config as unknown as { localeName: string }).localeName = 'de';
     await vi.waitFor(() => expect(cancelLabel()).toBe('Abbrechen'));
+    // The editor loads its own strings; the uploader loads its locale separately
+    // and may still be resolving. Tearing it down mid-load is a file-uploader bug
+    // (fixed upstream, not yet released), so let the uploader finish switching too.
+    await vi.waitFor(() => expect(getApi().l10n('cancel')).toBe('Abbrechen'));
     cleanup();
   });
 
