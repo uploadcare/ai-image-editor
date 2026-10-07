@@ -4,17 +4,12 @@ import { createEmulatorServer } from '@uploadcare/api-emulator/listen';
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiProviderError } from '../model/types';
-import { emulatorFetch, mintAuthToken, SEEDED_IMAGE_UUID } from './emulator.testing';
+import { emulatorFetch, mintAuthToken, plainTextFailure, SEEDED_IMAGE_UUID } from './emulator.testing';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
 
 const PUBLIC_KEY = 'demopublickey';
 const CDN = 'https://cdn.example.com';
 const NO_DELAY = { pollIntervalMs: 0 } as const;
-
-const sentInit = (fetchImpl: ReturnType<typeof vi.fn<typeof fetch>>, call = 0) =>
-  fetchImpl.mock.calls[call]![1] as RequestInit;
-const sentBody = (fetchImpl: ReturnType<typeof vi.fn<typeof fetch>>, call = 0) =>
-  JSON.parse(sentInit(fetchImpl, call).body as string) as Record<string, unknown>;
 
 const jsonResponse = (body: unknown) =>
   new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
@@ -54,10 +49,10 @@ describe('UploadcareDerivativeApi', () => {
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: fetchImpl, ...NO_DELAY });
     await provider.generate({ prompt: 'a hat', mode: 'generate', aspectRatio: [16, 9] });
 
-    expect(fetchImpl.mock.calls[0]![0]).toBe('https://upload.uploadcare.com/derivative/image/generate/');
-    expect(sentInit(fetchImpl).method).toBe('POST');
-    expect((sentInit(fetchImpl).headers as Record<string, string>)['Content-Type']).toBe('application/json');
-    expect(sentBody(fetchImpl)).toMatchObject({
+    expect(fetchImpl.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/generate/');
+    expect(fetchImpl.requests[0].method).toBe('POST');
+    expect(fetchImpl.requests[0].headers.get('Content-Type')).toBe('application/json');
+    expect(await fetchImpl.requests[0].json()).toMatchObject({
       pub_key: PUBLIC_KEY,
       prompt: 'a hat',
       aspect_ratio: [16, 9],
@@ -69,7 +64,7 @@ describe('UploadcareDerivativeApi', () => {
     const fetchImpl = emulatorFetch();
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: fetchImpl, ...NO_DELAY });
     await provider.generate({ prompt: 'x', mode: 'generate', metadata: { source: 'ai-image-editor' } });
-    expect(sentBody(fetchImpl).metadata).toEqual({ source: 'ai-image-editor' });
+    expect((await fetchImpl.requests[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
   });
 
   it('forwards request metadata to the edit endpoint', async () => {
@@ -81,15 +76,15 @@ describe('UploadcareDerivativeApi', () => {
       source: SEEDED_IMAGE_UUID,
       metadata: { source: 'ai-image-editor' },
     });
-    expect(fetchImpl.mock.calls[0]![0]).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-    expect(sentBody(fetchImpl).metadata).toEqual({ source: 'ai-image-editor' });
+    expect(fetchImpl.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
+    expect((await fetchImpl.requests[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
   });
 
   it('uses 1:1 when aspectRatio is missing or invalid', async () => {
     const fetchImpl = emulatorFetch();
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: fetchImpl, ...NO_DELAY });
     await provider.generate({ prompt: 'x', mode: 'generate' });
-    expect(sentBody(fetchImpl).aspect_ratio).toEqual([1, 1]);
+    expect((await fetchImpl.requests[0].json()).aspect_ratio).toEqual([1, 1]);
   });
 
   it('polls the status endpoint with pub_key + job_id until the success frame reports is_ready', async () => {
@@ -106,10 +101,10 @@ describe('UploadcareDerivativeApi', () => {
     expect(result.url).toBe(`${CDN}/${result.uuid}/`);
     // 1 POST + 4 status polls: processing, uploading, success not yet ready, success ready.
     expect(fetchImpl).toHaveBeenCalledTimes(5);
-    expect(fetchImpl.mock.calls[1]![0]).toMatch(
+    expect(fetchImpl.requests[1].url).toMatch(
       new RegExp(`^https://upload\\.uploadcare\\.com/derivative/status/\\?pub_key=${PUBLIC_KEY}&job_id=[\\w-]+$`),
     );
-    expect(sentInit(fetchImpl, 1).method).toBe('GET');
+    expect(fetchImpl.requests[1].method).toBe('GET');
   });
 
   it('throws when the job ends in an error status', async () => {
@@ -155,8 +150,8 @@ describe('UploadcareDerivativeApi', () => {
       ...NO_DELAY,
     });
     const result = await provider.generate({ prompt: 'x', mode: 'generate' });
-    expect(fetchImpl.mock.calls[0]![0]).toBe('https://upload.example.com/derivative/image/generate/');
-    expect(fetchImpl.mock.calls[1]![0]).toMatch(
+    expect(fetchImpl.requests[0].url).toBe('https://upload.example.com/derivative/image/generate/');
+    expect(fetchImpl.requests[1].url).toMatch(
       new RegExp(`^https://upload\\.example\\.com/derivative/status/\\?pub_key=${PUBLIC_KEY}&job_id=`),
     );
     expect(result.url).toBe(`${CDN}/${result.uuid}/`);
@@ -186,16 +181,11 @@ describe('UploadcareDerivativeApi', () => {
   });
 
   it('surfaces non-2xx generate responses with status text', async () => {
-    // The emulator answers refusals with the JSON error envelope; this is the
-    // bare non-JSON failure a proxy or an outage would send instead.
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response('bad ratio', {
-        status: 400,
-        statusText: 'Bad Request',
-        headers: { 'Content-Type': 'text/plain' },
-      }),
-    );
-    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: fetchImpl, ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({
+      publicKey: PUBLIC_KEY,
+      fetch: plainTextFailure(400, 'Bad Request'),
+      ...NO_DELAY,
+    });
     await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/400/);
   });
 
@@ -253,8 +243,8 @@ describe('UploadcareDerivativeApi', () => {
         aspectRatio: [16, 9],
       });
 
-      expect(fetchImpl.mock.calls[0]![0]).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-      expect(sentBody(fetchImpl)).toMatchObject({
+      expect(fetchImpl.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
+      expect(await fetchImpl.requests[0].json()).toMatchObject({
         pub_key: PUBLIC_KEY,
         prompt: 'remove the cat',
         source: SEEDED_IMAGE_UUID,
@@ -269,7 +259,7 @@ describe('UploadcareDerivativeApi', () => {
       const fetchImpl = emulatorFetch();
       const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: fetchImpl, ...NO_DELAY });
       await provider.generate({ prompt: 'x', mode: 'edit', source: SEEDED_IMAGE_UUID });
-      expect(sentBody(fetchImpl).aspect_ratio).toBeUndefined();
+      expect((await fetchImpl.requests[0].json()).aspect_ratio).toBeUndefined();
     });
 
     it('throws (without any request) when an edit has no source uuid', async () => {
@@ -332,7 +322,7 @@ describe('UploadcareDerivativeApi', () => {
       });
 
       await provider.generate({ prompt: 'x', mode: 'generate' });
-      expect(new Headers(sentInit(fetchImpl).headers).get('Authorization')).toBe(`Bearer ${token}`);
+      expect(fetchImpl.requests[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
 
       await expect(provider.getFileInfo(SEEDED_IMAGE_UUID)).resolves.toMatchObject({ uuid: SEEDED_IMAGE_UUID });
     });
@@ -364,7 +354,7 @@ describe('UploadcareDerivativeApi', () => {
       token = mintAuthToken('second');
 
       await provider.generate({ prompt: 'x', mode: 'generate' });
-      expect(new Headers(sentInit(fetchImpl).headers).get('Authorization')).toBe(`Bearer ${token}`);
+      expect(fetchImpl.requests[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
       await expect(provider.getFileInfo(SEEDED_IMAGE_UUID)).resolves.toMatchObject({ uuid: SEEDED_IMAGE_UUID });
     });
   });
