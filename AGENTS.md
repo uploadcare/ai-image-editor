@@ -90,13 +90,17 @@ responses.
 - **Browser e2e** run the emulator in the page with
   `setupEmulator()` from `@uploadcare/api-emulator/browser` (MSW and
   `@mswjs/interceptors` underneath, both devDependencies here):
-  `tests/setup.ts` emulates Uploadcare's hosts and `cdn.example.com` (the
+  `tests/emulator.ts` emulates Uploadcare's hosts and `cdn.example.com` (the
   tests' CDN cname), fails any other Uploadcare host, passes every
-  non-Uploadcare origin through, and resets the session before every test. Signing stays
+  non-Uploadcare origin through, and resets the session before every test;
+  import `session` from there to register a scenario or preset. Signing stays
   Node-side in `tests/commands.ts` (`commands.mintAuthToken()`). The editor
-  tests use `DERIVATIVE_INSTANT_PUBLIC_KEY` so a
-  generation finishes on its first poll instead of after the editor's 1.5s
+  tests apply the `derivativesInstant` preset (`tests/editor/harness.ts`) so
+  a generation finishes on its first poll instead of after the editor's 1.5s
   interval several times over.
+- Steer the emulator per test with `session.on()` and `session.use(preset)`
+  (`resetSession()` answers the session in specs); there are no magic keys,
+  prompts or uuids.
 - Bearer tokens must be real: mint them with `mintAuthToken()` (specs) or
   `commands.mintAuthToken()` (e2e).
 - A hand-written stub is still right for what the emulator can't do (a bare
