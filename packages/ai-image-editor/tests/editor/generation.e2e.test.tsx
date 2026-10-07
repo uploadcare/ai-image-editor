@@ -1,3 +1,4 @@
+import { DEMO_FILES } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
 import { enLocale } from '../../src/shared/i18n/en';
 import { session } from '../emulator';
@@ -6,7 +7,6 @@ import {
   clickPrimary,
   clickSend,
   editorMode,
-  installFetch,
   mount,
   primaryBtn,
   recordRequests,
@@ -194,22 +194,9 @@ describe('<uc-ai-image-editor> generation', () => {
   });
 
   it('aborts in-flight generation and shows the new source when source changes', async () => {
-    // The job must still be running when the source changes, so the status
-    // poll hangs until it is aborted — a race the emulator, which answers at
-    // once, can't hold open. The job POST is answered here too: the emulator
-    // would refuse these made-up sources before the poll ever started.
-    installFetch(async (_input, init) =>
-      init?.method === 'POST'
-        ? new Response(JSON.stringify({ type: 'job', job_id: 'job-1' }), {
-            headers: { 'Content-Type': 'application/json' },
-          })
-        : new Promise((_resolve, reject) => {
-            init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), {
-              once: true,
-            });
-          }),
-    );
-    const el = mount({ ...STAGING, 'source-uuid': '00000000-0000-4000-8000-0000000000f1' });
+    // The status poll never answers, so the job is still running when the source changes.
+    session.on('GET /derivative/status/', () => new Promise<never>(() => {}));
+    const el = mount({ ...STAGING, 'source-uuid': DEMO_FILES[0] });
     await el.updateComplete;
 
     typePrompt(el, 'try');
@@ -217,12 +204,12 @@ describe('<uc-ai-image-editor> generation', () => {
     clickSend(el);
 
     // Change source mid-flight — this aborts the in-flight generation.
-    el.sourceUuid = '00000000-0000-4000-8000-0000000000f2';
+    el.sourceUuid = DEMO_FILES[1];
     await el.updateComplete;
 
     // After the abort, the displayed image should be the new source (no result override).
     await vi.waitFor(() => {
-      expect(canvasUrl(el)).toContain('https://cdn.example.com/00000000-0000-4000-8000-0000000000f2/');
+      expect(canvasUrl(el)).toContain(`https://cdn.example.com/${DEMO_FILES[1]}/`);
     });
   });
 });

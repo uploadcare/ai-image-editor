@@ -39,7 +39,7 @@ const realFetch = globalThis.fetch.bind(globalThis);
  * Swap `globalThis.fetch` for the rest of the test. The provider binds
  * `globalThis.fetch` at construction, so install it BEFORE setting `pubkey`.
  */
-export function installFetch(handler: typeof fetch): void {
+function installFetch(handler: typeof fetch): void {
   restoreFetch?.();
   globalThis.fetch = handler;
   restoreFetch = () => {
