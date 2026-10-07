@@ -1,4 +1,5 @@
-// TEMPORARY: file: dependency, see tests/commands.ts.
+// TEMPORARY: file: dependency, see src/entities/provider/api/emulator.testing.ts.
+import { DEMO_FILES } from '@uploadcare/api-emulator';
 import { afterEach, beforeEach } from 'vitest';
 import { page } from 'vitest/browser';
 import type { UcAiImageEditor as UcAiImageEditorType } from '../../src/index';
@@ -93,7 +94,7 @@ export function mount(attrs: Record<string, string> = {}): UcAiImageEditorType {
 export const STAGING = { pubkey: 'demopublickey', 'cdn-cname': 'https://cdn.example.com' };
 
 /** An image every fresh emulator session already holds. */
-export const SAMPLE_UUID = '49b4c5a1-31b3-4349-ba07-d97a2d883c37';
+export const SAMPLE_UUID = DEMO_FILES[0];
 
 export function typePrompt(el: UcAiImageEditorType, value: string): void {
   const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;

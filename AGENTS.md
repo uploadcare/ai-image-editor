@@ -93,16 +93,16 @@ responses.
   `tests/emulator.ts` emulates Uploadcare's hosts and `cdn.example.com` (the
   tests' CDN cname), fails any other Uploadcare host, passes every
   non-Uploadcare origin through, and resets the session before every test;
-  import `session` from there to register a scenario or preset. Signing stays
-  Node-side in `tests/commands.ts` (`commands.mintAuthToken()`). The editor
+  import `session` from there to register a scenario or preset. The editor
   tests apply the `derivativesInstant` preset (`tests/editor/harness.ts`) so
   a generation finishes on its first poll instead of after the editor's 1.5s
   interval several times over.
 - Steer the emulator per test with `session.on()` and `session.use(preset)`
   (`resetSession()` answers the session in specs); there are no magic keys,
   prompts or uuids.
-- Bearer tokens must be real: mint them with `mintAuthToken()` (specs) or
-  `commands.mintAuthToken()` (e2e).
+- Bearer tokens must be real: mint them with the emulator's `mintAuthToken()`
+  (WebCrypto, so it works in the page too). The images every fresh session
+  holds are its `DEMO_FILES`.
 - A hand-written stub is still right for what the emulator can't do (a bare
   non-JSON failure, a poll that hangs or never finishes); say why next to it.
 

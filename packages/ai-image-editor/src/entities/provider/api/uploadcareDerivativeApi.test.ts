@@ -1,10 +1,10 @@
 // TEMPORARY: file: dependency, see emulator.testing.ts.
-import { type EmulatorSession, resetSession } from '@uploadcare/api-emulator';
+import { type EmulatorSession, mintAuthToken, resetSession } from '@uploadcare/api-emulator';
 import { createEmulatorServer } from '@uploadcare/api-emulator/listen';
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiProviderError } from '../model/types';
-import { emulatorFetch, mintAuthToken, plainTextFailure, SEEDED_IMAGE_UUID } from './emulator.testing';
+import { emulatorFetch, plainTextFailure, SEEDED_IMAGE_UUID } from './emulator.testing';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
 
 const PUBLIC_KEY = 'demopublickey';
@@ -311,7 +311,7 @@ describe('UploadcareDerivativeApi', () => {
       // the client's own fetch, while `getFileInfo` hands options to
       // upload-client's isReadyPoll. Dropping either assignment would leave
       // half the provider unauthenticated.
-      const token = mintAuthToken();
+      const token = await mintAuthToken();
       const fetchImpl = emulatorFetch();
       const provider = new UploadcareDerivativeApi({
         publicKey: PUBLIC_KEY,
@@ -351,7 +351,7 @@ describe('UploadcareDerivativeApi', () => {
         ...NO_DELAY,
       });
 
-      token = mintAuthToken('second');
+      token = await mintAuthToken({ tokenId: 'second' });
 
       await provider.generate({ prompt: 'x', mode: 'generate' });
       expect(fetchImpl.requests[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
