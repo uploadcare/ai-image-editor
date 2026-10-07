@@ -1,4 +1,5 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
+import { DEMO_FILES } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
 import { clickSend, editorMode, mount, recordRequests, SAMPLE_UUID, STAGING, typePrompt } from './harness';
 
@@ -28,9 +29,9 @@ describe('<uc-ai-image-editor> result filename', () => {
   it('names the result via the outputFilename resolver (original + counter)', async () => {
     const stub = recordRequests();
     const el = mount(STAGING);
-    // A fresh uuid with no persisted lineage → counter starts at 1.
+    // A seeded image no test has edited, so no persisted lineage → counter starts at 1.
     el.sourceFileInfo = {
-      uuid: '00000000-0000-4000-8000-000000000001',
+      uuid: DEMO_FILES[1],
       originalFilename: 'cat.png',
       imageInfo: null,
     } as unknown as UploadcareFile;
@@ -41,7 +42,8 @@ describe('<uc-ai-image-editor> result filename', () => {
     typePrompt(el, 'add a hat');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
+    // Waits for the result too, so the run behind the request succeeded.
+    await vi.waitFor(() => expect(stub.results.length).toBe(1));
     expect(stub.generateBodies[0]!.filename).toBe('cat.png-edit-1');
   });
 
