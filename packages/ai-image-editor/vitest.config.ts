@@ -10,9 +10,6 @@ export default defineConfig({
           name: 'specs',
           include: ['src/**/*.test.ts'],
           environment: 'happy-dom',
-          // happy-dom's fetch preflights a cross-origin request, and the emulator answers no OPTIONS; the specs test
-          // the clients, not CORS.
-          environmentOptions: { happyDOM: { settings: { fetch: { disableSameOriginPolicy: true } } } },
           setupFiles: ['tests/specs/setup.ts'],
         },
       },
