@@ -82,9 +82,9 @@ second time, pushing the original one level deeper on `cause`.
 stands in for the Upload API and CDN; tests should not hand-write Uploadcare
 responses.
 
-- **Specs** (happy-dom) inject `emulatorFetch()` from
-  `src/entities/provider/api/emulator.testing.ts` as the client's `fetch`, and
-  call `resetSession()` before each test. `getFileInfo` goes through
+- **Specs** (happy-dom) inject the emulator's `createFetch()` as the client's
+  `fetch`, take the session from `resetSession()` before each test, and read
+  what was sent from its `requests`. `getFileInfo` goes through
   upload-client's own transport, so those specs start a real emulator server
   (`@uploadcare/api-emulator/listen`) and pass its origin as `baseUrl`.
 - **Browser e2e** run the emulator in the page with
