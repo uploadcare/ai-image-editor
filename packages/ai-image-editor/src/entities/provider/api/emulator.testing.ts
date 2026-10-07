@@ -23,9 +23,9 @@ export const emulatorFetch = () => {
 };
 
 /**
- * The emulator answers every refusal with the JSON error envelope, so it can't
- * produce the bare non-2xx, non-JSON response a proxy or an outage would. This
- * stub stands in for that.
+ * The bare non-2xx, non-JSON response a proxy or an outage would give. A
+ * `session.on()` scenario could answer it too; a stub is shorter when the
+ * spec needs nothing else from the emulator.
  */
 export const plainTextFailure = (status: number, statusText: string) =>
   vi.fn<typeof fetch>().mockResolvedValue(new Response('upstream failure', { status, statusText }));

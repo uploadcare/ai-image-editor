@@ -104,8 +104,10 @@ responses.
 - Bearer tokens must be real: mint them with the emulator's `mintAuthToken()`
   (WebCrypto, so it works in the page too). The images every fresh session
   holds are its `DEMO_FILES`.
-- A hand-written stub is still right for what the emulator can't do (a bare
-  non-JSON failure, a poll that hangs or never finishes); say why next to it.
+- A `session.on()` handler runs before the emulator's routes and can answer
+  any `Response` or a promise that never settles, so a bare non-JSON failure,
+  a job stuck in `processing` or a poll that hangs is a scenario, not a stub.
+  Hand-write a `fetch` only where it is simpler, and say why next to it.
 
 The dependency is a TEMPORARY `file:` link to an unreleased checkout, so
 `npm ci` only resolves it on that machine; swap it for a version once the
