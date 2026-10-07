@@ -90,8 +90,7 @@ responses.
   `session` from there to register a scenario or read what was sent from its
   `requests`. The clients call the global `fetch`; a spec that checks what
   they pass it uses `vi.spyOn(globalThis, 'fetch')` and restores it after the
-  test. The project sets happy-dom's `disableSameOriginPolicy`, because the
-  emulator answers no CORS preflight.
+  test.
 - **Browser e2e** run the emulator in the page with
   `setupEmulator()` from `@uploadcare/api-emulator/browser` (MSW and
   `@mswjs/interceptors` underneath, both devDependencies of the root
