@@ -10,17 +10,9 @@ const PUBLIC_KEY = 'demopublickey';
 const CDN = 'https://cdn.example.com';
 const NO_DELAY = { pollIntervalMs: 0 } as const;
 
-const jsonResponse = (body: unknown) =>
-  new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
-
-/**
- * A job that never finishes. The emulator's jobs always reach a terminal frame
- * within four polls, so it can't keep `poll` waiting long enough to time out.
- */
-const neverFinishingFetch = () =>
-  vi.fn<typeof fetch>(async (_url, init) =>
-    jsonResponse(init?.method === 'POST' ? { type: 'job', job_id: 'job-slow' } : { type: 'job', status: 'processing' }),
-  );
+/** A job that never finishes: every status poll answers `processing`. */
+const neverFinish = () =>
+  session.on('GET /derivative/status/', () => Response.json({ type: 'job', status: 'processing' }));
 
 /**
  * `getFileInfo` goes through upload-client's own transport (node:http here),
@@ -117,22 +109,31 @@ describe('UploadcareDerivativeApi', () => {
 
   it('wraps an internal poll timeout as a generation_timeout provider error', async () => {
     // A zero timeout: `poll` gives up on its own, without the caller's signal ever aborting.
+    neverFinish();
+    let jobId: string | undefined;
+    session.on('POST /derivative/image/generate/', async ({ next }) => {
+      const answer = await next();
+      jobId = (await answer?.clone().json())?.job_id;
+      return answer;
+    });
     const provider = new UploadcareDerivativeApi({
       publicKey: PUBLIC_KEY,
-      fetch: neverFinishingFetch(),
+      fetch: emulatorFetch(),
       pollIntervalMs: 0,
       pollTimeoutMs: 0,
     });
     const err = await provider.generate({ prompt: 'x', mode: 'generate' }).catch((e) => e);
     expect(err).toBeInstanceOf(AiProviderError);
     expect(err.errorCode).toBe('generation_timeout');
-    expect(err.message).toContain('job-slow');
+    expect(jobId).toBeTruthy();
+    expect(err.message).toContain(jobId);
   });
 
   it('times out when the job never reaches a terminal state', async () => {
+    neverFinish();
     const provider = new UploadcareDerivativeApi({
       publicKey: PUBLIC_KEY,
-      fetch: neverFinishingFetch(),
+      fetch: emulatorFetch(),
       pollIntervalMs: 0,
       pollTimeoutMs: 5,
     });
