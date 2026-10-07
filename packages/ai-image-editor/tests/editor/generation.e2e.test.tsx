@@ -1,7 +1,6 @@
-// TEMPORARY: file: dependency, see tests/commands.ts.
-import { CONTENT_MODERATED_PROMPT } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
 import { enLocale } from '../../src/shared/i18n/en';
+import { session } from '../emulator';
 import {
   canvasUrl,
   clickPrimary,
@@ -95,12 +94,14 @@ describe('<uc-ai-image-editor> generation', () => {
   });
 
   it('reports a refused run with uc:error and its message, and keeps the prompt', async () => {
+    // derivativesInstant again, so it wraps the failure and the error comes on the first poll.
+    session.use('derivativeFailure', { code: 'content_moderated' }).use('derivativesInstant');
     const el = mount(STAGING);
     await el.updateComplete;
     const onError = vi.fn();
     el.addEventListener('uc:error', onError);
 
-    typePrompt(el, CONTENT_MODERATED_PROMPT);
+    typePrompt(el, 'a tiger');
     await el.updateComplete;
     clickSend(el);
     await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
@@ -113,7 +114,7 @@ describe('<uc-ai-image-editor> generation', () => {
     expect(canvasUrl(el)).toBeNull();
     expect(editorMode(el)).toBe('generate');
     const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
-    expect(input.value).toBe(CONTENT_MODERATED_PROMPT);
+    expect(input.value).toBe('a tiger');
   });
 
   it.skip('fires uc:change as the current result appears and clears', async () => {

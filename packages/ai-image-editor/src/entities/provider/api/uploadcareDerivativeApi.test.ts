@@ -1,5 +1,5 @@
 // TEMPORARY: file: dependency, see emulator.testing.ts.
-import { CONTENT_MODERATED_PROMPT, resetSession, SIGNED_UPLOADS_PUBLIC_KEY } from '@uploadcare/api-emulator';
+import { type EmulatorSession, resetSession } from '@uploadcare/api-emulator';
 import { createEmulatorServer } from '@uploadcare/api-emulator/listen';
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -39,7 +39,10 @@ beforeAll(async () => {
   ({ origin: uploadOrigin, close: closeEmulator } = await createEmulatorServer({ delayMs: 0 }));
 });
 afterAll(() => closeEmulator());
-beforeEach(() => resetSession());
+let session: EmulatorSession;
+beforeEach(() => {
+  session = resetSession();
+});
 
 describe('UploadcareDerivativeApi', () => {
   it('throws when publicKey is missing', () => {
@@ -110,8 +113,9 @@ describe('UploadcareDerivativeApi', () => {
   });
 
   it('throws when the job ends in an error status', async () => {
+    session.use('derivativeFailure', { code: 'content_moderated' });
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: emulatorFetch(), ...NO_DELAY });
-    await expect(provider.generate({ prompt: CONTENT_MODERATED_PROMPT, mode: 'generate' })).rejects.toMatchObject({
+    await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toMatchObject({
       name: 'AiProviderError',
       errorCode: 'content_moderated',
     });
@@ -308,6 +312,9 @@ describe('UploadcareDerivativeApi', () => {
   describe('authToken', () => {
     // A signed-uploads project refuses every request without a valid Bearer
     // token, so each call below succeeding is the proof the token got there.
+    beforeEach(() => {
+      session.use('signedUploads');
+    });
 
     it('carries the token on both network paths', async () => {
       // The two paths are independent: `generate`/`edit`/`status` go through
@@ -317,7 +324,7 @@ describe('UploadcareDerivativeApi', () => {
       const token = mintAuthToken();
       const fetchImpl = emulatorFetch();
       const provider = new UploadcareDerivativeApi({
-        publicKey: SIGNED_UPLOADS_PUBLIC_KEY,
+        publicKey: PUBLIC_KEY,
         baseUrl: uploadOrigin,
         authToken: token,
         fetch: fetchImpl,
@@ -332,7 +339,7 @@ describe('UploadcareDerivativeApi', () => {
 
     it('is refused on both network paths without one', async () => {
       const provider = new UploadcareDerivativeApi({
-        publicKey: SIGNED_UPLOADS_PUBLIC_KEY,
+        publicKey: PUBLIC_KEY,
         baseUrl: uploadOrigin,
         fetch: emulatorFetch(),
         ...NO_DELAY,
@@ -347,7 +354,7 @@ describe('UploadcareDerivativeApi', () => {
       let token = 'not-a-token';
       const fetchImpl = emulatorFetch();
       const provider = new UploadcareDerivativeApi({
-        publicKey: SIGNED_UPLOADS_PUBLIC_KEY,
+        publicKey: PUBLIC_KEY,
         baseUrl: uploadOrigin,
         authToken: () => token,
         fetch: fetchImpl,

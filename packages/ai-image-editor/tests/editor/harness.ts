@@ -1,22 +1,27 @@
 // TEMPORARY: file: dependency, see tests/commands.ts.
-import { DERIVATIVE_INSTANT_PUBLIC_KEY } from '@uploadcare/api-emulator';
-import { afterEach } from 'vitest';
+import { afterEach, beforeEach } from 'vitest';
 import { page } from 'vitest/browser';
 import type { UcAiImageEditor as UcAiImageEditorType } from '../../src/index';
 import { UcAiImageEditor } from '../../src/index';
+import { session } from '../emulator';
 import { cleanup } from '../test-renderer';
 
 /**
  * Shared setup for the `<uc-ai-image-editor>` browser tests, which are split by
  * subject (mounting, generation, history, layout, …) and all need the same
  * three things: the elements registered, the Upload API (the emulator, see
- * `tests/setup.ts`), and a mounted editor. Importing this module registers
+ * `tests/emulator.ts`), and a mounted editor. Importing this module registers
  * the custom elements and the teardown for whichever test file pulls it in.
  */
 export { UcAiImageEditor };
 export type { UcAiImageEditorType };
 
 let restoreFetch: (() => void) | null = null;
+
+/** Generations finish on their first status poll, so a test doesn't sit through the editor's 1.5s interval. */
+beforeEach(() => {
+  session.use('derivativesInstant');
+});
 
 afterEach(() => {
   restoreFetch?.();
@@ -27,7 +32,7 @@ afterEach(() => {
   cleanup();
 });
 
-/** The page's own fetch, which `tests/setup.ts` answers from the emulator. */
+/** The page's own fetch, which `tests/emulator.ts` answers from the emulator. */
 const realFetch = globalThis.fetch.bind(globalThis);
 
 /**
@@ -85,8 +90,7 @@ export function mount(attrs: Record<string, string> = {}): UcAiImageEditorType {
   return el;
 }
 
-/** Generations finish on their first status poll, so a test doesn't sit through the editor's 1.5s interval. */
-export const STAGING = { pubkey: DERIVATIVE_INSTANT_PUBLIC_KEY, 'cdn-cname': 'https://cdn.example.com' };
+export const STAGING = { pubkey: 'demopublickey', 'cdn-cname': 'https://cdn.example.com' };
 
 /** An image every fresh emulator session already holds. */
 export const SAMPLE_UUID = '49b4c5a1-31b3-4349-ba07-d97a2d883c37';

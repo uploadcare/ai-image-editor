@@ -1,5 +1,5 @@
 // TEMPORARY: file: dependency, see emulator.testing.ts.
-import { DERIVATIVE_DISABLED_PUBLIC_KEY, resetSession } from '@uploadcare/api-emulator';
+import { type EmulatorSession, resetSession } from '@uploadcare/api-emulator';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiProviderError } from '../model/types';
 import { emulatorFetch, mintAuthToken, SEEDED_IMAGE_UUID } from './emulator.testing';
@@ -20,7 +20,10 @@ const sentBody = (fetchImpl: ReturnType<typeof emulatorFetch>, call = 0) =>
 const plainTextFailure = (status: number, statusText: string) =>
   vi.fn<typeof fetch>().mockResolvedValue(new Response('upstream failure', { status, statusText }));
 
-beforeEach(() => resetSession());
+let session: EmulatorSession;
+beforeEach(() => {
+  session = resetSession();
+});
 
 describe('UploadcareApiClient', () => {
   it('throws when publicKey is missing', () => {
@@ -141,7 +144,8 @@ describe('UploadcareApiClient', () => {
     });
 
     it('surfaces a platform error envelope as an AiProviderError with its code', async () => {
-      const client = new UploadcareApiClient({ publicKey: DERIVATIVE_DISABLED_PUBLIC_KEY, fetch: emulatorFetch() });
+      session.use('derivativesDisabled');
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: emulatorFetch() });
       await expect(client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' })).rejects.toMatchObject({
         name: 'AiProviderError',
         errorCode: 'derivative_disabled',
