@@ -35,8 +35,8 @@ export default defineConfig({
   },
   themeConfig: {
     logo: {
-      light: 'https://ucarecdn.com/1b4714cd-53be-447b-bbde-e061f1e5a22f/logosafespacetransparent.svg',
-      dark: 'https://ucarecdn.com/3b610a0a-780c-4750-a8b4-3bf4a8c90389/logotransparentinverted.svg',
+      light: 'https://ucarecdn.com/27eed822-4a34-4347-b227-a89df2e7bf47/uploadcare-logo.svg',
+      dark: 'https://ucarecdn.com/dfd6c07b-fd17-4559-8803-bc98f92b564b/uploadcare-logo-inverted.svg',
       alt: 'Uploadcare',
     },
     siteTitle: 'AI Image Editor',
