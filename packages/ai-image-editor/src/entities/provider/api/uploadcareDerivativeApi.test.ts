@@ -1,4 +1,3 @@
-// TEMPORARY: file: dependency, see emulator.testing.ts.
 import { type EmulatorSession, mintAuthToken, resetSession } from '@uploadcare/api-emulator';
 import { createEmulatorServer } from '@uploadcare/api-emulator/listen';
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';

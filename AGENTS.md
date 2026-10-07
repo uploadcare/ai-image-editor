@@ -89,7 +89,8 @@ responses.
   (`@uploadcare/api-emulator/listen`) and pass its origin as `baseUrl`.
 - **Browser e2e** run the emulator in the page with
   `setupEmulator()` from `@uploadcare/api-emulator/browser` (MSW and
-  `@mswjs/interceptors` underneath, both devDependencies here):
+  `@mswjs/interceptors` underneath, both devDependencies of the root
+  `package.json`):
   `tests/emulator.ts` emulates Uploadcare's hosts and `cdn.example.com` (the
   tests' CDN cname), fails any other Uploadcare host, passes every
   non-Uploadcare origin through, and resets the session before every test;
@@ -106,8 +107,9 @@ responses.
 - A hand-written stub is still right for what the emulator can't do (a bare
   non-JSON failure, a poll that hangs or never finishes); say why next to it.
 
-The dependency is a TEMPORARY `file:` link to an unreleased checkout until the
-package ships; swap it for a version range then and drop the TEMPORARY comments.
+The dependency is a TEMPORARY `file:` link to an unreleased checkout, so
+`npm ci` only resolves it on that machine; swap it for a version once the
+package ships.
 
 ## Docs layout
 
