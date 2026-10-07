@@ -1,7 +1,7 @@
-import { createFetch, DEMO_FILES, type EmulatorSession, mintAuthToken, resetSession } from '@uploadcare/api-emulator';
-import { createEmulatorServer } from '@uploadcare/api-emulator/listen';
+import { DEMO_FILES, mintAuthToken } from '@uploadcare/api-emulator';
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { session } from '../../../../tests/specs/setup';
 import { AiProviderError } from '../model/types';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
 
@@ -13,20 +13,8 @@ const NO_DELAY = { pollIntervalMs: 0 } as const;
 const neverFinish = () =>
   session.on('GET /derivative/status/', () => Response.json({ type: 'job', status: 'processing' }));
 
-/**
- * `getFileInfo` goes through upload-client's own transport (node:http here),
- * not the injected fetch, so it needs the emulator as a real origin. Both
- * paths share the emulator's default session.
- */
-let uploadOrigin: string;
-let closeEmulator: () => Promise<void>;
-beforeAll(async () => {
-  ({ origin: uploadOrigin, close: closeEmulator } = await createEmulatorServer({ delayMs: 0 }));
-});
-afterAll(() => closeEmulator());
-let session: EmulatorSession;
-beforeEach(() => {
-  session = resetSession();
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('UploadcareDerivativeApi', () => {
@@ -35,7 +23,7 @@ describe('UploadcareDerivativeApi', () => {
   });
 
   it('POSTs the prompt + aspect ratio + pub_key to the derivative endpoint', async () => {
-    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: createFetch(), ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     await provider.generate({ prompt: 'a hat', mode: 'generate', aspectRatio: [16, 9] });
 
     expect(session.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/generate/');
@@ -50,13 +38,13 @@ describe('UploadcareDerivativeApi', () => {
   });
 
   it('forwards request metadata to the generate endpoint', async () => {
-    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: createFetch(), ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     await provider.generate({ prompt: 'x', mode: 'generate', metadata: { source: 'ai-image-editor' } });
     expect((await session.requests[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
   });
 
   it('forwards request metadata to the edit endpoint', async () => {
-    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: createFetch(), ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     await provider.generate({
       prompt: 'x',
       mode: 'edit',
@@ -68,7 +56,7 @@ describe('UploadcareDerivativeApi', () => {
   });
 
   it('uses 1:1 when aspectRatio is missing or invalid', async () => {
-    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: createFetch(), ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     await provider.generate({ prompt: 'x', mode: 'generate' });
     expect((await session.requests[0].json()).aspect_ratio).toEqual([1, 1]);
   });
@@ -77,7 +65,6 @@ describe('UploadcareDerivativeApi', () => {
     const provider = new UploadcareDerivativeApi({
       publicKey: PUBLIC_KEY,
       cdnBaseUrl: CDN,
-      fetch: createFetch(),
       ...NO_DELAY,
     });
 
@@ -94,7 +81,7 @@ describe('UploadcareDerivativeApi', () => {
 
   it('throws when the job ends in an error status', async () => {
     session.use('derivativeFailure', { code: 'content_moderated' });
-    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: createFetch(), ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toMatchObject({
       name: 'AiProviderError',
       errorCode: 'content_moderated',
@@ -112,7 +99,6 @@ describe('UploadcareDerivativeApi', () => {
     });
     const provider = new UploadcareDerivativeApi({
       publicKey: PUBLIC_KEY,
-      fetch: createFetch(),
       pollIntervalMs: 0,
       pollTimeoutMs: 0,
     });
@@ -127,7 +113,6 @@ describe('UploadcareDerivativeApi', () => {
     neverFinish();
     const provider = new UploadcareDerivativeApi({
       publicKey: PUBLIC_KEY,
-      fetch: createFetch(),
       pollIntervalMs: 0,
       pollTimeoutMs: 5,
     });
@@ -139,7 +124,6 @@ describe('UploadcareDerivativeApi', () => {
       publicKey: PUBLIC_KEY,
       baseUrl: 'https://upload.example.com',
       cdnBaseUrl: CDN,
-      fetch: createFetch(),
       ...NO_DELAY,
     });
     const result = await provider.generate({ prompt: 'x', mode: 'generate' });
@@ -154,7 +138,6 @@ describe('UploadcareDerivativeApi', () => {
     const provider = new UploadcareDerivativeApi({
       publicKey: PUBLIC_KEY,
       cdnBaseUrl: CDN,
-      fetch: createFetch(),
       ...NO_DELAY,
     });
     const result = await provider.generate({ prompt: 'x', mode: 'generate', filename: 'f.png' });
@@ -167,7 +150,7 @@ describe('UploadcareDerivativeApi', () => {
   });
 
   it('derives the CDN base from the public key when cdnBaseUrl is left at the default', async () => {
-    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: createFetch(), ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     const result = await provider.generate({ prompt: 'x', mode: 'generate' });
     const base = await getPrefixedCdnBaseAsync(PUBLIC_KEY, 'https://ucarecd.net');
     expect(result.url).toBe(`${base}/${result.uuid}/`);
@@ -180,47 +163,46 @@ describe('UploadcareDerivativeApi', () => {
     );
     const provider = new UploadcareDerivativeApi({
       publicKey: PUBLIC_KEY,
-      fetch: createFetch(),
       ...NO_DELAY,
     });
     await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/400/);
   });
 
   it('passes the abort signal to generate and status fetches', async () => {
-    const fetchImpl = vi.fn(createFetch());
-    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: fetchImpl, ...NO_DELAY });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     const controller = new AbortController();
     await provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
-    const signals = fetchImpl.mock.calls.map(([, init]) => init?.signal);
+    const signals = fetchSpy.mock.calls.map(([, init]) => init?.signal);
     expect(signals.length).toBeGreaterThanOrEqual(2);
     expect(signals.every((s) => s === controller.signal)).toBe(true);
   });
 
   it('stops polling when the signal is aborted mid-flight', async () => {
     const controller = new AbortController();
-    const emulator = createFetch();
-    const fetchImpl = vi.fn<typeof fetch>(async (url, init) => {
-      const response = await emulator(url, init);
+    const emulated = globalThis.fetch;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+      const response = await emulated(url, init);
       // Abort while "processing": the next poll must never happen.
       if (init?.method === 'GET') controller.abort();
       return response;
     });
-    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: fetchImpl, ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
 
     await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toThrow(
       /cancel/i,
     );
     // 1 POST + exactly 1 status poll, then it bails — no further polling.
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it('does not start polling when the signal is already aborted', async () => {
-    const fetchImpl = vi.fn(createFetch());
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const controller = new AbortController();
     controller.abort();
-    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: fetchImpl, ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toThrow();
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   describe('edit mode', () => {
@@ -228,7 +210,6 @@ describe('UploadcareDerivativeApi', () => {
       const provider = new UploadcareDerivativeApi({
         publicKey: PUBLIC_KEY,
         cdnBaseUrl: CDN,
-        fetch: createFetch(),
         ...NO_DELAY,
       });
 
@@ -252,13 +233,13 @@ describe('UploadcareDerivativeApi', () => {
     });
 
     it('omits aspect_ratio when none is provided', async () => {
-      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: createFetch(), ...NO_DELAY });
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
       await provider.generate({ prompt: 'x', mode: 'edit', source: DEMO_FILES[0] });
       expect((await session.requests[0].json()).aspect_ratio).toBeUndefined();
     });
 
     it('throws (without any request) when an edit has no source uuid', async () => {
-      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, fetch: createFetch(), ...NO_DELAY });
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
       await expect(provider.generate({ prompt: 'x', mode: 'edit' })).rejects.toThrow(/source/i);
       expect(session.requests).toHaveLength(0);
     });
@@ -271,7 +252,7 @@ describe('UploadcareDerivativeApi', () => {
 
   describe('getFileInfo', () => {
     it('waits for the file to be ready and wraps it as an UploadcareFile on the CDN base', async () => {
-      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, baseUrl: uploadOrigin, cdnBaseUrl: CDN });
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, cdnBaseUrl: CDN });
 
       const file = await provider.getFileInfo(DEMO_FILES[0]);
 
@@ -281,14 +262,14 @@ describe('UploadcareDerivativeApi', () => {
     });
 
     it('honours the abort signal', async () => {
-      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, baseUrl: uploadOrigin });
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
       controller.abort();
       await expect(provider.getFileInfo(DEMO_FILES[0], controller.signal)).rejects.toThrow(/cancel/i);
     });
 
     it('propagates a lookup failure', async () => {
-      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, baseUrl: uploadOrigin });
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY });
       await expect(provider.getFileInfo('missing')).rejects.toThrow(/not found/i);
     });
   });
@@ -308,9 +289,7 @@ describe('UploadcareDerivativeApi', () => {
       const token = await mintAuthToken();
       const provider = new UploadcareDerivativeApi({
         publicKey: PUBLIC_KEY,
-        baseUrl: uploadOrigin,
         authToken: token,
-        fetch: createFetch(),
         ...NO_DELAY,
       });
 
@@ -323,8 +302,6 @@ describe('UploadcareDerivativeApi', () => {
     it('is refused on both network paths without one', async () => {
       const provider = new UploadcareDerivativeApi({
         publicKey: PUBLIC_KEY,
-        baseUrl: uploadOrigin,
-        fetch: createFetch(),
         ...NO_DELAY,
       });
       await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/signature/i);
@@ -337,9 +314,7 @@ describe('UploadcareDerivativeApi', () => {
       let token = 'not-a-token';
       const provider = new UploadcareDerivativeApi({
         publicKey: PUBLIC_KEY,
-        baseUrl: uploadOrigin,
         authToken: () => token,
-        fetch: createFetch(),
         ...NO_DELAY,
       });
 

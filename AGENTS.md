@@ -82,11 +82,16 @@ second time, pushing the original one level deeper on `cause`.
 stands in for the Upload API and CDN; tests should not hand-write Uploadcare
 responses.
 
-- **Specs** (happy-dom) inject the emulator's `createFetch()` as the client's
-  `fetch`, take the session from `resetSession()` before each test, and read
-  what was sent from its `requests`. `getFileInfo` goes through
-  upload-client's own transport, so those specs start a real emulator server
-  (`@uploadcare/api-emulator/listen`) and pass its origin as `baseUrl`.
+- **Specs** (happy-dom) run against `setupEmulator()` from
+  `@uploadcare/api-emulator/node`, started once in `tests/specs/setup.ts`
+  (the `specs` project's setup file). It answers the global `fetch` and
+  `node:http(s)` (upload-client's transport, so `getFileInfo` too), refuses
+  every other origin, and resets the session before every test: import
+  `session` from there to register a scenario or read what was sent from its
+  `requests`. The clients call the global `fetch`; a spec that checks what
+  they pass it uses `vi.spyOn(globalThis, 'fetch')` and restores it after the
+  test. The project sets happy-dom's `disableSameOriginPolicy`, because the
+  emulator answers no CORS preflight.
 - **Browser e2e** run the emulator in the page with
   `setupEmulator()` from `@uploadcare/api-emulator/browser` (MSW and
   `@mswjs/interceptors` underneath, both devDependencies of the root
@@ -99,7 +104,7 @@ responses.
   a generation finishes on its first poll instead of after the editor's 1.5s
   interval several times over.
 - Steer the emulator per test with `session.on()` and `session.use(preset)`
-  (`resetSession()` answers the session in specs); there are no magic keys,
+  (`session` from the project's setup file); there are no magic keys,
   prompts or uuids.
 - Bearer tokens must be real: mint them with the emulator's `mintAuthToken()`
   (WebCrypto, so it works in the page too). The images every fresh session
@@ -107,7 +112,7 @@ responses.
 - A `session.on()` handler runs before the emulator's routes and can answer
   any `Response` or a promise that never settles, so a bare non-JSON failure,
   a job stuck in `processing` or a poll that hangs is a scenario, not a stub.
-  Hand-write a `fetch` only where it is simpler, and say why next to it.
+  Stub `fetch` only where it is simpler, and say why next to it.
 
 The dependency is a TEMPORARY `file:` link to an unreleased checkout, so
 `npm ci` only resolves it on that machine; swap it for a version once the

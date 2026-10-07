@@ -1,13 +1,13 @@
-import { createFetch, DEMO_FILES, type EmulatorSession, mintAuthToken, resetSession } from '@uploadcare/api-emulator';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEMO_FILES, mintAuthToken } from '@uploadcare/api-emulator';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { session } from '../../../../tests/specs/setup';
 import { AiProviderError } from '../model/types';
 import { UploadcareApiClient } from './uploadcareApiClient';
 
 const PUBLIC_KEY = 'demopublickey';
 
-let session: EmulatorSession;
-beforeEach(() => {
-  session = resetSession();
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('UploadcareApiClient', () => {
@@ -17,7 +17,7 @@ describe('UploadcareApiClient', () => {
 
   describe('authToken', () => {
     it('sends no Authorization header when unset', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
 
@@ -26,7 +26,7 @@ describe('UploadcareApiClient', () => {
 
     it('sends a plain token as a bearer header', async () => {
       const token = await mintAuthToken();
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch(), authToken: token });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, authToken: token });
 
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
 
@@ -36,7 +36,7 @@ describe('UploadcareApiClient', () => {
     it('re-resolves a resolver per request, so a job can rotate tokens mid-flight', async () => {
       const [first, second] = [await mintAuthToken({ tokenId: 'first' }), await mintAuthToken({ tokenId: 'second' })];
       const authToken = vi.fn().mockResolvedValueOnce(first).mockResolvedValueOnce(second);
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch(), authToken });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, authToken });
 
       const { job_id } = await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
       await client.getJobStatus(job_id!);
@@ -48,7 +48,7 @@ describe('UploadcareApiClient', () => {
 
   describe('generate', () => {
     it('POSTs pub_key + prompt + aspect_ratio + filename and returns the job', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
       const job = await client.generate({ prompt: 'a hat', aspectRatio: [16, 9], filename: 'generated.png' });
 
@@ -64,7 +64,7 @@ describe('UploadcareApiClient', () => {
     });
 
     it('includes store only when provided', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png', store: true });
@@ -74,7 +74,7 @@ describe('UploadcareApiClient', () => {
     });
 
     it('includes metadata only when provided', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
       await client.generate({
@@ -92,7 +92,6 @@ describe('UploadcareApiClient', () => {
       const client = new UploadcareApiClient({
         publicKey: PUBLIC_KEY,
         baseUrl: 'https://upload.example.com/',
-        fetch: createFetch(),
       });
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
       expect(session.requests[0].url).toBe('https://upload.example.com/derivative/image/generate/');
@@ -103,27 +102,27 @@ describe('UploadcareApiClient', () => {
         'POST /derivative/image/generate/',
         () => new Response('upstream failure', { status: 400, statusText: 'Bad Request' }),
       );
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await expect(client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' })).rejects.toThrow(/400/);
     });
 
     it('forwards the abort signal', async () => {
-      const fetchImpl = vi.fn(createFetch());
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: fetchImpl });
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png', signal: controller.signal });
-      expect(fetchImpl.mock.calls[0]![1]?.signal).toBe(controller.signal);
+      expect(fetchSpy.mock.calls[0]![1]?.signal).toBe(controller.signal);
     });
 
     it('sends Accept: application/json', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
       expect(session.requests[0].headers.get('Accept')).toBe('application/json');
     });
 
     it('surfaces a platform error envelope as an AiProviderError with its code', async () => {
       session.use('derivativesDisabled');
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await expect(client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' })).rejects.toMatchObject({
         name: 'AiProviderError',
         errorCode: 'derivative_disabled',
@@ -134,7 +133,7 @@ describe('UploadcareApiClient', () => {
 
   describe('edit', () => {
     it('POSTs pub_key + prompt + source uuid + filename to the edit endpoint', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
       const job = await client.edit({ prompt: 'remove the cat', source: DEMO_FILES[0], filename: 'edited.png' });
 
@@ -150,7 +149,7 @@ describe('UploadcareApiClient', () => {
     });
 
     it('includes aspect_ratio only when provided', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
       await client.edit({ prompt: 'x', source: DEMO_FILES[0], filename: 'f.png' });
       await client.edit({ prompt: 'x', source: DEMO_FILES[0], filename: 'f.png', aspectRatio: [16, 9] });
@@ -160,7 +159,7 @@ describe('UploadcareApiClient', () => {
     });
 
     it('includes metadata only when provided', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
       await client.edit({ prompt: 'x', source: DEMO_FILES[0], filename: 'f.png' });
       await client.edit({
@@ -175,7 +174,7 @@ describe('UploadcareApiClient', () => {
     });
 
     it('surfaces a source the project does not have as an AiProviderError', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await expect(client.edit({ prompt: 'x', source: 'missing', filename: 'f.png' })).rejects.toMatchObject({
         name: 'AiProviderError',
         errorCode: 'source_not_found',
@@ -187,16 +186,16 @@ describe('UploadcareApiClient', () => {
         'POST /derivative/image/edit/',
         () => new Response('upstream failure', { status: 400, statusText: 'Bad Request' }),
       );
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await expect(client.edit({ prompt: 'x', source: 'u', filename: 'f.png' })).rejects.toThrow(/400/);
     });
 
     it('forwards the abort signal', async () => {
-      const fetchImpl = vi.fn(createFetch());
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: fetchImpl });
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
       await client.edit({ prompt: 'x', source: DEMO_FILES[0], filename: 'f.png', signal: controller.signal });
-      expect(fetchImpl.mock.calls[0]![1]?.signal).toBe(controller.signal);
+      expect(fetchSpy.mock.calls[0]![1]?.signal).toBe(controller.signal);
     });
   });
 
@@ -205,7 +204,7 @@ describe('UploadcareApiClient', () => {
       (await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' })).job_id!;
 
     it('GETs the status endpoint with pub_key + job_id and returns the parsed status', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const jobId = await startJob(client);
 
       const status = await client.getJobStatus(jobId);
@@ -222,24 +221,24 @@ describe('UploadcareApiClient', () => {
         'GET /derivative/status/',
         () => new Response('upstream failure', { status: 404, statusText: 'Not Found' }),
       );
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await expect(client.getJobStatus('job-1')).rejects.toThrow(/404/);
     });
 
     it('surfaces a platform error envelope (e.g. job_not_found) as an AiProviderError', async () => {
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: createFetch() });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const err = await client.getJobStatus('job-1').catch((e) => e);
       expect(err).toBeInstanceOf(AiProviderError);
       expect(err.errorCode).toBe('job_not_found');
     });
 
     it('forwards the abort signal', async () => {
-      const fetchImpl = vi.fn(createFetch());
-      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: fetchImpl });
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const jobId = await startJob(client);
       const controller = new AbortController();
       await client.getJobStatus(jobId, controller.signal);
-      expect(fetchImpl.mock.calls[1]![1]?.signal).toBe(controller.signal);
+      expect(fetchSpy.mock.calls[1]![1]?.signal).toBe(controller.signal);
     });
   });
 });
