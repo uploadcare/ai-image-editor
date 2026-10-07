@@ -1,5 +1,5 @@
+import { mintAuthToken } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
-import { commands } from 'vitest/browser';
 import type { UcAiImageEditorType } from './harness';
 import { clickSend, mount, recordRequests, STAGING, typePrompt } from './harness';
 
@@ -42,7 +42,7 @@ describe('<uc-ai-image-editor> authToken', () => {
 
   it('signs once authToken is set and stops once it is unset', async () => {
     const { auth, results } = recordRequests();
-    const token = await commands.mintAuthToken('plain');
+    const token = await mintAuthToken({ tokenId: 'plain' });
     const el = mount(STAGING);
     el.authToken = token;
     await el.updateComplete;
@@ -59,7 +59,7 @@ describe('<uc-ai-image-editor> authToken', () => {
 
   it('sends a plain token on every request', async () => {
     const { auth, results } = recordRequests();
-    const token = await commands.mintAuthToken('plain');
+    const token = await mintAuthToken({ tokenId: 'plain' });
     const el = mount(STAGING);
     el.authToken = token;
     await el.updateComplete;
@@ -74,7 +74,7 @@ describe('<uc-ai-image-editor> authToken', () => {
     // Standalone, the editor owns the cache: a generate makes several
     // authenticated requests and must not ask the app for a token each time.
     const { auth, results } = recordRequests();
-    const token = await commands.mintAuthToken('fetched');
+    const token = await mintAuthToken({ tokenId: 'fetched' });
     const fetchToken = vi.fn(async () => token);
     const el = mount(STAGING);
     el.authToken = fetchToken;
@@ -90,7 +90,10 @@ describe('<uc-ai-image-editor> authToken', () => {
   it('keeps the cached token when the function identity changes', async () => {
     // A React parent hands over a new closure on every render.
     const { auth, results } = recordRequests();
-    const [firstToken, secondToken] = [await commands.mintAuthToken('first'), await commands.mintAuthToken('second')];
+    const [firstToken, secondToken] = [
+      await mintAuthToken({ tokenId: 'first' }),
+      await mintAuthToken({ tokenId: 'second' }),
+    ];
     const first = vi.fn(async () => firstToken);
     const el = mount(STAGING);
     el.authToken = first;
@@ -110,7 +113,7 @@ describe('<uc-ai-image-editor> authToken', () => {
     // The escape hatch for a sign-out, and the only recovery when a token's
     // `exp` cannot be read and so never goes stale on its own.
     const { results } = recordRequests();
-    const token = await commands.mintAuthToken('fetched');
+    const token = await mintAuthToken({ tokenId: 'fetched' });
     const fetchToken = vi.fn(async () => token);
     const el = mount(STAGING);
     el.authToken = fetchToken;
@@ -128,7 +131,7 @@ describe('<uc-ai-image-editor> authToken', () => {
     // What the file-uploader plugin sets: the uploader already caches, so the
     // editor must resolve through to it rather than hold its own copy.
     const { results } = recordRequests();
-    const token = await commands.mintAuthToken('fetched');
+    const token = await mintAuthToken({ tokenId: 'fetched' });
     const fetchToken = vi.fn(async () => token);
     const el = mount(STAGING);
     el.cacheAuthToken = false;
@@ -144,7 +147,7 @@ describe('<uc-ai-image-editor> authToken', () => {
     // What the File Uploader plugin hands over: the uploader's cache, which
     // the editor must use rather than wrap in a second one.
     const { auth, results } = recordRequests();
-    const token = await commands.mintAuthToken('provider');
+    const token = await mintAuthToken({ tokenId: 'provider' });
     const getToken = vi.fn(async () => token);
     const invalidate = vi.fn();
     const el = mount(STAGING);

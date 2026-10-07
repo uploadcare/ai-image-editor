@@ -1,8 +1,7 @@
 // TEMPORARY: `@uploadcare/api-emulator` is a `file:` dependency on an unreleased
 // checkout (see packages/ai-image-editor/package.json); swap it for a version
 // range once the package ships, and drop this comment.
-import { handle, SIGNED_UPLOADS_SECRET_KEY } from '@uploadcare/api-emulator';
-import { generateAuthToken } from '@uploadcare/signed-uploads/server';
+import { DEMO_FILES, handle } from '@uploadcare/api-emulator';
 import { vi } from 'vitest';
 
 /**
@@ -34,9 +33,5 @@ export const emulatorFetch = () => {
 export const plainTextFailure = (status: number, statusText: string) =>
   vi.fn<typeof fetch>().mockResolvedValue(new Response('upstream failure', { status, statusText }));
 
-/** A Bearer token the emulator accepts; `id` keeps two tokens minted in the same second apart. */
-export const mintAuthToken = (id = 'token') =>
-  generateAuthToken(SIGNED_UPLOADS_SECRET_KEY, { lifetime: 60_000, tokenId: id });
-
 /** A stored image every fresh emulator session starts with. */
-export const SEEDED_IMAGE_UUID = '49b4c5a1-31b3-4349-ba07-d97a2d883c37';
+export const SEEDED_IMAGE_UUID = DEMO_FILES[0];

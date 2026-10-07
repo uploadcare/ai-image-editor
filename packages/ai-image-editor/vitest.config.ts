@@ -1,6 +1,5 @@
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
-import { emulatorCommands } from './tests/commands';
 
 export default defineConfig({
   test: {
@@ -24,7 +23,6 @@ export default defineConfig({
             instances: [{ browser: 'chromium' }],
             enabled: true,
             headless: true,
-            commands: emulatorCommands,
           },
         },
       },

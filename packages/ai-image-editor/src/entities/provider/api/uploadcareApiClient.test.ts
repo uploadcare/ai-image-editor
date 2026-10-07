@@ -1,8 +1,8 @@
 // TEMPORARY: file: dependency, see emulator.testing.ts.
-import { type EmulatorSession, resetSession } from '@uploadcare/api-emulator';
+import { type EmulatorSession, mintAuthToken, resetSession } from '@uploadcare/api-emulator';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiProviderError } from '../model/types';
-import { emulatorFetch, mintAuthToken, plainTextFailure, SEEDED_IMAGE_UUID } from './emulator.testing';
+import { emulatorFetch, plainTextFailure, SEEDED_IMAGE_UUID } from './emulator.testing';
 import { UploadcareApiClient } from './uploadcareApiClient';
 
 const PUBLIC_KEY = 'demopublickey';
@@ -28,7 +28,7 @@ describe('UploadcareApiClient', () => {
     });
 
     it('sends a plain token as a bearer header', async () => {
-      const token = mintAuthToken();
+      const token = await mintAuthToken();
       const fetchImpl = emulatorFetch();
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: fetchImpl, authToken: token });
 
@@ -38,7 +38,7 @@ describe('UploadcareApiClient', () => {
     });
 
     it('re-resolves a resolver per request, so a job can rotate tokens mid-flight', async () => {
-      const [first, second] = [mintAuthToken('first'), mintAuthToken('second')];
+      const [first, second] = [await mintAuthToken({ tokenId: 'first' }), await mintAuthToken({ tokenId: 'second' })];
       const fetchImpl = emulatorFetch();
       const authToken = vi.fn().mockResolvedValueOnce(first).mockResolvedValueOnce(second);
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, fetch: fetchImpl, authToken });
