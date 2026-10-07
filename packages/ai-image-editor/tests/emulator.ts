@@ -1,4 +1,3 @@
-// TEMPORARY: file: dependency, see src/entities/provider/api/emulator.testing.ts.
 import type { EmulatorSession } from '@uploadcare/api-emulator';
 import { setupEmulator } from '@uploadcare/api-emulator/browser';
 import { beforeEach } from 'vitest';

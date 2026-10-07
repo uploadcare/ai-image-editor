@@ -1,4 +1,3 @@
-// TEMPORARY: file: dependency, see src/entities/provider/api/emulator.testing.ts.
 import { DEMO_FILES } from '@uploadcare/api-emulator';
 import { afterEach, beforeEach } from 'vitest';
 import { page } from 'vitest/browser';

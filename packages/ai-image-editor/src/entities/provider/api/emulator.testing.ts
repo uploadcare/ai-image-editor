@@ -1,6 +1,3 @@
-// TEMPORARY: `@uploadcare/api-emulator` is a `file:` dependency on an unreleased
-// checkout (see packages/ai-image-editor/package.json); swap it for a version
-// range once the package ships, and drop this comment.
 import { DEMO_FILES, handle } from '@uploadcare/api-emulator';
 import { vi } from 'vitest';
 

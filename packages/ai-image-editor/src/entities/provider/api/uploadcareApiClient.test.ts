@@ -1,4 +1,3 @@
-// TEMPORARY: file: dependency, see emulator.testing.ts.
 import { type EmulatorSession, mintAuthToken, resetSession } from '@uploadcare/api-emulator';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiProviderError } from '../model/types';
