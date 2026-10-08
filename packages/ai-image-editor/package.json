@@ -62,7 +62,7 @@
     "@custom-elements-manifest/to-markdown": "^0.1.0",
     "@uploadcare/api-emulator": "file:/Users/nd0ut/workspace/uc-586-sync/packages/api-emulator",
     "@uploadcare/file-uploader": "1.34.0",
-    "@vitest/browser-playwright": "^4.1.10",
+    "@vitest/browser-playwright": "^4.1.11",
     "lit-analyzer": "^2.0.3",
     "playwright": "^1.49.0",
     "typedoc": "^0.28.19",
