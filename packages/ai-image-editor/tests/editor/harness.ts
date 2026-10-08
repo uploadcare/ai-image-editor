@@ -16,66 +16,17 @@ import { cleanup } from '../test-renderer';
 export { UcAiImageEditor };
 export type { UcAiImageEditorType };
 
-let restoreFetch: (() => void) | null = null;
-
 /** Generations finish on their first status poll, so a test doesn't sit through the editor's 1.5s interval. */
 beforeEach(() => {
   session.use('derivativesInstant');
 });
 
 afterEach(() => {
-  restoreFetch?.();
-  restoreFetch = null;
   // Persisted history is namespaced by pubkey in localStorage; clear it so a
   // seeded/recorded lineage in one test can't leak into the next.
   localStorage.clear();
   cleanup();
 });
-
-/** The page's own fetch, which `tests/emulator.ts` answers from the emulator. */
-const realFetch = globalThis.fetch.bind(globalThis);
-
-/**
- * Swap `globalThis.fetch` for the rest of the test. The provider binds
- * `globalThis.fetch` at construction, so install it BEFORE setting `pubkey`.
- */
-function installFetch(handler: typeof fetch): void {
-  restoreFetch?.();
-  globalThis.fetch = handler;
-  restoreFetch = () => {
-    globalThis.fetch = realFetch;
-  };
-}
-
-/**
- * Record what the editor sends to (and gets back from) the derivative API, which
- * the emulator answers. Install BEFORE setting `pubkey`, like `installFetch`.
- */
-export function recordRequests(): {
-  /** Every derivative POST body, in order. */
-  generateBodies: Array<Record<string, unknown>>;
-  /** The Authorization header of every request, in order. */
-  auth: Array<string | null>;
-  /** The uuid of every finished result, in order. */
-  results: string[];
-} {
-  const generateBodies: Array<Record<string, unknown>> = [];
-  const auth: Array<string | null> = [];
-  const results: string[] = [];
-  installFetch(async (input, init) => {
-    const response = await realFetch(input, init);
-    // Recorded once answered, so a test waiting on a count waits for the answer too.
-    auth.push(new Headers(init?.headers).get('Authorization'));
-    if (init?.method === 'POST') generateBodies.push(JSON.parse(init.body as string));
-    const frame = await response
-      .clone()
-      .json()
-      .catch(() => null);
-    if (frame?.status === 'success' && frame.is_ready) results.push(frame.uuid);
-    return response;
-  });
-  return { generateBodies, auth, results };
-}
 
 export function mount(attrs: Record<string, string> = {}): UcAiImageEditorType {
   const el = document.createElement('uc-ai-image-editor') as UcAiImageEditorType;

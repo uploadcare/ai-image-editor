@@ -98,7 +98,11 @@ responses.
   `tests/emulator.ts` emulates Uploadcare's hosts and `cdn.example.com` (the
   tests' CDN cname), fails any other Uploadcare host, passes every
   non-Uploadcare origin through, and resets the session before every test;
-  import `session` from there to register a scenario or preset. The editor
+  import `session` from there to register a scenario or preset, or to read
+  what the editor sent (`requests`) and what a run produced (`files`; the
+  harness's `resultUuid()` answers the one that isn't a `DEMO_FILES` image).
+  A test that checks what the editor passed `fetch` itself uses
+  `vi.spyOn(globalThis, 'fetch')` and restores it after the test. The editor
   tests apply the `derivativesInstant` preset (`tests/editor/harness.ts`) so
   a generation finishes on its first poll instead of after the editor's 1.5s
   interval several times over.

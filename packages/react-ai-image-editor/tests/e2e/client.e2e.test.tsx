@@ -8,7 +8,7 @@ import { AiImageEditor, preloadAiImageEditor } from '../../src';
 import { setupContainers } from '../support/containers';
 
 // The real element talks to Uploadcare APIs once connected; stub the network
-// so tests are hermetic (same approach as packages/ai-image-editor e2e tests).
+// so tests are hermetic.
 const realFetch = globalThis.fetch;
 beforeAll(() => {
   globalThis.fetch = (async () =>
