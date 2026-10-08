@@ -117,9 +117,13 @@ responses.
   a job stuck in `processing` or a poll that hangs is a scenario, not a stub.
   Stub `fetch` only where it is simpler, and say why next to it.
 
-The dependency is a TEMPORARY `file:` link to an unreleased checkout, so
-`npm ci` only resolves it on that machine; swap it for a version once the
-package ships.
+The React wrapper's e2e project runs against the same in-page emulator
+(`packages/react-ai-image-editor/tests/e2e/setup.ts`), so a request the
+element starts making there fails loudly instead of reaching the network.
+
+In both packages the dependency is a TEMPORARY `file:` link to an unreleased
+checkout, so `npm ci` only resolves it on that machine; swap it for a version
+once the package ships.
 
 ## Docs layout
 
