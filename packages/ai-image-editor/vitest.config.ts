@@ -1,4 +1,5 @@
 import { playwright } from '@vitest/browser-playwright';
+import { msw } from 'msw/vite';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -15,6 +16,9 @@ export default defineConfig({
       },
       {
         extends: true,
+        // Serves msw 3's /mockServiceWorker.js, which the browser emulator registers, from this repo's msw
+        // rather than whichever copy @vitest/browser happens to resolve.
+        plugins: [msw({ mode: 'worker-only' })],
         test: {
           name: 'e2e',
           include: ['tests/**/*.test.{ts,tsx}'],
