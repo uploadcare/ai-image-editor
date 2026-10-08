@@ -1,12 +1,29 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { DEMO_FILES } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
-import { clickSend, editorMode, mount, recordRequests, SAMPLE_UUID, STAGING, typePrompt } from './harness';
+import type { UcAiImageEditorType } from './harness';
+import { clickPrimary, clickSend, editorMode, mount, primaryBtn, SAMPLE_UUID, STAGING, typePrompt } from './harness';
 
-/** What the result is named: the source's name, a resolver, or a fixed string. */
+/**
+ * What the result is named: the source's name, a resolver, or a fixed string.
+ * The emulator stores a result under the name the editor asked for, so the
+ * committed file's `originalFilename` is the name the run produced.
+ */
 describe('<uc-ai-image-editor> result filename', () => {
+  /** Runs the test's one generation, commits it, and answers the committed file's name. */
+  const producedFilename = async (el: UcAiImageEditorType, prompt: string) => {
+    typePrompt(el, prompt);
+    await el.updateComplete;
+    clickSend(el);
+    // The primary commits a result, so it is enabled once the run has one.
+    await vi.waitFor(() => expect(primaryBtn(el).disabled).toBe(false));
+    const onDone = vi.fn();
+    el.addEventListener('uc:done', onDone);
+    clickPrimary(el);
+    return (onDone.mock.calls[0]![0].detail.file as UploadcareFile).originalFilename;
+  };
+
   it('names the result after the source file in edit mode (preserves the original name)', async () => {
-    const stub = recordRequests();
     const el = mount(STAGING);
     // Inject the source's file info (as the plugin does) — it carries the uuid
     // (→ edit mode) and its originalFilename is the default output name.
@@ -18,16 +35,11 @@ describe('<uc-ai-image-editor> result filename', () => {
     await el.updateComplete;
     expect(editorMode(el)).toBe('edit');
 
-    typePrompt(el, 'add a hat');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
     // The edit result is named after the source, not the provider's default.
-    expect(stub.generateBodies[0]!.filename).toBe('holiday-photo.jpg');
+    expect(await producedFilename(el, 'add a hat')).toBe('holiday-photo.jpg');
   });
 
   it('names the result via the outputFilename resolver (original + counter)', async () => {
-    const stub = recordRequests();
     const el = mount(STAGING);
     // A seeded image no test has edited, so no persisted lineage → counter starts at 1.
     el.sourceFileInfo = {
@@ -39,24 +51,14 @@ describe('<uc-ai-image-editor> result filename', () => {
     el.outputFilename = (original, counter) => `${original ?? 'ai'}-edit-${counter}`;
     await el.updateComplete;
 
-    typePrompt(el, 'add a hat');
-    await el.updateComplete;
-    clickSend(el);
-    // Waits for the result too, so the run behind the request succeeded.
-    await vi.waitFor(() => expect(stub.results.length).toBe(1));
-    expect(stub.generateBodies[0]!.filename).toBe('cat.png-edit-1');
+    expect(await producedFilename(el, 'add a hat')).toBe('cat.png-edit-1');
   });
 
   it('uses a static outputFilename string verbatim', async () => {
-    const stub = recordRequests();
     const el = mount(STAGING);
     el.outputFilename = 'my-art.png';
     await el.updateComplete;
 
-    typePrompt(el, 'a sunset');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
-    expect(stub.generateBodies[0]!.filename).toBe('my-art.png');
+    expect(await producedFilename(el, 'a sunset')).toBe('my-art.png');
   });
 });
