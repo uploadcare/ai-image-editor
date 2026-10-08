@@ -9,7 +9,7 @@ import {
   editorMode,
   mount,
   primaryBtn,
-  recordRequests,
+  resultUuid,
   SAMPLE_UUID,
   STAGING,
   typePrompt,
@@ -21,33 +21,30 @@ import {
  */
 describe('<uc-ai-image-editor> generation', () => {
   it('auto-enters edit mode after the first successful generation', async () => {
-    const { results } = recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     expect(editorMode(el)).toBe('generate');
     typePrompt(el, 'a tiger');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(canvasUrl(el)).toContain(`https://cdn.example.com/${results[0]}/`));
+    await vi.waitFor(() => expect(canvasUrl(el)).toContain(`https://cdn.example.com/${resultUuid()}/`));
     await el.updateComplete;
     expect(editorMode(el)).toBe('edit');
   });
 
   it('clears the prompt after a successful generation', async () => {
-    const { results } = recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
     typePrompt(el, 'a tiger');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(canvasUrl(el)).toContain(`https://cdn.example.com/${results[0]}/`));
+    await vi.waitFor(() => expect(canvasUrl(el)).toContain(`https://cdn.example.com/${resultUuid()}/`));
     await el.updateComplete;
     expect(input.value).toBe('');
   });
 
   it('generates via the send button, then the primary commits the result with uc:done', async () => {
-    const { results } = recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
 
@@ -58,7 +55,7 @@ describe('<uc-ai-image-editor> generation', () => {
     await el.updateComplete;
     clickSend(el);
     await vi.waitFor(() => {
-      expect(canvasUrl(el)).toContain(`https://cdn.example.com/${results[0]}/`);
+      expect(canvasUrl(el)).toContain(`https://cdn.example.com/${resultUuid()}/`);
     });
     await el.updateComplete;
 
@@ -69,13 +66,12 @@ describe('<uc-ai-image-editor> generation', () => {
     clickPrimary(el);
     expect(onDone).toHaveBeenCalledTimes(1);
     const detail = onDone.mock.calls[0]![0].detail;
-    expect(detail.url).toBe(`https://cdn.example.com/${results[0]}/`);
-    expect(detail.file.uuid).toBe(results[0]);
-    expect(detail.file.cdnUrl).toBe(`https://cdn.example.com/${results[0]}/`);
+    expect(detail.url).toBe(`https://cdn.example.com/${resultUuid()}/`);
+    expect(detail.file.uuid).toBe(resultUuid());
+    expect(detail.file.cdnUrl).toBe(`https://cdn.example.com/${resultUuid()}/`);
   });
 
   it('includes the UploadcareFile and its uuid in uc:done after a generation', async () => {
-    const { results } = recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     const onDone = vi.fn();
@@ -84,13 +80,13 @@ describe('<uc-ai-image-editor> generation', () => {
     typePrompt(el, 'make it pop');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(canvasUrl(el)).toContain(`https://cdn.example.com/${results[0]}/`));
+    await vi.waitFor(() => expect(canvasUrl(el)).toContain(`https://cdn.example.com/${resultUuid()}/`));
     await el.updateComplete;
 
     clickPrimary(el);
     expect(onDone).toHaveBeenCalledTimes(1);
-    expect(onDone.mock.calls[0]![0].detail.file.uuid).toBe(results[0]);
-    expect(onDone.mock.calls[0]![0].detail.uuid).toBe(results[0]);
+    expect(onDone.mock.calls[0]![0].detail.file.uuid).toBe(resultUuid());
+    expect(onDone.mock.calls[0]![0].detail.uuid).toBe(resultUuid());
   });
 
   it('reports a refused run with uc:error and its message, and keeps the prompt', async () => {
@@ -118,7 +114,6 @@ describe('<uc-ai-image-editor> generation', () => {
   });
 
   it.skip('fires uc:change as the current result appears and clears', async () => {
-    const { results } = recordRequests();
     const el = mount(STAGING);
     await el.updateComplete;
     const onChange = vi.fn();
@@ -131,8 +126,8 @@ describe('<uc-ai-image-editor> generation', () => {
       expect(onChange).toHaveBeenCalledTimes(1);
     });
     const first = onChange.mock.calls[0]![0].detail;
-    expect(first.result.url).toBe(`https://cdn.example.com/${results[0]}/`);
-    expect(first.result.file.uuid).toBe(results[0]);
+    expect(first.result.url).toBe(`https://cdn.example.com/${resultUuid()}/`);
+    expect(first.result.file.uuid).toBe(resultUuid());
 
     // Start over clears the current result -> uc:change with null.
     await el.updateComplete;
@@ -179,7 +174,6 @@ describe('<uc-ai-image-editor> generation', () => {
   });
 
   it('applies an async secure-delivery resolver to the canvas preview', async () => {
-    const { results } = recordRequests();
     const el = mount(STAGING);
     el.secureDeliveryProxyUrlResolver = async (url: string) => `https://signed.example/${encodeURIComponent(url)}`;
     await el.updateComplete;
@@ -188,7 +182,7 @@ describe('<uc-ai-image-editor> generation', () => {
     clickSend(el);
     await vi.waitFor(() =>
       expect(canvasUrl(el)).toContain(
-        `https://signed.example/${encodeURIComponent(`https://cdn.example.com/${results[0]}/`)}`,
+        `https://signed.example/${encodeURIComponent(`https://cdn.example.com/${resultUuid()}/`)}`,
       ),
     );
   });
