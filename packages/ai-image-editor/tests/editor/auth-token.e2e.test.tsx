@@ -13,8 +13,7 @@ import { clickSend, historyEl, mount, STAGING, typePrompt } from './harness';
  */
 describe('<uc-ai-image-editor> authToken', () => {
   beforeEach(() => {
-    // derivativesInstant again, so it wraps the signing gate like it did the plain routes.
-    session.use('signedUploads').use('derivativesInstant');
+    session.use('signedUploads');
   });
 
   /**
