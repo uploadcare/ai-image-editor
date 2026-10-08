@@ -1,11 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
-import { clickSend, editorMode, mount, recordRequests, SAMPLE_UUID, STAGING, typePrompt } from './harness';
+import { session } from '../emulator';
+import { clickSend, editorMode, mount, SAMPLE_UUID, STAGING, typePrompt } from './harness';
+
+/**
+ * The body of every derivative POST (generate or edit) the emulator received. The
+ * emulator ignores the ratio, so the request is the only place it shows.
+ */
+const derivativeBodies = (): Promise<Array<Record<string, unknown>>> =>
+  Promise.all(
+    session.requests
+      .filter((request) => request.method === 'POST' && new URL(request.url).pathname.startsWith('/derivative/'))
+      .map((request) => request.clone().json()),
+  );
 
 /** The ratio picker: what it offers per mode, what it sends, what it restores. */
 describe('<uc-ai-image-editor> aspect ratio', () => {
   it('renders the aspect-ratio picker in generate mode (no Auto) and sends the selected ratio', async () => {
-    const stub = recordRequests();
-    const el = mount({ ...STAGING, 'aspect-ratios': '16:9 1:1' });
+    // 3:2: neither the picker's default (the first ratio) nor the provider's fallback (1:1).
+    const el = mount({ ...STAGING, 'aspect-ratios': '16:9 3:2' });
     await el.updateComplete;
 
     const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
@@ -17,18 +29,18 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
     const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
     expect(options.length).toBe(2);
 
-    // Pick the second option (1:1) before the only generate — sending flips to edit.
+    // Pick the second option (3:2) before the only generate — sending flips to edit.
     options[1]!.click();
     await el.updateComplete;
     typePrompt(el, 'mountain');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
-    expect(stub.generateBodies[0]!.aspect_ratio).toEqual([1, 1]);
+    await vi.waitFor(async () => expect(await derivativeBodies()).toHaveLength(1));
+    const [body] = await derivativeBodies();
+    expect(body!.aspect_ratio).toEqual([3, 2]);
   });
 
   it('defaults edit mode to "Auto" and omits aspect_ratio (preserving the source AR)', async () => {
-    const stub = recordRequests();
     const el = mount(STAGING);
     el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
@@ -46,10 +58,11 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
     typePrompt(el, 'add a hat');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
+    await vi.waitFor(async () => expect(await derivativeBodies()).toHaveLength(1));
+    const [body] = await derivativeBodies();
     // Auto is the default → no aspect_ratio on the wire; backend preserves it.
-    expect(stub.generateBodies[0]!.aspect_ratio).toBeUndefined();
-    expect(stub.generateBodies[0]!.source).toBe(SAMPLE_UUID);
+    expect(body!.aspect_ratio).toBeUndefined();
+    expect(body!.source).toBe(SAMPLE_UUID);
   });
 
   it('renders the aspect-ratio picker in edit mode too', async () => {
@@ -61,7 +74,6 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
   });
 
   it('sends an explicit ratio when the user reshapes in edit mode', async () => {
-    const stub = recordRequests();
     const el = mount({ ...STAGING, 'aspect-ratios': '1:1' });
     el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
@@ -78,8 +90,9 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
     typePrompt(el, 'make it square');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() => expect(stub.generateBodies.length).toBe(1));
-    expect(stub.generateBodies[0]!.aspect_ratio).toEqual([1, 1]);
+    await vi.waitFor(async () => expect(await derivativeBodies()).toHaveLength(1));
+    const [body] = await derivativeBodies();
+    expect(body!.aspect_ratio).toEqual([1, 1]);
   });
 
   it('records the aspect ratio on a history entry and restores it when re-selected', async () => {
