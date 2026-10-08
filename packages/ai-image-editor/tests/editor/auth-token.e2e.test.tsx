@@ -44,8 +44,9 @@ describe('<uc-ai-image-editor> authToken', () => {
   };
 
   it.each([undefined, null, ''])('signs nothing when authToken is %p', async (value) => {
-    // The common case: a project without signing. The provider gets no token
-    // function, so nothing has to stand in for a missing token.
+    // No token function reaches the provider, so no header is sent at all: a
+    // missing header is SignatureRequiredError, while an empty 'Bearer ' would
+    // be AccessTokenInvalidError.
     const el = mount(STAGING);
     el.authToken = value as unknown as undefined;
     await el.updateComplete;
