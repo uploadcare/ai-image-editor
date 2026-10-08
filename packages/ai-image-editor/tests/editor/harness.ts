@@ -95,6 +95,10 @@ export const STAGING = { pubkey: 'demopublickey', 'cdn-cname': 'https://cdn.exam
 /** An image every fresh emulator session already holds. */
 export const SAMPLE_UUID = DEMO_FILES[0];
 
+/** The file the test's run produced: the one in the session that isn't a seeded `DEMO_FILES` image. */
+export const resultUuid = (): string | undefined =>
+  [...session.files.keys()].find((uuid) => !DEMO_FILES.includes(uuid));
+
 export function typePrompt(el: UcAiImageEditorType, value: string): void {
   const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
   input.value = value;
