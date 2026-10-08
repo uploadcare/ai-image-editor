@@ -36,6 +36,6 @@ export default defineConfig(({ command }) => {
         },
       },
     },
-    plugins: [dts({ rollupTypes: true, insertTypesEntry: true })],
+    plugins: [dts({ bundleTypes: true, insertTypesEntry: true })],
   };
 });
