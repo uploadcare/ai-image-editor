@@ -1,25 +1,11 @@
 import type { DoneDetail, UcAiImageEditor } from '@uploadcare/ai-image-editor';
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { AiImageEditorError } from '@uploadcare/ai-image-editor/errors';
 import { AiImageEditor, preloadAiImageEditor } from '../../src';
 import { setupContainers } from '../support/containers';
-
-// The real element talks to Uploadcare APIs once connected; stub the network
-// so tests are hermetic.
-const realFetch = globalThis.fetch;
-beforeAll(() => {
-  globalThis.fetch = (async () =>
-    new Response(JSON.stringify({}), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    })) as typeof fetch;
-  return () => {
-    globalThis.fetch = realFetch;
-  };
-});
 
 const makeContainer = setupContainers();
 
