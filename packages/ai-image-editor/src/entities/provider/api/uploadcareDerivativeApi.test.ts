@@ -1,5 +1,6 @@
 import { DEMO_FILES, mintAuthToken } from '@uploadcare/api-emulator';
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
+import type { UploadcareFile } from '@uploadcare/upload-client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { session } from '../../../../tests/specs/setup';
 import { AiProviderError } from '../model/types';
@@ -10,6 +11,10 @@ const CDN = 'https://cdn.example.com';
 const NO_DELAY = { pollIntervalMs: 0 } as const;
 const STATUS_PATH = '/derivative/status/';
 const STATUS = `GET ${STATUS_PATH}`;
+
+/** A result's width over its height. */
+const ratioOf = (file: UploadcareFile) =>
+  (file.imageInfo?.width ?? Number.NaN) / (file.imageInfo?.height ?? Number.NaN);
 
 /** Answers nothing, ever: a request to `route` stays in flight until its caller aborts it. */
 const hang = (route: string) => session.on(route, () => new Promise<never>(() => {}));
@@ -22,19 +27,16 @@ describe('UploadcareDerivativeApi', () => {
     expect(() => new UploadcareDerivativeApi({ publicKey: '' })).toThrow(/publicKey/);
   });
 
-  it('POSTs the prompt + aspect ratio + pub_key to the derivative endpoint', async () => {
+  it('generates an image at the requested aspect ratio', async () => {
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
-    await provider.generate({ prompt: 'a hat', mode: 'generate', aspectRatio: [16, 9] });
+    const { file } = await provider.generate({ prompt: 'a hat', mode: 'generate', aspectRatio: [16, 9] });
+    expect(ratioOf(file)).toBe(16 / 9);
+  });
 
-    expect(session.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/generate/');
-    expect(session.requests[0].method).toBe('POST');
-    expect(session.requests[0].headers.get('Content-Type')).toBe('application/json');
-    expect(await session.requests[0].json()).toMatchObject({
-      pub_key: PUBLIC_KEY,
-      prompt: 'a hat',
-      aspect_ratio: [16, 9],
-      filename: 'generated.png',
-    });
+  it('names the result generated.png when no filename is given', async () => {
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+    const { file } = await provider.generate({ prompt: 'x', mode: 'generate' });
+    expect(file.originalFilename).toBe('generated.png');
   });
 
   it('forwards request metadata to the generate endpoint', async () => {
@@ -55,10 +57,10 @@ describe('UploadcareDerivativeApi', () => {
     expect((await session.requests[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
   });
 
-  it('uses 1:1 when aspectRatio is missing or invalid', async () => {
+  it('generates a square image when aspectRatio is missing', async () => {
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
-    await provider.generate({ prompt: 'x', mode: 'generate' });
-    expect((await session.requests[0].json()).aspect_ratio).toEqual([1, 1]);
+    const { file } = await provider.generate({ prompt: 'x', mode: 'generate' });
+    expect(ratioOf(file)).toBe(1);
   });
 
   it('keeps polling through processing, uploading and an unready success until is_ready', async () => {
@@ -203,7 +205,7 @@ describe('UploadcareDerivativeApi', () => {
   });
 
   describe('edit mode', () => {
-    it('POSTs prompt + source uuid to the edit endpoint and resolves the result', async () => {
+    it('edits the source into a new file at the requested aspect ratio', async () => {
       const provider = new UploadcareDerivativeApi({
         publicKey: PUBLIC_KEY,
         cdnBaseUrl: CDN,
@@ -218,21 +220,19 @@ describe('UploadcareDerivativeApi', () => {
       });
 
       expect(session.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-      expect(await session.requests[0].json()).toMatchObject({
-        pub_key: PUBLIC_KEY,
-        prompt: 'remove the cat',
-        source: DEMO_FILES[0],
-        aspect_ratio: [16, 9],
-      });
       expect(result.uuid).not.toBe(DEMO_FILES[0]);
+      expect(ratioOf(result.file)).toBe(16 / 9);
       expect(result.url).toBe(`${CDN}/${result.uuid}/`);
       expect(result.mode).toBe('edit');
     });
 
-    it('omits aspect_ratio when none is provided', async () => {
+    it("keeps the source's dimensions when no aspectRatio is given", async () => {
       const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
-      await provider.generate({ prompt: 'x', mode: 'edit', source: DEMO_FILES[0] });
-      expect((await session.requests[0].json()).aspect_ratio).toBeUndefined();
+      const source = await provider.getFileInfo(DEMO_FILES[0]);
+      const { file } = await provider.generate({ prompt: 'x', mode: 'edit', source: DEMO_FILES[0] });
+      expect(file.imageInfo).toMatchObject({ width: source.imageInfo?.width, height: source.imageInfo?.height });
+      // The seeded demo image is not square, so a 1:1 default would show here.
+      expect(ratioOf(file)).not.toBe(1);
     });
 
     it('throws (without any request) when an edit has no source uuid', async () => {
