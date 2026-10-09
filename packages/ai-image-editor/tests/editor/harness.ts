@@ -16,7 +16,13 @@ import { cleanup } from '../test-renderer';
 export { UcAiImageEditor };
 export type { UcAiImageEditorType };
 
-/** Generations finish on their first status poll, so a test doesn't sit through the editor's 1.5s interval. */
+/**
+ * Generations finish on their first status poll, so a test doesn't sit through the editor's 1.5s interval.
+ *
+ * Order matters: a preset or `session.on` answers before the ones registered earlier, and derivativesInstant only
+ * speeds up the scenarios registered *before* it (see the emulator README's preset table). A test that adds its own
+ * status scenario, `derivativeFailure` say, applies derivativesInstant again after it to keep instant answers.
+ */
 beforeEach(() => {
   session.use('derivativesInstant');
 });
