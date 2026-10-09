@@ -1,6 +1,7 @@
 import type { EmulatorSession } from '@uploadcare/api-emulator';
 import { setupEmulator } from '@uploadcare/api-emulator/node';
 import { afterAll, beforeEach } from 'vitest';
+import { failOnSchemaDrift } from '../schema-drift';
 
 /**
  * The Uploadcare emulator behind this process's `fetch` and `node:http(s)`, for Uploadcare's hosts and
@@ -16,6 +17,8 @@ export let session: EmulatorSession;
 beforeEach(async () => {
   session = await emulator.reset();
 });
+
+failOnSchemaDrift();
 
 /** Removes the emulator's global patches, so a worker shared with a later file starts clean. */
 afterAll(() => emulator.stop());
