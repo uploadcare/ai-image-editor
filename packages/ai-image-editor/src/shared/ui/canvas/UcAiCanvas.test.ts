@@ -15,23 +15,22 @@ const preloadImg = (el: UcAiCanvas) => el.shadowRoot!.querySelector('img.preload
 const shownImg = (el: UcAiCanvas) => el.shadowRoot!.querySelector('img.canvas__image');
 const errorState = (el: UcAiCanvas) => el.shadowRoot!.querySelector('.error-state');
 const canvasEl = (el: UcAiCanvas) => el.shadowRoot!.querySelector('.canvas')!;
-const isEmpty = (el: UcAiCanvas) => canvasEl(el).classList.contains('is-empty');
-const isLoading = (el: UcAiCanvas) => canvasEl(el).classList.contains('is-loading');
+const canvasClasses = (el: UcAiCanvas) => canvasEl(el).classList;
 
 describe('UcAiCanvas', () => {
   it('preloads the new url before displaying it', async () => {
     const el = await mount('https://example.com/a.png');
     // Before load: empty state (dot grid shown), nothing displayed, preloader present.
-    expect(isEmpty(el)).toBe(true);
+    expect(canvasClasses(el)).toContain('is-empty');
     expect(shownImg(el)).toBeNull();
-    expect(preloadImg(el)).toBeTruthy();
+    expect(preloadImg(el)).not.toBeNull();
 
     preloadImg(el)!.dispatchEvent(new Event('load'));
     await el.updateComplete;
 
     // After load: the image is displayed, empty state cleared, preloader gone.
     expect(shownImg(el)?.getAttribute('src')).toBe('https://example.com/a.png');
-    expect(isEmpty(el)).toBe(false);
+    expect(canvasClasses(el)).not.toContain('is-empty');
     expect(preloadImg(el)).toBeNull();
   });
 
@@ -57,7 +56,7 @@ describe('UcAiCanvas', () => {
     el.ratio = 16 / 9;
     await el.updateComplete;
     // The frame element exists and is the box the image is cropped into.
-    expect(el.shadowRoot!.querySelector('.canvas__frame')).toBeTruthy();
+    expect(el.shadowRoot!.querySelector('.canvas__frame')).not.toBeNull();
   });
 
   describe('frame sizing', () => {
@@ -199,7 +198,7 @@ describe('UcAiCanvas', () => {
     const el = await mount('https://example.com/broken.png');
     preloadImg(el)!.dispatchEvent(new Event('error'));
     await el.updateComplete;
-    expect(errorState(el)).toBeTruthy();
+    expect(errorState(el)).not.toBeNull();
 
     el.url = 'https://example.com/fresh.png';
     await el.updateComplete;
@@ -210,11 +209,11 @@ describe('UcAiCanvas', () => {
 
   it('marks the canvas as loading while busy', async () => {
     const el = await mount(null);
-    expect(isLoading(el)).toBe(false);
+    expect(canvasClasses(el)).not.toContain('is-loading');
     el.busy = true;
     await el.updateComplete;
-    expect(isLoading(el)).toBe(true);
-    expect(isEmpty(el)).toBe(true);
+    expect(canvasClasses(el)).toContain('is-loading');
+    expect(canvasClasses(el)).toContain('is-empty');
   });
 
   describe('fullscreen button', () => {
@@ -256,7 +255,7 @@ describe('UcAiCanvas', () => {
 
       preloadImg(el)!.dispatchEvent(new Event('load'));
       await el.updateComplete;
-      expect(fullscreenBtn(el)).toBeTruthy();
+      expect(fullscreenBtn(el)).not.toBeNull();
     });
 
     it('requests fullscreen on the canvas when clicked', async () => {

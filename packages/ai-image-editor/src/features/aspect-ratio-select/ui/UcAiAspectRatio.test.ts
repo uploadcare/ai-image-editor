@@ -46,7 +46,7 @@ describe('UcAiAspectRatio', () => {
 
   it('disables the trigger while busy', async () => {
     const el = await mount({ busy: true });
-    expect(trigger(el).disabled).toBe(true);
+    expect(trigger(el)).toHaveProperty('disabled', true);
   });
 
   it('renders an Auto entry when one is provided (edit mode)', async () => {

@@ -114,7 +114,7 @@ describe('UploadcareDerivativeApi', () => {
     const err = await provider.generate({ prompt: 'x', mode: 'generate' }).catch((e) => e);
     expect(err).toBeInstanceOf(AiProviderError);
     expect(err.errorCode).toBe('generation_timeout');
-    expect(jobId).toBeTruthy();
+    expect(jobId).toEqual(expect.any(String));
     expect(err.message).toContain(jobId);
   });
 

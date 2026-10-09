@@ -104,8 +104,8 @@ describe('UcAiHistory', () => {
     const el = await mount({ entries: series(7), selectedUuid: 'e6' });
     // ordered oldest→newest is e0…e6; the newest window is e2…e6.
     expect(labelsOf(el)).toEqual(['e2', 'e3', 'e4', 'e5', 'e6']);
-    expect(prev(el)!.disabled).toBe(false); // an older result exists
-    expect(next(el)!.disabled).toBe(true); // already at the newest
+    expect(prev(el)).toHaveProperty('disabled', false); // an older result exists
+    expect(next(el)).toHaveProperty('disabled', true); // already at the newest
   });
 
   it('prev/next step the active result and emit uc:select', async () => {
@@ -155,12 +155,12 @@ describe('UcAiHistory', () => {
 
   it('disables prev at the oldest result and next at the newest', async () => {
     const oldest = await mount({ entries: series(7), selectedUuid: 'e0' });
-    expect(prev(oldest)!.disabled).toBe(true);
-    expect(next(oldest)!.disabled).toBe(false);
+    expect(prev(oldest)).toHaveProperty('disabled', true);
+    expect(next(oldest)).toHaveProperty('disabled', false);
 
     const newest = await mount({ entries: series(7), selectedUuid: 'e6' });
-    expect(prev(newest)!.disabled).toBe(false);
-    expect(next(newest)!.disabled).toBe(true);
+    expect(prev(newest)).toHaveProperty('disabled', false);
+    expect(next(newest)).toHaveProperty('disabled', true);
   });
 
   it('keeps the window steady across unrelated re-renders (fresh array, same selection)', async () => {
@@ -226,7 +226,7 @@ describe('UcAiHistory', () => {
       expect(chips(el)).toHaveLength(9);
       expect(prev(el)).toBeNull();
       expect(next(el)).toBeNull();
-      expect(el.shadowRoot!.querySelector('.chips--carousel')).toBeTruthy();
+      expect(el.shadowRoot!.querySelector('.chips--carousel')).not.toBeNull();
     });
 
     it('selects the chip whose uuid is tapped and emits uc:select', async () => {
@@ -243,7 +243,7 @@ describe('UcAiHistory', () => {
       mockCoarse(false);
       const el = await mount({ entries: series(9), selectedUuid: 'e8' });
       expect(chips(el)).toHaveLength(5);
-      expect(next(el)).toBeTruthy();
+      expect(next(el)).not.toBeNull();
       expect(el.shadowRoot!.querySelector('.chips--carousel')).toBeNull();
     });
   });
