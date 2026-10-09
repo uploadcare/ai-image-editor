@@ -1,4 +1,3 @@
-import { DEMO_FILES } from '@uploadcare/api-emulator';
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { describe, expect, it, vi } from 'vitest';
 import type { UcAiImageEditorType } from './harness';
@@ -39,9 +38,9 @@ describe('<uc-ai-image-editor> result filename', () => {
 
   it('names the result via the outputFilename resolver (original + counter)', async () => {
     const el = mount(STAGING);
-    // A seeded image no test has edited, so no persisted lineage → counter starts at 1.
+    // History is cleared after every test, so the source has no persisted lineage → counter starts at 1.
     el.sourceFileInfo = {
-      uuid: DEMO_FILES[1],
+      uuid: SAMPLE_UUID,
       originalFilename: 'cat.png',
       imageInfo: null,
     } as unknown as UploadcareFile;

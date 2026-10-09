@@ -1,4 +1,4 @@
-import { DEMO_FILES } from '@uploadcare/api-emulator';
+import { ADAPTIVE_IMAGE_UUID, DEMO_FILES, DEMO_IMAGE_UUID } from '@uploadcare/api-emulator';
 import { afterEach, beforeEach, expect } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import type { UcAiImageEditor as UcAiImageEditorType } from '../../src/index';
@@ -43,8 +43,11 @@ export function mount(attrs: Record<string, string> = {}): UcAiImageEditorType {
 
 export const STAGING = { pubkey: 'demopublickey', 'cdn-cname': 'https://cdn.example.com' };
 
-/** An image every fresh emulator session already holds. */
-export const SAMPLE_UUID = DEMO_FILES[0];
+/** An image every fresh emulator session already holds: a stored 136×150 JPEG (not square). */
+export const SAMPLE_UUID = DEMO_IMAGE_UUID;
+
+/** A second seeded image, for a test that switches sources: the same bytes as `SAMPLE_UUID` under another uuid. */
+export const SECOND_SAMPLE_UUID = ADAPTIVE_IMAGE_UUID;
 
 /** The file the test's run produced: the one in the session that isn't a seeded `DEMO_FILES` image. */
 export const resultUuid = (): string | undefined =>
