@@ -1,6 +1,7 @@
 import type { EmulatorSession } from '@uploadcare/api-emulator';
 import { setupEmulator } from '@uploadcare/api-emulator/browser';
 import { beforeEach } from 'vitest';
+import { failOnSchemaDrift } from './schema-drift';
 
 /**
  * The Uploadcare emulator, running in the page, for Uploadcare's hosts and `cdn.example.com` (the CDN cname the
@@ -16,3 +17,5 @@ export let session: EmulatorSession;
 beforeEach(async () => {
   session = await emulator.reset();
 });
+
+failOnSchemaDrift();
