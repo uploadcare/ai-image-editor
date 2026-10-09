@@ -6,6 +6,9 @@ import { UploadcareApiClient } from './uploadcareApiClient';
 
 const PUBLIC_KEY = 'demopublickey';
 
+/** Answers nothing, ever: a request to `route` stays in flight until its caller aborts it. */
+const hang = (route: string) => session.on(route, () => new Promise<never>(() => {}));
+
 describe('UploadcareApiClient', () => {
   it('throws when publicKey is missing', () => {
     expect(() => new UploadcareApiClient({ publicKey: '' })).toThrow(/publicKey/);
@@ -102,12 +105,21 @@ describe('UploadcareApiClient', () => {
       await expect(client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' })).rejects.toThrow(/400/);
     });
 
-    it('forwards the abort signal', async () => {
-      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    it('gives up on a hanging request when the caller aborts', async () => {
+      hang('POST /derivative/image/generate/');
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
-      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png', signal: controller.signal });
-      expect(fetchSpy.mock.calls[0]![1]?.signal).toBe(controller.signal);
+
+      const pending = client.generate({
+        prompt: 'x',
+        aspectRatio: [1, 1],
+        filename: 'f.png',
+        signal: controller.signal,
+      });
+      await vi.waitFor(() => expect(session.requests).toHaveLength(1));
+      controller.abort();
+
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     });
 
     it('sends Accept: application/json', async () => {
@@ -186,12 +198,16 @@ describe('UploadcareApiClient', () => {
       await expect(client.edit({ prompt: 'x', source: 'u', filename: 'f.png' })).rejects.toThrow(/400/);
     });
 
-    it('forwards the abort signal', async () => {
-      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    it('gives up on a hanging request when the caller aborts', async () => {
+      hang('POST /derivative/image/edit/');
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
-      await client.edit({ prompt: 'x', source: DEMO_FILES[0], filename: 'f.png', signal: controller.signal });
-      expect(fetchSpy.mock.calls[0]![1]?.signal).toBe(controller.signal);
+
+      const pending = client.edit({ prompt: 'x', source: DEMO_FILES[0], filename: 'f.png', signal: controller.signal });
+      await vi.waitFor(() => expect(session.requests).toHaveLength(1));
+      controller.abort();
+
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     });
   });
 
@@ -228,13 +244,17 @@ describe('UploadcareApiClient', () => {
       expect(err.errorCode).toBe('job_not_found');
     });
 
-    it('forwards the abort signal', async () => {
-      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    it('gives up on a hanging request when the caller aborts', async () => {
+      hang('GET /derivative/status/');
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const jobId = await startJob(client);
       const controller = new AbortController();
-      await client.getJobStatus(jobId, controller.signal);
-      expect(fetchSpy.mock.calls[1]![1]?.signal).toBe(controller.signal);
+
+      const pending = client.getJobStatus(jobId, controller.signal);
+      await vi.waitFor(() => expect(session.requests).toHaveLength(2));
+      controller.abort();
+
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     });
   });
 });
