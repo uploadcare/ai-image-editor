@@ -406,6 +406,30 @@ describe('UploadcareDerivativeApi', () => {
       await expect(provider.getFileInfo(DEMO_IMAGE_UUID)).rejects.toThrow(/signature/i);
     });
 
+    it('surfaces a token the API cannot read as AccessTokenInvalidError, without polling', async () => {
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, authToken: 'not-a-jwt', ...NO_DELAY });
+
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toMatchObject({
+        name: 'AiProviderError',
+        errorCode: 'AccessTokenInvalidError',
+      });
+      expect(session.requests).toHaveLength(1);
+    });
+
+    it('surfaces a token that expires mid-job as AccessTokenExpiredError on the next poll', async () => {
+      // Two minutes past `exp`, beyond the API's 30s clock leeway.
+      const [fresh, expired] = [await mintAuthToken(), await mintAuthToken({ lifetime: -120_000 })];
+      const authToken = vi.fn().mockResolvedValueOnce(fresh).mockResolvedValue(expired);
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, authToken, ...NO_DELAY });
+
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toMatchObject({
+        name: 'AiProviderError',
+        errorCode: 'AccessTokenExpiredError',
+      });
+      // The start went through on the fresh token; the first poll, on the expired one, ended the job.
+      expect(session.requests).toHaveLength(2);
+    });
+
     it('follows a token that changes, on both network paths', async () => {
       // The provider holds one resolver for its lifetime; whoever owns the
       // token changes what that resolver returns, and nothing is pushed in.
