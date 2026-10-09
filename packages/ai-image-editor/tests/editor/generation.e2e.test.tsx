@@ -11,7 +11,6 @@ import {
   generatedUuid,
   mount,
   promptBox,
-  resultUuid,
   SAMPLE_UUID,
   STAGING,
   sendPrompt,
@@ -93,29 +92,25 @@ describe('<uc-ai-image-editor> generation', () => {
     await expect.element(promptBox()).toHaveValue('a tiger');
   });
 
-  it.skip('fires uc:change as the current result appears and clears', async () => {
+  it('fires uc:change with the result when a run lands, and with null when a new source clears it', async () => {
     const el = mount(STAGING);
-    await el.updateComplete;
     const onChange = vi.fn();
     el.addEventListener('uc:change', onChange);
 
     await sendPrompt('a tiger');
-    await vi.waitFor(() => {
-      expect(onChange).toHaveBeenCalledTimes(1);
+    const uuid = await generatedUuid();
+    await expectCanvasToShow(uuid);
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange.mock.calls[0]![0].detail.result).toMatchObject({
+      url: `https://cdn.example.com/${uuid}/`,
+      file: { uuid },
     });
-    const first = onChange.mock.calls[0]![0].detail;
-    expect(first.result.url).toBe(`https://cdn.example.com/${resultUuid()}/`);
-    expect(first.result.file.uuid).toBe(resultUuid());
 
-    // Start over clears the current result -> uc:change with null.
-    await el.updateComplete;
-    const history = el.shadowRoot!.querySelector('uc-ai-history')!;
-    const startOver = history.shadowRoot!.querySelector('.startover__btn') as HTMLButtonElement;
-    startOver.click();
-    await vi.waitFor(() => {
-      expect(onChange).toHaveBeenCalledTimes(2);
-    });
-    expect(onChange.mock.calls[1]![0].detail.result).toBeNull();
+    // A host handing over another image drops the result: that source has no history to resume.
+    el.sourceUuid = SAMPLE_UUID;
+    await expectCanvasToShow(SAMPLE_UUID);
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange.mock.calls[1]![0].detail).toEqual({ result: null });
   });
 
   it('dispatches uc:cancel when the cancel button is clicked', async () => {
