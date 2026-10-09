@@ -1,8 +1,8 @@
-import type { UploadcareFile } from '@uploadcare/upload-client';
 import { DEMO_FILES } from '@uploadcare/api-emulator';
+import type { UploadcareFile } from '@uploadcare/upload-client';
 import { describe, expect, it, vi } from 'vitest';
 import type { UcAiImageEditorType } from './harness';
-import { clickPrimary, clickSend, editorMode, mount, primaryBtn, SAMPLE_UUID, STAGING, typePrompt } from './harness';
+import { clickDone, doneButton, editorRegion, mount, SAMPLE_UUID, STAGING, sendPrompt } from './harness';
 
 /**
  * What the result is named: the source's name, a resolver, or a fixed string.
@@ -12,14 +12,13 @@ import { clickPrimary, clickSend, editorMode, mount, primaryBtn, SAMPLE_UUID, ST
 describe('<uc-ai-image-editor> result filename', () => {
   /** Runs the test's one generation, commits it, and answers the committed file's name. */
   const producedFilename = async (el: UcAiImageEditorType, prompt: string) => {
-    typePrompt(el, prompt);
-    await el.updateComplete;
-    clickSend(el);
+    await sendPrompt(prompt);
     // The primary commits a result, so it is enabled once the run has one.
-    await vi.waitFor(() => expect(primaryBtn(el).disabled).toBe(false));
+    await expect.element(doneButton()).toBeEnabled();
     const onDone = vi.fn();
     el.addEventListener('uc:done', onDone);
-    clickPrimary(el);
+    await clickDone();
+    expect(onDone).toHaveBeenCalledOnce();
     return (onDone.mock.calls[0]![0].detail.file as UploadcareFile).originalFilename;
   };
 
@@ -32,8 +31,7 @@ describe('<uc-ai-image-editor> result filename', () => {
       originalFilename: 'holiday-photo.jpg',
       imageInfo: null,
     } as unknown as UploadcareFile;
-    await el.updateComplete;
-    expect(editorMode(el)).toBe('edit');
+    await expect.element(editorRegion('edit')).toBeVisible();
 
     // The edit result is named after the source, not the provider's default.
     expect(await producedFilename(el, 'add a hat')).toBe('holiday-photo.jpg');
