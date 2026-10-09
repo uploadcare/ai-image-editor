@@ -40,7 +40,3 @@ declare module 'vitest/browser' {
 export function getCtxName(): string {
   return `test-${Math.random().toString(36).slice(2)}`;
 }
-
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}

@@ -1,7 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { delay } from '../test-renderer';
 import type { UcAiImageEditorType } from './harness';
 import { canvasUrl, clickSend, mount, STAGING, typePrompt } from './harness';
+
+/**
+ * Resolves once a ResizeObserver created now has reported `target`'s current size. Observers are notified in creation
+ * order, so every older one (the host's own) has already handled that layout.
+ */
+const afterResizeObservers = (target: Element) =>
+  new Promise<void>((resolve) => {
+    const observer = new ResizeObserver(() => {
+      observer.disconnect();
+      resolve();
+    });
+    observer.observe(target);
+  });
 
 /** How the host sizes itself: fill vs content, the clamp, and the CDN rendition it picks. */
 describe('<uc-ai-image-editor> sizing', () => {
@@ -107,7 +119,8 @@ describe('<uc-ai-image-editor> sizing', () => {
 
     // …while shrinking keeps the sharper, already-cached one.
     el.style.width = '300px';
-    await delay(120);
+    await afterResizeObservers(el);
+    await el.updateComplete;
     expect(canvasUrl(el)).toContain(`/preview/${size(1000)}x${size(1000)}/`);
   });
 });
