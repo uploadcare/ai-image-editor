@@ -4,6 +4,9 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // Every spy and stubbed global is undone before the next test, so none leaks into a test that runs after it.
+    restoreMocks: true,
+    unstubGlobals: true,
     projects: [
       {
         extends: true,

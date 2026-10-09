@@ -1,14 +1,10 @@
 import { DEMO_FILES, mintAuthToken } from '@uploadcare/api-emulator';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { session } from '../../../../tests/specs/setup';
 import { AiProviderError } from '../model/types';
 import { UploadcareApiClient } from './uploadcareApiClient';
 
 const PUBLIC_KEY = 'demopublickey';
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe('UploadcareApiClient', () => {
   it('throws when publicKey is missing', () => {

@@ -273,20 +273,16 @@ describe('UcAiCanvas', () => {
           }
         },
       );
-      try {
-        const el = await mountWithImage();
-        el.fullsizeUrl = 'https://example.com/full.png';
-        await el.updateComplete;
+      const el = await mountWithImage();
+      el.fullsizeUrl = 'https://example.com/full.png';
+      await el.updateComplete;
 
-        fullscreenBtn(el)!.dispatchEvent(new Event('mouseenter'));
-        expect(created).toEqual(['https://example.com/full.png']);
+      fullscreenBtn(el)!.dispatchEvent(new Event('mouseenter'));
+      expect(created).toEqual(['https://example.com/full.png']);
 
-        // Hovering again must not refetch the same url.
-        fullscreenBtn(el)!.dispatchEvent(new Event('mouseenter'));
-        expect(created).toHaveLength(1);
-      } finally {
-        vi.unstubAllGlobals();
-      }
+      // Hovering again must not refetch the same url.
+      fullscreenBtn(el)!.dispatchEvent(new Event('mouseenter'));
+      expect(created).toHaveLength(1);
     });
 
     it('overlays the fullsize rendition only while fullscreen', async () => {

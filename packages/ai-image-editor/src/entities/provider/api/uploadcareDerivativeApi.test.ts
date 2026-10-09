@@ -1,6 +1,6 @@
 import { DEMO_FILES, mintAuthToken } from '@uploadcare/api-emulator';
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { session } from '../../../../tests/specs/setup';
 import { AiProviderError } from '../model/types';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
@@ -12,10 +12,6 @@ const NO_DELAY = { pollIntervalMs: 0 } as const;
 /** A job that never finishes: every status poll answers `processing`. */
 const neverFinish = () =>
   session.on('GET /derivative/status/', () => Response.json({ type: 'job', status: 'processing' }));
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe('UploadcareDerivativeApi', () => {
   it('throws when publicKey is missing', () => {
