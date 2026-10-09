@@ -1,6 +1,6 @@
 import { playwright } from '@vitest/browser-playwright';
 import { msw } from 'msw/vite';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -37,6 +37,8 @@ export default defineConfig({
         test: {
           name: 'e2e',
           include: ['tests/**/*.test.{ts,tsx}'],
+          // The contract tests run in node, in their own project.
+          exclude: [...configDefaults.exclude, 'tests/contract/**'],
           setupFiles: ['tests/setup.ts'],
           browser: {
             provider: playwright(),
