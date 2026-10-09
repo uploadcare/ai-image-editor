@@ -152,6 +152,12 @@ async function readJson(response: Response, action: string): Promise<unknown> {
       `Uploadcare ${action} failed (${response.status} ${response.statusText})${text ? `: ${text}` : ''}`,
     );
   }
+  // Every derivative endpoint answers a JSON object; anything else (a proxy's HTML page, an empty body) is a failure.
+  if (data === null || typeof data !== 'object') {
+    throw new Error(
+      `Uploadcare ${action} failed (${response.status}): the response is not a JSON object${text ? `: ${text}` : ''}`,
+    );
+  }
   return data;
 }
 

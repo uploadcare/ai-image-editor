@@ -144,6 +144,16 @@ describe('UploadcareDerivativeApi', () => {
       await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/fetch/i);
       expect(statusPolls()).toHaveLength(2);
     });
+
+    it('rejects a status frame that is not a JSON object, and polls no more', async () => {
+      failSecondPoll(() => new Response('<html>Bad gateway</html>', { headers: { 'Content-Type': 'text/html' } }));
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(
+        'Uploadcare generate status failed (200): the response is not a JSON object: <html>Bad gateway</html>',
+      );
+      expect(statusPolls()).toHaveLength(2);
+    });
   });
 
   describe('with the default poll options', () => {
