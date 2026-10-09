@@ -4,10 +4,10 @@ import { beforeEach } from 'vitest';
 
 /**
  * The Uploadcare emulator, running in the page, for Uploadcare's hosts and `cdn.example.com` (the CDN cname the
- * editor tests configure). Any other Uploadcare host fails; every other origin passes through: the uploader tests import an Unsplash image from a URL,
- * and the emulator's `from_url` answers for that source without fetching it.
+ * editor tests configure). Every other origin except the page's own fails, so nothing reaches the real network. The
+ * uploader tests import an Unsplash image from a URL; the emulator's `from_url` answers for it without fetching it.
  */
-const emulator = setupEmulator({ cdnHosts: ['cdn.example.com'], unhandled: 'passthrough' });
+const emulator = setupEmulator({ cdnHosts: ['cdn.example.com'], unhandled: 'error' });
 
 /** The current test's emulator session, for a test that registers a scenario or preset on it. */
 export let session: EmulatorSession;
