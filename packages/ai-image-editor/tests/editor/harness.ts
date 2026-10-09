@@ -78,13 +78,11 @@ export const historyChips = () => page.getByRole('toolbar', { name: 'Recent prom
 export const historyChip = (prompt: string) =>
   page.getByRole('toolbar', { name: 'Recent prompts' }).getByRole('button', { name: prompt, exact: true });
 
-export const fillPrompt = (value: string) => userEvent.fill(promptBox(), value);
-
 export const clickDone = () => userEvent.click(doneButton());
 
 /** Types the prompt and sends it. */
 export async function sendPrompt(value: string): Promise<void> {
-  await fillPrompt(value);
+  await userEvent.fill(promptBox(), value);
   await userEvent.click(sendButton());
 }
 
@@ -97,33 +95,3 @@ export async function generatedUuid(): Promise<string> {
 /** Waits for the canvas to show the CDN rendition of `uuid`. */
 export const expectCanvasToShow = (uuid: string) =>
   expect.element(canvasImage()).toHaveAttribute('src', expect.stringContaining(`https://cdn.example.com/${uuid}/`));
-export function typePrompt(el: UcAiImageEditorType, value: string): void {
-  const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
-  input.value = value;
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
-export function primaryBtn(el: UcAiImageEditorType): HTMLButtonElement {
-  return el.shadowRoot!.querySelector('uc-ai-footer')!.shadowRoot!.querySelector('.btn--primary') as HTMLButtonElement;
-}
-
-/** Footer primary commits the result (fires uc:done). */
-export function clickPrimary(el: UcAiImageEditorType): void {
-  primaryBtn(el).click();
-}
-
-/** The prompt row's send button triggers generation. */
-export function clickSend(el: UcAiImageEditorType): void {
-  const promptRow = el.shadowRoot!.querySelector('uc-ai-prompt-row')!;
-  (promptRow.shadowRoot!.querySelector('.send') as HTMLButtonElement).click();
-}
-
-export const historyEl = (el: UcAiImageEditorType) =>
-  el.shadowRoot!.querySelector('uc-ai-history') as (HTMLElement & { entries: unknown[] }) | null;
-
-export const canvasUrl = (el: UcAiImageEditorType): string | null =>
-  (el.shadowRoot!.querySelector('uc-ai-canvas') as unknown as { url: string | null }).url;
-
-/** The derived editor mode, read off the prompt-row child the editor feeds. */
-export const editorMode = (el: UcAiImageEditorType): string =>
-  (el.shadowRoot!.querySelector('uc-ai-prompt-row') as unknown as { mode: string }).mode;
