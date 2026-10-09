@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import './UcAiCanvas';
 import type { UcAiCanvas } from './UcAiCanvas';
 
@@ -227,6 +227,13 @@ describe('UcAiCanvas', () => {
       HTMLElement.prototype.requestFullscreen = requestFullscreen;
       return requestFullscreen;
     }
+
+    // happy-dom has none of these, so removing them restores it; a stub left behind would show the button in a later test.
+    afterEach(() => {
+      Reflect.deleteProperty(document, 'fullscreenEnabled');
+      Reflect.deleteProperty(document, 'fullscreenElement');
+      Reflect.deleteProperty(HTMLElement.prototype, 'requestFullscreen');
+    });
 
     async function mountWithImage(): Promise<UcAiCanvas> {
       const el = await mount('https://example.com/a.png');
