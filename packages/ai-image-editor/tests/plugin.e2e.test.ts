@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
-import { cleanup, delay, getCtxName } from './test-renderer';
+import { cleanup, getCtxName } from './test-renderer';
 
 const TEST_IMAGE_URL =
   'https://images.unsplash.com/photo-1699102241946-45c5e1937d69?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=640';
@@ -24,7 +24,7 @@ async function renderUploader(plugins: unknown[] = []) {
      <uc-config ctx-name="${ctxName}" pubkey="demopublickey" test-mode debug></uc-config>
      <uc-upload-ctx-provider ctx-name="${ctxName}"></uc-upload-ctx-provider>`,
   );
-  await delay(0);
+  await customElements.whenDefined('uc-config');
   const config = document.querySelector(`uc-config[ctx-name="${ctxName}"]`) as Config;
   config.plugins = plugins;
   return { ctxName, config };
