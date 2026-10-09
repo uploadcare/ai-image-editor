@@ -120,10 +120,8 @@ describe('aspectRatioEquals', () => {
 });
 
 describe('POPULAR_ASPECT_RATIOS', () => {
-  it('contains only valid ratios', () => {
-    for (const ratio of POPULAR_ASPECT_RATIOS) {
-      expect(isValidAspectRatio(ratio)).toBe(true);
-    }
+  it.each(POPULAR_ASPECT_RATIOS)('offers %i:%i, a valid ratio', (w, h) => {
+    expect(isValidAspectRatio([w, h])).toBe(true);
   });
 
   it('contains 1:1', () => {
