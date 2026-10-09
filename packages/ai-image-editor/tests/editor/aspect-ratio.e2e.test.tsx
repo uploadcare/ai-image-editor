@@ -1,18 +1,29 @@
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { describe, expect, it, vi } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import { session } from '../emulator';
 import {
-  canvasUrl,
-  clickPrimary,
-  clickSend,
-  editorMode,
+  clickDone,
+  editorRegion,
+  expectCanvasToShow,
+  generatedUuid,
+  historyChips,
   mount,
-  resultUuid,
   SAMPLE_UUID,
   STAGING,
-  typePrompt,
+  sendPrompt,
   type UcAiImageEditorType,
 } from './harness';
+
+/** The picker's trigger, named "Pick aspect ratio: <selection>". */
+const ratioTrigger = () => page.getByRole('button', { name: /^Pick aspect ratio/ });
+const ratioOptions = () => page.getByRole('listbox', { name: 'Pick aspect ratio' }).getByRole('option');
+
+/** Opens the picker and picks the option named `name`. */
+async function pickRatio(name: string): Promise<void> {
+  await userEvent.click(ratioTrigger());
+  await userEvent.click(ratioOptions().filter({ hasText: name }));
+}
 
 /**
  * Waits for the run's result on the canvas, commits it, and returns the image info of the file `uc:done` hands the
@@ -20,15 +31,10 @@ import {
  * dimensions show which ratio the editor asked for.
  */
 async function committedImage(el: UcAiImageEditorType): Promise<UploadcareFile['imageInfo']> {
-  await vi.waitFor(() => {
-    const uuid = resultUuid();
-    expect(uuid).toBeDefined();
-    expect(canvasUrl(el)).toContain(`/${uuid}/`);
-  });
-  await el.updateComplete;
+  await expectCanvasToShow(await generatedUuid());
   const onDone = vi.fn();
   el.addEventListener('uc:done', onDone);
-  clickPrimary(el);
+  await clickDone();
   expect(onDone).toHaveBeenCalledOnce();
   return (onDone.mock.calls[0]![0] as CustomEvent<{ file: UploadcareFile }>).detail.file.imageInfo;
 }
@@ -39,46 +45,35 @@ const ratioOf = (image: UploadcareFile['imageInfo']) => (image?.width ?? Number.
 /** The ratio picker: what it offers per mode, the shape of the image it produces, what it restores. */
 describe('<uc-ai-image-editor> aspect ratio', () => {
   it('renders the aspect-ratio picker in generate mode (no Auto) and generates at the selected ratio', async () => {
-    // 3:2: neither the picker's default (the first ratio) nor the provider's fallback (1:1).
-    const el = mount({ ...STAGING, 'aspect-ratios': '16:9 3:2' });
-    await el.updateComplete;
-
-    const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
-    expect(ratio).toBeTruthy();
+    // 16:9: neither the generate default (3:2) nor the provider's fallback (1:1).
+    const el = mount({ ...STAGING, 'aspect-ratios': '3:2 16:9' });
 
     // Generate mode offers only the standard ratios — no "Auto".
-    (ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
-    await el.updateComplete;
-    const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
-    expect(options.length).toBe(2);
+    await userEvent.click(ratioTrigger());
+    await expect.poll(() => ratioOptions().elements()).toHaveLength(2);
+    await expect.element(ratioOptions().first()).toHaveTextContent('3:2');
+    await expect.element(ratioOptions().last()).toHaveTextContent('16:9');
 
-    // Pick the second option (3:2) before the only generate — sending flips to edit.
-    options[1]!.click();
-    await el.updateComplete;
-    typePrompt(el, 'mountain');
-    await el.updateComplete;
-    clickSend(el);
-    expect(ratioOf(await committedImage(el))).toBe(3 / 2);
+    // Pick 16:9 before the only generate — sending flips to edit.
+    await userEvent.click(ratioOptions().last());
+    await expect.element(ratioTrigger()).toHaveAccessibleName('Pick aspect ratio: 16:9');
+    await sendPrompt('mountain');
+    expect(ratioOf(await committedImage(el))).toBeCloseTo(16 / 9, 2);
   });
 
   it('defaults edit mode to "Auto", which keeps the dimensions of the source image', async () => {
     const el = mount(STAGING);
     el.sourceUuid = SAMPLE_UUID;
-    await el.updateComplete;
-    expect(editorMode(el)).toBe('edit');
+    await expect.element(editorRegion('edit')).toBeVisible();
+    await expect.element(ratioTrigger()).toHaveAccessibleName('Pick aspect ratio: Auto');
 
-    // The picker leads with an "Auto" entry (square icon, no w:h numbers).
-    const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
-    (ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
-    await el.updateComplete;
-    const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
-    expect(options[0]!.textContent).toContain('Auto');
-    // "Auto" reserves the ratio column but shows no "w:h" numbers.
-    expect(options[0]!.querySelector('.option-ratio')?.textContent).toBe('');
+    // The picker leads with an "Auto" entry, named without any w:h numbers.
+    await userEvent.click(ratioTrigger());
+    await expect.element(ratioOptions().first()).toHaveAccessibleName('Auto');
+    await expect.element(ratioOptions().first()).toHaveAttribute('aria-selected', 'true');
+    await userEvent.keyboard('{Escape}');
 
-    typePrompt(el, 'add a hat');
-    await el.updateComplete;
-    clickSend(el);
+    await sendPrompt('add a hat');
     // Auto is the default → no aspect_ratio is sent, so the result keeps the source's size.
     const source = session.files.get(SAMPLE_UUID)!.image!;
     expect(await committedImage(el)).toMatchObject({ width: source.width, height: source.height });
@@ -87,69 +82,43 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
   it('renders the aspect-ratio picker in edit mode too', async () => {
     const el = mount(STAGING);
     el.sourceUuid = SAMPLE_UUID;
-    await el.updateComplete;
-    expect(editorMode(el)).toBe('edit');
-    expect(el.shadowRoot!.querySelector('uc-ai-aspect-ratio')).toBeTruthy();
+    await expect.element(editorRegion('edit')).toBeVisible();
+    await expect.element(ratioTrigger()).toBeVisible();
   });
 
   it('reshapes the result to a ratio the user picks in edit mode', async () => {
     const el = mount({ ...STAGING, 'aspect-ratios': '1:1' });
     el.sourceUuid = SAMPLE_UUID;
-    await el.updateComplete;
+    await expect.element(editorRegion('edit')).toBeVisible();
 
-    const ratio = el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
-    (ratio.shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
-    await el.updateComplete;
     // [Auto, 1:1] in edit mode — pick the concrete ratio to reshape.
-    const options = Array.from(ratio.shadowRoot!.querySelectorAll('.option')) as HTMLButtonElement[];
-    expect(options.length).toBe(2);
-    options[1]!.click();
-    await el.updateComplete;
+    await userEvent.click(ratioTrigger());
+    await expect.poll(() => ratioOptions().elements()).toHaveLength(2);
+    await userEvent.click(ratioOptions().filter({ hasText: '1:1' }));
+    await expect.element(ratioTrigger()).toHaveAccessibleName('Pick aspect ratio: 1:1');
 
-    typePrompt(el, 'make it square');
-    await el.updateComplete;
-    clickSend(el);
+    await sendPrompt('make it square');
     // The source is not square, so a square result means the 1:1 was sent rather than Auto.
     expect(ratioOf(await committedImage(el))).toBe(1);
   });
 
   it('records the aspect ratio on a history entry and restores it when re-selected', async () => {
     const el = mount({ ...STAGING, 'aspect-ratios': '16:9 1:1' });
-    await el.updateComplete;
-
-    const ratioEl = () => el.shadowRoot!.querySelector('uc-ai-aspect-ratio')!;
-    const selected = () => (ratioEl() as unknown as { selected: unknown }).selected;
-    const pickOption = async (i: number) => {
-      (ratioEl().shadowRoot!.querySelector('.trigger') as HTMLButtonElement).click();
-      await el.updateComplete;
-      (ratioEl().shadowRoot!.querySelectorAll('.option')[i] as HTMLButtonElement).click();
-      await el.updateComplete;
-    };
 
     // Generate with 1:1 (generate options are [16:9, 1:1]).
-    await pickOption(1);
-    expect(selected()).toEqual([1, 1]);
-    typePrompt(el, 'a cat');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
-    await el.updateComplete;
-
-    const history = el.shadowRoot!.querySelector('uc-ai-history') as unknown as {
-      entries: Array<{ ratio: unknown }>;
-    };
-    expect(history.entries[0]!.ratio).toEqual([1, 1]);
+    await pickRatio('1:1');
+    await expect.element(ratioTrigger()).toHaveAccessibleName('Pick aspect ratio: 1:1');
+    await sendPrompt('a cat');
+    await expect.element(editorRegion('edit')).toBeVisible();
+    await expect.element(historyChips().first()).toHaveAccessibleName('a cat');
+    expect(ratioOf(await committedImage(el))).toBe(1);
 
     // Change the ratio after the fact (edit options are [Auto, 16:9, 1:1]).
-    await pickOption(1);
-    expect(selected()).toEqual([16, 9]);
+    await pickRatio('16:9');
+    await expect.element(ratioTrigger()).toHaveAccessibleName('Pick aspect ratio: 16:9');
 
     // Re-selecting the history entry restores the 1:1 ratio it was made with.
-    const entry = history.entries[0];
-    el.shadowRoot!.querySelector('uc-ai-history')!.dispatchEvent(
-      new CustomEvent('uc:select', { detail: { entry }, bubbles: true, composed: true }),
-    );
-    await el.updateComplete;
-    expect(selected()).toEqual([1, 1]);
+    await userEvent.click(historyChips().first());
+    await expect.element(ratioTrigger()).toHaveAccessibleName('Pick aspect ratio: 1:1');
   });
 });
