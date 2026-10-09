@@ -1,14 +1,18 @@
+import { DEMO_FILES } from '@uploadcare/api-emulator';
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { describe, expect, it, vi } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import {
-  canvasUrl,
-  clickSend,
+  canvasImage,
   editorMode,
+  editorRegion,
+  expectCanvasToShow,
+  historyChips,
   historyEl,
   mount,
   SAMPLE_UUID,
   STAGING,
-  typePrompt,
+  sendPrompt,
 } from './harness';
 
 /**
@@ -17,30 +21,17 @@ import {
  */
 describe('<uc-ai-image-editor> history', () => {
   it('populates the history strip after a successful generation', async () => {
-    const el = mount(STAGING);
-    await el.updateComplete;
-    typePrompt(el, 'a tiger');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => {
-      expect(historyEl(el)?.entries.length).toBe(1);
-    });
+    mount(STAGING);
+    await sendPrompt('a tiger');
+    await expect.poll(() => historyChips().elements()).toHaveLength(1);
   });
 
-  it('shows the generated result as a selectable history chip', async () => {
-    const el = mount(STAGING);
-    await el.updateComplete;
-    typePrompt(el, 'a tiger');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(historyEl(el)?.entries.length).toBe(1));
-    await el.updateComplete;
-
-    const history = historyEl(el)!;
-    const chips = history.shadowRoot!.querySelectorAll('.chip');
-    expect(chips.length).toBe(1);
+  it('shows the generated result as a selected history chip named after its prompt', async () => {
+    mount(STAGING);
+    await sendPrompt('a tiger');
     // The current result's chip is marked selected.
-    expect(history.shadowRoot!.querySelector('.chip--selected')).toBeTruthy();
+    await expect.element(historyChips().first()).toHaveAccessibleName('a tiger');
+    await expect.element(historyChips().first()).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows and persists the original image in the history strip when editing (plugin path)', async () => {
@@ -48,16 +39,14 @@ describe('<uc-ai-image-editor> history', () => {
     const el = mount(STAGING);
     // The plugin hands the editor the source's file info directly.
     el.sourceFileInfo = { uuid: SAMPLE_UUID } as UploadcareFile;
-    await el.updateComplete;
-    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
+    await expect.element(editorRegion('edit')).toBeVisible();
 
     // The strip mounts with the original as its base entry — the starting point
-    // you can revert to — once the source's display url has resolved.
-    await vi.waitFor(() => {
-      const strip = historyEl(el) as (HTMLElement & { entries: Array<{ file: { uuid: string } }> }) | null;
-      expect(strip).not.toBeNull();
-      expect(strip!.entries.some((entry) => entry.file.uuid === SAMPLE_UUID)).toBe(true);
-    });
+    // you can revert to — once the source's display url has resolved: one
+    // selected chip showing the source's thumbnail.
+    await expect.poll(() => historyChips().elements()).toHaveLength(1);
+    await expect.element(historyChips().first()).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => historyChips().element().querySelector('img')?.src).toContain(`/${SAMPLE_UUID}/`);
 
     // …and the original is persisted as a root node so it survives a reload.
     const stored = JSON.parse(localStorage.getItem(`uc-ai-image-editor/history/${STAGING.pubkey}`) ?? '{}');
@@ -65,7 +54,8 @@ describe('<uc-ai-image-editor> history', () => {
   });
 
   it('resumes on the latest result (not the original) when reopening a lineage', async () => {
-    const LATEST = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    // A seeded image, so the CDN serves it and the canvas can show it.
+    const LATEST = DEMO_FILES[1]!;
     const key = `uc-ai-image-editor/history/${STAGING.pubkey}`;
     // Seed a prior edit of SAMPLE_UUID into storage (a result whose parent is it).
     localStorage.setItem(
@@ -86,12 +76,11 @@ describe('<uc-ai-image-editor> history', () => {
 
     const el = mount(STAGING);
     el.sourceFileInfo = { uuid: SAMPLE_UUID } as UploadcareFile;
-    await el.updateComplete;
-    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
+    await expect.element(editorRegion('edit')).toBeVisible();
 
     // The canvas (and shimmer) resume on the latest result, not the original.
-    await vi.waitFor(() => expect(canvasUrl(el)).toContain(LATEST));
-    expect(canvasUrl(el)).not.toContain(SAMPLE_UUID);
+    await expectCanvasToShow(LATEST);
+    await expect.element(canvasImage()).not.toHaveAttribute('src', expect.stringContaining(SAMPLE_UUID));
   });
 
   it('does not render Start over in edit mode opened with a source (uploader AI-edit)', async () => {
@@ -109,21 +98,14 @@ describe('<uc-ai-image-editor> history', () => {
   });
 
   it.skip('returns to generate mode after Start over (from the history strip)', async () => {
-    const el = mount(STAGING);
-    await el.updateComplete;
-    typePrompt(el, 'a tiger');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
-    await el.updateComplete;
+    mount(STAGING);
+    await sendPrompt('a tiger');
+    await expect.element(editorRegion('edit')).toBeVisible();
 
-    const history = historyEl(el)!;
-    const startOver = history.shadowRoot!.querySelector('.startover__btn') as HTMLButtonElement;
-    startOver.click();
-    await el.updateComplete;
-    expect(editorMode(el)).toBe('generate');
-    expect(canvasUrl(el)).toBeNull();
+    await userEvent.click(page.getByRole('button', { name: 'Start over' }));
+    await expect.element(editorRegion('generate')).toBeVisible();
+    await expect.element(canvasImage()).not.toBeInTheDocument();
     // Start over also clears the prompt history (the strip unmounts).
-    await vi.waitFor(() => expect(historyEl(el)).toBeNull());
+    await expect.element(page.getByRole('toolbar', { name: 'Recent prompts' })).not.toBeInTheDocument();
   });
 });
