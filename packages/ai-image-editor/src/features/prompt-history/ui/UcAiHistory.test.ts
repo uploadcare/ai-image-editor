@@ -114,6 +114,7 @@ describe('UcAiHistory', () => {
     el.addEventListener('uc:select', onSelect);
 
     prev(el)!.click(); // one older than e6
+    expect(onSelect).toHaveBeenCalledOnce();
     expect((onSelect.mock.calls[0]![0] as CustomEvent).detail.entry.id).toBe('e5');
 
     // The parent restores that result, handing the selection back down.
@@ -236,6 +237,7 @@ describe('UcAiHistory', () => {
       el.addEventListener('uc:select', onSelect);
 
       chips(el)[0]!.click(); // oldest (e0)
+      expect(onSelect).toHaveBeenCalledOnce();
       expect((onSelect.mock.calls[0]![0] as CustomEvent).detail.entry.id).toBe('e0');
     });
 
