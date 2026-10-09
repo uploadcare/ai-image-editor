@@ -28,6 +28,15 @@ function sideOfCanvas(el: UcAiImageEditorType, target: Locator): 'above' | 'belo
   return (box.top + box.bottom) / 2 < (canvas.top + canvas.bottom) / 2 ? 'over-top' : 'over-bottom';
 }
 
+/** Where `target` sits against the prompt box: wholly above or below it, or overlapping it. */
+function sideOfPrompt(target: Locator): 'above' | 'below' | 'overlapping' {
+  const box = rectOf(target);
+  const prompt = rectOf(promptBox());
+  if (box.bottom <= prompt.top) return 'above';
+  if (box.top >= prompt.bottom) return 'below';
+  return 'overlapping';
+}
+
 /** Runs one generation so the history strip mounts. */
 async function generateOnce(): Promise<void> {
   await sendPrompt('a tiger');
@@ -60,74 +69,64 @@ async function transitionsDone(el: UcAiImageEditorType): Promise<void> {
  * how auto-hide docking changes that, measured on the rendered boxes.
  */
 describe('<uc-ai-image-editor> layout', () => {
-  it('places the composer per composer-placement + canvas-fit', async () => {
-    const el = mount(STAGING);
-    el.canvasFit = 'full';
-    el.composerPlacement = 'bottom';
+  // canvas-fit full floats the composer over the canvas; available docks it outside, so the canvas shrinks.
+  it.each([
+    ['full', 'bottom', 'over-bottom'],
+    ['full', 'top', 'over-top'],
+    ['available', 'top', 'above'],
+    ['available', 'bottom', 'below'],
+  ] as const)(
+    'with canvas-fit %s and composer-placement %s, puts the composer %s the canvas',
+    async (fit, placement, side) => {
+      const el = mount(STAGING);
+      el.canvasFit = fit;
+      el.composerPlacement = placement;
+      await expect.poll(() => sideOfCanvas(el, promptBox())).toBe(side);
+    },
+  );
 
-    // canvas-fit full → composer floats over the full canvas.
-    await expect.poll(() => sideOfCanvas(el, promptBox())).toBe('over-bottom');
-
-    el.composerPlacement = 'top';
-    await expect.poll(() => sideOfCanvas(el, promptBox())).toBe('over-top');
-
-    // canvas-fit available → composer docked outside the canvas so the canvas
-    // shrinks. `top` sits above it…
-    el.canvasFit = 'available';
-    el.composerPlacement = 'top';
-    await expect.poll(() => sideOfCanvas(el, promptBox())).toBe('above');
-
-    // …`bottom` below it.
-    el.composerPlacement = 'bottom';
-    await expect.poll(() => sideOfCanvas(el, promptBox())).toBe('below');
-  });
-
-  it('defaults to a docked composer at the bottom', async () => {
+  it('defaults to a docked composer and a toolbar, both below the canvas', async () => {
     const el = mount(STAGING);
     expect(el.composerPlacement).toBe('bottom');
     expect(el.canvasFit).toBe('available');
     await expect.poll(() => sideOfCanvas(el, promptBox())).toBe('below');
+    await expect.poll(() => sideOfCanvas(el, doneButton())).toBe('below');
   });
 
-  it('places the toolbar per toolbar-placement', async () => {
+  // An unknown value falls back to the default (bottom), like the other placement enums.
+  it.each([
+    ['bottom', 'below'],
+    ['top', 'above'],
+    ['junk', 'below'],
+  ] as const)('with toolbar-placement %s, puts the toolbar %s the canvas', async (placement, side) => {
     const el = mount(STAGING);
+    el.toolbarPlacement = placement as UcAiImageEditorType['toolbarPlacement'];
+    await expect.poll(() => sideOfCanvas(el, doneButton())).toBe(side);
+  });
 
-    // Default: toolbar at the bottom (below the canvas).
-    await expect.poll(() => sideOfCanvas(el, doneButton())).toBe('below');
-
-    // Top: toolbar above the canvas.
-    el.toolbarPlacement = 'top';
-    await expect.poll(() => sideOfCanvas(el, doneButton())).toBe('above');
-
-    // None: no toolbar at all; the canvas still renders.
+  it('renders no toolbar with toolbar-placement none, and still renders the canvas', async () => {
+    const el = mount(STAGING);
     el.toolbarPlacement = 'none';
     await expect.element(doneButton()).not.toBeInTheDocument();
     expect(canvasRect(el).height).toBeGreaterThan(0);
-
-    // An unknown value falls back to the default (bottom), like the other
-    // placement enums.
-    el.toolbarPlacement = 'junk' as never;
-    await expect.poll(() => sideOfCanvas(el, doneButton())).toBe('below');
   });
 
-  it('places the history strip per history-placement (overlay composer)', async () => {
-    const el = mount(STAGING);
-    el.canvasFit = 'full'; // relative history rides an overlay composer
-    await generateOnce();
-
-    // composer-above (default): over the canvas, right above the prompt.
-    await expect.poll(() => rectOf(historyStrip()).bottom - rectOf(promptBox()).top).toBeLessThanOrEqual(0);
-    await expect.poll(() => sideOfCanvas(el, historyStrip())).toBe('over-bottom');
-
-    // composer-below: under the prompt.
-    el.historyPlacement = 'composer-below';
-    await expect.poll(() => rectOf(historyStrip()).top - rectOf(promptBox()).bottom).toBeGreaterThanOrEqual(0);
-
-    // canvas-top: pinned to the canvas's top edge, away from the composer at the bottom.
-    el.historyPlacement = 'canvas-top';
-    await expect.poll(() => sideOfCanvas(el, historyStrip())).toBe('over-top');
-    expect(sideOfCanvas(el, promptBox())).toBe('over-bottom');
-  });
+  // An overlay composer (canvas-fit full), which relative history placements ride.
+  it.each([
+    ['composer-above', 'over-bottom', 'above'],
+    ['composer-below', 'over-bottom', 'below'],
+    ['canvas-top', 'over-top', 'above'],
+  ] as const)(
+    'with history-placement %s, puts the history strip %s the canvas and %s the prompt',
+    async (placement, canvasSide, promptSide) => {
+      const el = mount(STAGING);
+      el.canvasFit = 'full';
+      el.historyPlacement = placement;
+      await generateOnce();
+      await expect.poll(() => sideOfCanvas(el, historyStrip())).toBe(canvasSide);
+      await expect.poll(() => sideOfPrompt(historyStrip())).toBe(promptSide);
+    },
+  );
 
   it('pins the history over the canvas when the composer is docked-out', async () => {
     const el = mount(STAGING); // docked at the bottom by default
