@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import type { UcAiImageEditor } from '../src/index';
 import { session } from './emulator';
@@ -63,6 +63,23 @@ beforeAll(async () => {
   UC.defineLocale('de', () => import('@uploadcare/file-uploader/locales/file-uploader/de.js').then((m) => m.default));
   // Registers <uc-ai-image-editor> and sub-elements
   await import('../src/index');
+});
+
+/*
+ * The editor harness forces the dot grid's 2D path with `shimmerConfig = { useWebgl: false }`, but the plugin creates
+ * its own editor, and the canvas picks its backend before a test can reach it. Headless Chromium's WebGL is software
+ * (swiftshader): the generating shimmer's per-frame GL work starves the main thread, which is also where the emulator
+ * answers, so a single edit took ~5s instead of ~0.3s and, under a loaded suite, ran the test past its timeout. With no
+ * webgl2 context on offer the grid falls back to 2D, as it does in a browser without WebGL. Restored after each test.
+ */
+beforeEach(() => {
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (
+    this: HTMLCanvasElement,
+    ...args: Parameters<HTMLCanvasElement['getContext']>
+  ) {
+    return args[0] === 'webgl2' ? null : getContext.apply(this, args);
+  } as HTMLCanvasElement['getContext']);
 });
 
 describe('AiImageEditorPlugin', () => {
