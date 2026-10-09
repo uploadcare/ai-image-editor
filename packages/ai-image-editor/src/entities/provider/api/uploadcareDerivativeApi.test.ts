@@ -266,7 +266,9 @@ describe('UploadcareDerivativeApi', () => {
 
     it('propagates a lookup failure', async () => {
       const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY });
-      await expect(provider.getFileInfo('missing')).rejects.toThrow(/not found/i);
+      // A well-formed uuid the session does not hold: a malformed id would be
+      // refused earlier, as invalid, and never reach the not-found lookup.
+      await expect(provider.getFileInfo('00000000-0000-4000-8000-000000000000')).rejects.toThrow(/not found/i);
     });
   });
 
