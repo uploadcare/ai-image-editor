@@ -34,6 +34,11 @@ describe('UcAiAspectRatio', () => {
     expect(selected[0]!.querySelector('.option-ratio')?.textContent).toBe('3:2');
   });
 
+  it('names the listbox after the picker', async () => {
+    const el = await mount({ labelText: 'Pick aspect ratio' });
+    expect(el.shadowRoot!.querySelector('[role="listbox"]')?.getAttribute('aria-label')).toBe('Pick aspect ratio');
+  });
+
   it('disables the trigger while busy', async () => {
     const el = await mount({ busy: true });
     expect(trigger(el).disabled).toBe(true);
