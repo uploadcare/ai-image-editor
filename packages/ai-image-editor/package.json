@@ -32,6 +32,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:contract:live": "UC_CONTRACT_TARGET=live vitest run --project contract",
     "docs:api": "cem analyze && node scripts/build-cem-docs.mjs && typedoc && node scripts/clean-typedoc-class.mjs",
     "docs:dev": "npm run docs:api && vitepress dev docs",
     "docs:build": "npm run docs:api && vitepress build docs",
