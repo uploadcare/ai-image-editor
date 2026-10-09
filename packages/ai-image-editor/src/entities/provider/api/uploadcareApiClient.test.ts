@@ -244,9 +244,9 @@ describe('UploadcareApiClient', () => {
 
     it('surfaces a platform error envelope (e.g. job_not_found) as an AiProviderError', async () => {
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
-      const err = await client.getJobStatus('job-1').catch((e) => e);
-      expect(err).toBeInstanceOf(AiProviderError);
-      expect(err.errorCode).toBe('job_not_found');
+      const pending = client.getJobStatus('job-1');
+      await expect(pending).rejects.toBeInstanceOf(AiProviderError);
+      await expect(pending).rejects.toMatchObject({ errorCode: 'job_not_found' });
     });
 
     it('gives up on a hanging request when the caller aborts', async () => {
