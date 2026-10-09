@@ -1,5 +1,6 @@
 import type { DoneDetail, UcAiImageEditor } from '@uploadcare/ai-image-editor';
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
 
@@ -133,8 +134,8 @@ it('updated callback props receive events (no stale handlers)', async () => {
   );
 
   const root = roots[roots.length - 1];
-  root.render(<AiImageEditor pubkey="test-pubkey" onCancel={second} />);
-  await new Promise((r) => setTimeout(r, 50));
+  // Commits synchronously, layout effects included, so @lit/react has swapped the listener before the event.
+  flushSync(() => root.render(<AiImageEditor pubkey="test-pubkey" onCancel={second} />));
 
   const el = container.querySelector('uc-ai-image-editor') as UcAiImageEditor;
   el.dispatchEvent(new CustomEvent('uc:cancel'));
