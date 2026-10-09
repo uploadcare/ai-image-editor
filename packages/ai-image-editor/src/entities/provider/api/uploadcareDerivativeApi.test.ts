@@ -135,6 +135,15 @@ describe('UploadcareDerivativeApi', () => {
       await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/503 Service Unavailable/);
       expect(statusPolls()).toHaveLength(2);
     });
+
+    it('rejects with the network error of a dropped connection, and polls no more', async () => {
+      failSecondPoll(() => Response.error());
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+
+      // fetch's own error, untouched: not a provider error and not a timeout.
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/fetch/i);
+      expect(statusPolls()).toHaveLength(2);
+    });
   });
 
   describe('with the default poll options', () => {
