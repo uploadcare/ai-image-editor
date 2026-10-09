@@ -9,6 +9,9 @@ const PUBLIC_KEY = 'demopublickey';
 const CDN = 'https://cdn.example.com';
 const NO_DELAY = { pollIntervalMs: 0 } as const;
 
+/** Answers nothing, ever: a request to `route` stays in flight until its caller aborts it. */
+const hang = (route: string) => session.on(route, () => new Promise<never>(() => {}));
+
 /** A job that never finishes: every status poll answers `processing`. */
 const neverFinish = () =>
   session.on('GET /derivative/status/', () => Response.json({ type: 'job', status: 'processing' }));
@@ -164,41 +167,39 @@ describe('UploadcareDerivativeApi', () => {
     await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/400/);
   });
 
-  it('passes the abort signal to generate and status fetches', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+  it('cancels a job that is still starting when the caller aborts', async () => {
+    hang('POST /derivative/image/generate/');
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     const controller = new AbortController();
-    await provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
-    const signals = fetchSpy.mock.calls.map(([, init]) => init?.signal);
-    expect(signals.length).toBeGreaterThanOrEqual(2);
-    expect(signals.every((s) => s === controller.signal)).toBe(true);
+
+    const pending = provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
+    await vi.waitFor(() => expect(session.requests).toHaveLength(1));
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
   });
 
-  it('stops polling when the signal is aborted mid-flight', async () => {
-    const controller = new AbortController();
-    const emulated = globalThis.fetch;
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
-      const response = await emulated(url, init);
-      // Abort while "processing": the next poll must never happen.
-      if (init?.method === 'GET') controller.abort();
-      return response;
-    });
+  it('cancels a status poll in flight when the caller aborts', async () => {
+    hang('GET /derivative/status/');
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+    const controller = new AbortController();
 
-    await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toThrow(
-      /cancel/i,
-    );
-    // 1 POST + exactly 1 status poll, then it bails — no further polling.
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const pending = provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
+    // The start, then the first status poll.
+    await vi.waitFor(() => expect(session.requests).toHaveLength(2));
+    controller.abort();
+
+    await expect(pending).rejects.toThrow(/cancel/i);
   });
 
-  it('does not start polling when the signal is already aborted', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+  it('sends nothing when the signal is already aborted', async () => {
     const controller = new AbortController();
     controller.abort();
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
-    await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toThrow();
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toMatchObject(
+      { name: 'AbortError' },
+    );
+    expect(session.requests).toHaveLength(0);
   });
 
   describe('edit mode', () => {
