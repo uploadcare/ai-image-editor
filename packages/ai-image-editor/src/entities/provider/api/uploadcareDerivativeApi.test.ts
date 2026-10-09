@@ -111,11 +111,11 @@ describe('UploadcareDerivativeApi', () => {
       pollIntervalMs: 0,
       pollTimeoutMs: 0,
     });
-    const err = await provider.generate({ prompt: 'x', mode: 'generate' }).catch((e) => e);
-    expect(err).toBeInstanceOf(AiProviderError);
-    expect(err.errorCode).toBe('generation_timeout');
+    const pending = provider.generate({ prompt: 'x', mode: 'generate' });
+    await expect(pending).rejects.toBeInstanceOf(AiProviderError);
+    await expect(pending).rejects.toMatchObject({ errorCode: 'generation_timeout' });
     expect(jobId).toEqual(expect.any(String));
-    expect(err.message).toContain(jobId);
+    await expect(pending).rejects.toThrow(jobId);
   });
 
   describe('with the default poll options', () => {
