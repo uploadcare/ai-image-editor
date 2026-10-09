@@ -57,9 +57,17 @@ describe('UploadcareDerivativeApi', () => {
     expect((await session.requests[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
   });
 
-  it('generates a square image when aspectRatio is missing', async () => {
+  it.each([
+    ['missing', undefined],
+    ['not positive', [0, 1]],
+    ['wider than 10:1', [20, 1]],
+  ] as const)('generates a square image when aspectRatio is %s', async (_, aspectRatio) => {
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
-    const { file } = await provider.generate({ prompt: 'x', mode: 'generate' });
+    const { file } = await provider.generate({
+      prompt: 'x',
+      mode: 'generate',
+      aspectRatio: aspectRatio && [...aspectRatio],
+    });
     expect(ratioOf(file)).toBe(1);
   });
 
