@@ -175,16 +175,17 @@ describe('<uc-ai-image-editor> generation', () => {
 
   it('applies an async secure-delivery resolver to the canvas preview', async () => {
     const el = mount(STAGING);
-    el.secureDeliveryProxyUrlResolver = async (url: string) => `https://signed.example/${encodeURIComponent(url)}`;
+    // The signed URL stays on the emulated CDN, so the preview loads instead of reaching for a proxy that doesn't exist.
+    el.secureDeliveryProxyUrlResolver = async (url: string) => `${url}?token=signed`;
     await el.updateComplete;
     typePrompt(el, 'a tiger');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(() =>
-      expect(canvasUrl(el)).toContain(
-        `https://signed.example/${encodeURIComponent(`https://cdn.example.com/${resultUuid()}/`)}`,
-      ),
-    );
+    await vi.waitFor(() => {
+      const url = canvasUrl(el);
+      expect(url).toContain(`https://cdn.example.com/${resultUuid()}/`);
+      expect(url).toMatch(/\?token=signed$/);
+    });
   });
 
   it('aborts in-flight generation and shows the new source when source changes', async () => {
