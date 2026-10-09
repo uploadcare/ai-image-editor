@@ -19,6 +19,18 @@ export default defineConfig({
       },
       {
         extends: true,
+        test: {
+          // The derivative API contract: against the emulator by default, against the real API with
+          // `UC_CONTRACT_TARGET=live` (`npm run test:contract:live`), where a generation takes a while.
+          name: 'contract',
+          include: ['tests/contract/**/*.test.ts'],
+          environment: 'node',
+          setupFiles: ['tests/contract/setup.ts'],
+          testTimeout: process.env.UC_CONTRACT_TARGET === 'live' ? 180_000 : undefined,
+        },
+      },
+      {
+        extends: true,
         // Serves msw 3's /mockServiceWorker.js, which the browser emulator registers, from this repo's msw
         // rather than whichever copy @vitest/browser happens to resolve.
         plugins: [msw({ mode: 'worker-only' })],

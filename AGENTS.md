@@ -106,6 +106,15 @@ responses.
   tests apply the `derivativesInstant` preset (`tests/editor/harness.ts`) so
   a generation finishes on its first poll instead of after the editor's 1.5s
   interval several times over.
+- **Contract** tests (`tests/contract/`, the `contract` project) hold the
+  derivative API to one set of assertions on two targets: the emulator in
+  every `npm test`, and the real `upload.uploadcare.com` with
+  `npm run test:contract:live -w @uploadcare/ai-image-editor`
+  (`UC_CONTRACT_PUBLIC_KEY` required; the run fails without it). CI runs the
+  live target only by hand (the `contract` workflow).
+- In specs, e2e and contract tests, a request or response that fails the
+  client's dev schemas (`uploadcareApiClient.schemas.dev.ts`) fails the test
+  (`tests/schema-drift.ts`).
 - Steer the emulator per test with `session.on()` and `session.use(preset)`
   (`session` from the project's setup file); there are no magic keys,
   prompts or uuids.
