@@ -1,4 +1,4 @@
-import { DEMO_FILES, mintAuthToken } from '@uploadcare/api-emulator';
+import { DEMO_IMAGE_UUID, mintAuthToken } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
 import { session } from '../../../../tests/specs/setup';
 import { AiProviderError } from '../model/types';
@@ -143,7 +143,7 @@ describe('UploadcareApiClient', () => {
     it('POSTs pub_key + prompt + source uuid + filename to the edit endpoint', async () => {
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
-      const job = await client.edit({ prompt: 'remove the cat', source: DEMO_FILES[0], filename: 'edited.png' });
+      const job = await client.edit({ prompt: 'remove the cat', source: DEMO_IMAGE_UUID, filename: 'edited.png' });
 
       expect(job).toEqual({ type: 'job', job_id: expect.any(String) });
       expect(session.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
@@ -151,7 +151,7 @@ describe('UploadcareApiClient', () => {
       expect(await session.requests[0].json()).toMatchObject({
         pub_key: PUBLIC_KEY,
         prompt: 'remove the cat',
-        source: DEMO_FILES[0],
+        source: DEMO_IMAGE_UUID,
         filename: 'edited.png',
       });
     });
@@ -159,8 +159,8 @@ describe('UploadcareApiClient', () => {
     it('includes aspect_ratio only when provided', async () => {
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
-      await client.edit({ prompt: 'x', source: DEMO_FILES[0], filename: 'f.png' });
-      await client.edit({ prompt: 'x', source: DEMO_FILES[0], filename: 'f.png', aspectRatio: [16, 9] });
+      await client.edit({ prompt: 'x', source: DEMO_IMAGE_UUID, filename: 'f.png' });
+      await client.edit({ prompt: 'x', source: DEMO_IMAGE_UUID, filename: 'f.png', aspectRatio: [16, 9] });
 
       expect((await session.requests[0].json()).aspect_ratio).toBeUndefined();
       expect((await session.requests[1].json()).aspect_ratio).toEqual([16, 9]);
@@ -169,10 +169,10 @@ describe('UploadcareApiClient', () => {
     it('includes metadata only when provided', async () => {
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
-      await client.edit({ prompt: 'x', source: DEMO_FILES[0], filename: 'f.png' });
+      await client.edit({ prompt: 'x', source: DEMO_IMAGE_UUID, filename: 'f.png' });
       await client.edit({
         prompt: 'x',
-        source: DEMO_FILES[0],
+        source: DEMO_IMAGE_UUID,
         filename: 'f.png',
         metadata: { source: 'ai-image-editor' },
       });
@@ -203,7 +203,12 @@ describe('UploadcareApiClient', () => {
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
 
-      const pending = client.edit({ prompt: 'x', source: DEMO_FILES[0], filename: 'f.png', signal: controller.signal });
+      const pending = client.edit({
+        prompt: 'x',
+        source: DEMO_IMAGE_UUID,
+        filename: 'f.png',
+        signal: controller.signal,
+      });
       await vi.waitFor(() => expect(session.requests).toHaveLength(1));
       controller.abort();
 

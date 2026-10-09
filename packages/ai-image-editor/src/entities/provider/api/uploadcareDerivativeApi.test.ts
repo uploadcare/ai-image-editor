@@ -1,4 +1,4 @@
-import { DEMO_FILES, mintAuthToken } from '@uploadcare/api-emulator';
+import { DEMO_IMAGE_UUID, mintAuthToken } from '@uploadcare/api-emulator';
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -50,7 +50,7 @@ describe('UploadcareDerivativeApi', () => {
     await provider.generate({
       prompt: 'x',
       mode: 'edit',
-      source: DEMO_FILES[0],
+      source: DEMO_IMAGE_UUID,
       metadata: { source: 'ai-image-editor' },
     });
     expect(session.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
@@ -276,12 +276,12 @@ describe('UploadcareDerivativeApi', () => {
       const result = await provider.generate({
         prompt: 'remove the cat',
         mode: 'edit',
-        source: DEMO_FILES[0],
+        source: DEMO_IMAGE_UUID,
         aspectRatio: [16, 9],
       });
 
       expect(session.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-      expect(result.uuid).not.toBe(DEMO_FILES[0]);
+      expect(result.uuid).not.toBe(DEMO_IMAGE_UUID);
       expect(ratioOf(result.file)).toBe(16 / 9);
       expect(result.url).toBe(`${CDN}/${result.uuid}/`);
       expect(result.mode).toBe('edit');
@@ -289,8 +289,8 @@ describe('UploadcareDerivativeApi', () => {
 
     it("keeps the source's dimensions when no aspectRatio is given", async () => {
       const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
-      const source = await provider.getFileInfo(DEMO_FILES[0]);
-      const { file } = await provider.generate({ prompt: 'x', mode: 'edit', source: DEMO_FILES[0] });
+      const source = await provider.getFileInfo(DEMO_IMAGE_UUID);
+      const { file } = await provider.generate({ prompt: 'x', mode: 'edit', source: DEMO_IMAGE_UUID });
       expect(file.imageInfo).toMatchObject({ width: source.imageInfo?.width, height: source.imageInfo?.height });
       // The seeded demo image is not square, so a 1:1 default would show here.
       expect(ratioOf(file)).not.toBe(1);
@@ -312,10 +312,10 @@ describe('UploadcareDerivativeApi', () => {
     it('waits for the file to be ready and wraps it as an UploadcareFile on the CDN base', async () => {
       const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, cdnBaseUrl: CDN });
 
-      const file = await provider.getFileInfo(DEMO_FILES[0]);
+      const file = await provider.getFileInfo(DEMO_IMAGE_UUID);
 
-      expect(file.uuid).toBe(DEMO_FILES[0]);
-      expect(file.cdnUrl).toBe(`${CDN}/${DEMO_FILES[0]}/`);
+      expect(file.uuid).toBe(DEMO_IMAGE_UUID);
+      expect(file.cdnUrl).toBe(`${CDN}/${DEMO_IMAGE_UUID}/`);
       expect(file.imageInfo).toMatchObject({ width: expect.any(Number), height: expect.any(Number) });
     });
 
@@ -323,7 +323,7 @@ describe('UploadcareDerivativeApi', () => {
       const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
       controller.abort();
-      await expect(provider.getFileInfo(DEMO_FILES[0], controller.signal)).rejects.toThrow(/cancel/i);
+      await expect(provider.getFileInfo(DEMO_IMAGE_UUID, controller.signal)).rejects.toThrow(/cancel/i);
     });
 
     it('propagates a lookup failure', async () => {
@@ -356,7 +356,7 @@ describe('UploadcareDerivativeApi', () => {
       await provider.generate({ prompt: 'x', mode: 'generate' });
       expect(session.requests[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
 
-      await expect(provider.getFileInfo(DEMO_FILES[0])).resolves.toMatchObject({ uuid: DEMO_FILES[0] });
+      await expect(provider.getFileInfo(DEMO_IMAGE_UUID)).resolves.toMatchObject({ uuid: DEMO_IMAGE_UUID });
     });
 
     it('is refused on both network paths without one', async () => {
@@ -365,7 +365,7 @@ describe('UploadcareDerivativeApi', () => {
         ...NO_DELAY,
       });
       await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/signature/i);
-      await expect(provider.getFileInfo(DEMO_FILES[0])).rejects.toThrow(/signature/i);
+      await expect(provider.getFileInfo(DEMO_IMAGE_UUID)).rejects.toThrow(/signature/i);
     });
 
     it('follows a token that changes, on both network paths', async () => {
@@ -382,12 +382,12 @@ describe('UploadcareDerivativeApi', () => {
         new Set(requests.map((request) => request.headers.get('Authorization')));
 
       await provider.generate({ prompt: 'x', mode: 'generate' });
-      await expect(provider.getFileInfo(DEMO_FILES[0])).resolves.toMatchObject({ uuid: DEMO_FILES[0] });
+      await expect(provider.getFileInfo(DEMO_IMAGE_UUID)).resolves.toMatchObject({ uuid: DEMO_IMAGE_UUID });
       const beforeRotation = session.requests.length;
 
       token = second;
       await provider.generate({ prompt: 'x', mode: 'generate' });
-      await expect(provider.getFileInfo(DEMO_FILES[0])).resolves.toMatchObject({ uuid: DEMO_FILES[0] });
+      await expect(provider.getFileInfo(DEMO_IMAGE_UUID)).resolves.toMatchObject({ uuid: DEMO_IMAGE_UUID });
 
       expect(tokensSent(session.requests.slice(0, beforeRotation))).toEqual(new Set([`Bearer ${first}`]));
       expect(tokensSent(session.requests.slice(beforeRotation))).toEqual(new Set([`Bearer ${second}`]));

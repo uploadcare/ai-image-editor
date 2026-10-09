@@ -1,4 +1,3 @@
-import { DEMO_FILES } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { session } from '../emulator';
@@ -12,6 +11,7 @@ import {
   mount,
   promptBox,
   SAMPLE_UUID,
+  SECOND_SAMPLE_UUID,
   STAGING,
   sendPrompt,
 } from './harness';
@@ -161,16 +161,16 @@ describe('<uc-ai-image-editor> generation', () => {
   it('aborts in-flight generation and shows the new source when source changes', async () => {
     // The status poll never answers, so the job is still running when the source changes.
     session.on('GET /derivative/status/', () => new Promise<never>(() => {}));
-    const el = mount({ ...STAGING, 'source-uuid': DEMO_FILES[0] });
+    const el = mount({ ...STAGING, 'source-uuid': SAMPLE_UUID });
     await sendPrompt('try');
     // The prompt box locks while the run is in flight.
     await expect.element(promptBox()).toBeDisabled();
 
     // Change source mid-flight — this aborts the in-flight generation.
-    el.sourceUuid = DEMO_FILES[1];
+    el.sourceUuid = SECOND_SAMPLE_UUID;
 
     // After the abort, the displayed image should be the new source (no result override).
-    await expectCanvasToShow(DEMO_FILES[1]!);
+    await expectCanvasToShow(SECOND_SAMPLE_UUID);
     await expect.element(promptBox()).toBeEnabled();
   });
 });

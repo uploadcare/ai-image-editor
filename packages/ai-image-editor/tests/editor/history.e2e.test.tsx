@@ -1,4 +1,3 @@
-import { DEMO_FILES } from '@uploadcare/api-emulator';
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { describe, expect, it } from 'vitest';
 import {
@@ -8,6 +7,7 @@ import {
   historyChips,
   mount,
   SAMPLE_UUID,
+  SECOND_SAMPLE_UUID,
   STAGING,
   sendPrompt,
 } from './harness';
@@ -52,7 +52,7 @@ describe('<uc-ai-image-editor> history', () => {
 
   it('resumes on the latest result (not the original) when reopening a lineage', async () => {
     // A seeded image, so the CDN serves it and the canvas can show it.
-    const LATEST = DEMO_FILES[1]!;
+    const LATEST = SECOND_SAMPLE_UUID;
     const key = `uc-ai-image-editor/history/${STAGING.pubkey}`;
     // Seed a prior edit of SAMPLE_UUID into storage (a result whose parent is it).
     localStorage.setItem(
