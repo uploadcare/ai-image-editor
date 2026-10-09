@@ -25,27 +25,23 @@ describe('<uc-ai-image-editor> sizing', () => {
 
   it('defaults to fill and reflects the property to the attribute', async () => {
     const el = mount(STAGING);
-    await el.updateComplete;
     expect(el.sizing).toBe('fill');
     el.sizing = 'content';
-    await el.updateComplete;
-    expect(el.getAttribute('sizing')).toBe('content');
+    await expect.element(el).toHaveAttribute('sizing', 'content');
   });
 
   it('keeps an unsized fill host from collapsing (min-height fallback)', async () => {
     const el = mount(STAGING);
-    await el.updateComplete;
-    expect(getComputedStyle(el).minHeight).toBe('480px');
+    await expect.element(el).toHaveStyle({ minHeight: '480px' });
 
     // The mode is CSS-driven, so an unknown value behaves as fill too.
     el.sizing = 'junk' as never;
-    await el.updateComplete;
-    expect(getComputedStyle(el).minHeight).toBe('480px');
+    await expect.element(el).toHaveAttribute('sizing', 'junk');
+    expect(el).toHaveStyle({ minHeight: '480px' });
 
     // Content mode derives its own height instead of guarding a given one.
     el.sizing = 'content';
-    await el.updateComplete;
-    expect(getComputedStyle(el).minHeight).not.toBe('480px');
+    await expect.element(el).not.toHaveStyle({ minHeight: '480px' });
 
     // Plain consumer CSS always beats the :host fallback (shadow-cascade
     // rule: outer-tree declarations win over :host, specificity aside).
@@ -54,8 +50,7 @@ describe('<uc-ai-image-editor> sizing', () => {
     consumerCss.textContent = 'uc-ai-image-editor { min-height: 100px; }';
     document.head.append(consumerCss);
     try {
-      await el.updateComplete;
-      expect(getComputedStyle(el).minHeight).toBe('100px');
+      await expect.element(el).toHaveStyle({ minHeight: '100px' });
     } finally {
       consumerCss.remove();
     }
@@ -63,10 +58,9 @@ describe('<uc-ai-image-editor> sizing', () => {
 
   it('derives its height from the selected ratio at the given width in content mode', async () => {
     const el = mount({ ...STAGING, sizing: 'content', 'aspect-ratios': '1:1', style: 'width: 640px' });
-    await el.updateComplete;
 
     // The stage expresses the frame fit exactly: (640 - 40) / 1 + 40 = 640.
-    await vi.waitFor(() => expect(canvasEl(el).getBoundingClientRect().height).toBeCloseTo(640, 0));
+    await expect.poll(() => canvasEl(el).getBoundingClientRect().height).toBeCloseTo(640, 0);
 
     // The host wraps its content — stage plus composer/toolbar chrome.
     const shell = editorRegion('generate').element();
@@ -75,8 +69,7 @@ describe('<uc-ai-image-editor> sizing', () => {
 
     // Picking a different ratio re-derives it: (640 - 40) / 2 + 40 = 340.
     el.setAttribute('aspect-ratios', '2:1');
-    await el.updateComplete;
-    await vi.waitFor(() => expect(canvasEl(el).getBoundingClientRect().height).toBeCloseTo(340, 0));
+    await expect.poll(() => canvasEl(el).getBoundingClientRect().height).toBeCloseTo(340, 0);
   });
 
   it('clamps to the consumer max-height and letterboxes the canvas', async () => {
@@ -87,15 +80,13 @@ describe('<uc-ai-image-editor> sizing', () => {
       'aspect-ratios': '1:2',
       style: 'width: 640px; max-height: 600px',
     });
-    await el.updateComplete;
 
-    await vi.waitFor(() => expect(el.getBoundingClientRect().height).toBeCloseTo(600, 0));
+    await expect.poll(() => el.getBoundingClientRect().height).toBeCloseTo(600, 0);
     expect(canvasEl(el).getBoundingClientRect().height).toBeLessThan(600);
 
     // The frame letterboxes inside the clamped stage: it keeps the 1:2
     // ratio instead of stretching to the full width.
-    const canvas = el.shadowRoot!.querySelector('uc-ai-canvas')!;
-    const frame = canvas.shadowRoot!.querySelector('.canvas__frame') as HTMLElement;
+    const frame = canvasEl(el).shadowRoot!.querySelector('.canvas__frame') as HTMLElement;
     await vi.waitFor(() => {
       const rect = frame.getBoundingClientRect();
       expect(rect.height).toBeGreaterThan(0);
