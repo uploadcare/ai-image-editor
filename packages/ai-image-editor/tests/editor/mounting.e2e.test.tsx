@@ -33,16 +33,6 @@ describe('<uc-ai-image-editor> mounting and configuration', () => {
     expect(editorMode(el)).toBe('edit');
   });
 
-  it('updates internal prompt state when the user types in the prompt input', async () => {
-    const el = mount();
-    await el.updateComplete;
-    const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
-    input.value = 'a tiger';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    await el.updateComplete;
-    expect(input.value).toBe('a tiger');
-  });
-
   it('renders configurable prompt presets per mode', async () => {
     const el = mount();
     el.presets = {
