@@ -40,6 +40,6 @@ describe('UcAiFooter', () => {
 
   it('disables Done when primaryDisabled is set', async () => {
     const el = await mount({ primaryDisabled: true });
-    expect(primaryBtn(el)!.disabled).toBe(true);
+    expect(primaryBtn(el)).toHaveProperty('disabled', true);
   });
 });
