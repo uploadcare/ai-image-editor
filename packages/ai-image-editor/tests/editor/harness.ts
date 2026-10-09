@@ -1,6 +1,6 @@
 import { DEMO_FILES } from '@uploadcare/api-emulator';
-import { afterEach, beforeEach } from 'vitest';
-import { page } from 'vitest/browser';
+import { afterEach, beforeEach, expect } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import type { UcAiImageEditor as UcAiImageEditorType } from '../../src/index';
 import { UcAiImageEditor } from '../../src/index';
 import { session } from '../emulator';
@@ -50,6 +50,49 @@ export const SAMPLE_UUID = DEMO_FILES[0];
 export const resultUuid = (): string | undefined =>
   [...session.files.keys()].find((uuid) => !DEMO_FILES.includes(uuid));
 
+/*
+ * The editor as a user finds it: by role and accessible name, through its shadow roots (locators pierce open ones).
+ * The names are the English strings, written out so a changed label fails here rather than following the source.
+ */
+
+/** The prompt box, named after the mode's placeholder. */
+export const promptBox = () => page.getByRole('textbox');
+
+/** The prompt row's send button. It is hidden until the prompt holds text. */
+export const sendButton = () => page.getByRole('button', { name: 'Generate', exact: true });
+
+/** The footer's primary, which commits the result (fires `uc:done`). */
+export const doneButton = () => page.getByRole('button', { name: 'Done', exact: true });
+
+/** The editor's region, named after its mode. */
+export const editorRegion = (mode: 'generate' | 'edit') =>
+  page.getByRole('region', { name: mode === 'edit' ? 'Edit image' : 'Generate image', exact: true });
+
+/** The canvas's picture. Thumbnails and preloads are hidden from the accessibility tree, so it is the only image. */
+export const canvasImage = () => page.getByRole('img');
+
+/** The result chips in the history strip, each named after the prompt that made it. */
+export const historyChips = () => page.getByRole('toolbar', { name: 'Recent prompts' }).getByRole('button');
+
+export const fillPrompt = (value: string) => userEvent.fill(promptBox(), value);
+
+export const clickDone = () => userEvent.click(doneButton());
+
+/** Types the prompt and sends it. */
+export async function sendPrompt(value: string): Promise<void> {
+  await fillPrompt(value);
+  await userEvent.click(sendButton());
+}
+
+/** Waits for the run's result to land in the session and answers its uuid. */
+export async function generatedUuid(): Promise<string> {
+  await expect.poll(resultUuid).toBeDefined();
+  return resultUuid()!;
+}
+
+/** Waits for the canvas to show the CDN rendition of `uuid`. */
+export const expectCanvasToShow = (uuid: string) =>
+  expect.element(canvasImage()).toHaveAttribute('src', expect.stringContaining(`https://cdn.example.com/${uuid}/`));
 export function typePrompt(el: UcAiImageEditorType, value: string): void {
   const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
   input.value = value;
