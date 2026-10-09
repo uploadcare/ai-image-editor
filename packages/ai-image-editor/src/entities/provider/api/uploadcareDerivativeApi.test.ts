@@ -318,18 +318,26 @@ describe('UploadcareDerivativeApi', () => {
     it('follows a token that changes, on both network paths', async () => {
       // The provider holds one resolver for its lifetime; whoever owns the
       // token changes what that resolver returns, and nothing is pushed in.
-      let token = 'not-a-token';
+      const [first, second] = [await mintAuthToken({ tokenId: 'first' }), await mintAuthToken({ tokenId: 'second' })];
+      let token = first;
       const provider = new UploadcareDerivativeApi({
         publicKey: PUBLIC_KEY,
         authToken: () => token,
         ...NO_DELAY,
       });
-
-      token = await mintAuthToken({ tokenId: 'second' });
+      const tokensSent = (requests: Request[]) =>
+        new Set(requests.map((request) => request.headers.get('Authorization')));
 
       await provider.generate({ prompt: 'x', mode: 'generate' });
-      expect(session.requests[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
       await expect(provider.getFileInfo(DEMO_FILES[0])).resolves.toMatchObject({ uuid: DEMO_FILES[0] });
+      const beforeRotation = session.requests.length;
+
+      token = second;
+      await provider.generate({ prompt: 'x', mode: 'generate' });
+      await expect(provider.getFileInfo(DEMO_FILES[0])).resolves.toMatchObject({ uuid: DEMO_FILES[0] });
+
+      expect(tokensSent(session.requests.slice(0, beforeRotation))).toEqual(new Set([`Bearer ${first}`]));
+      expect(tokensSent(session.requests.slice(beforeRotation))).toEqual(new Set([`Bearer ${second}`]));
     });
   });
 });
