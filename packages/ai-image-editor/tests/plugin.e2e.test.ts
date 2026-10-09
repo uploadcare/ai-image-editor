@@ -165,7 +165,7 @@ describe('AiImageEditorPlugin', () => {
     await renderUploader([AiImageEditorPlugin]);
     const api = getApi();
     api.addFileFromUrl(TEST_IMAGE_URL);
-    (api as unknown as { initFlow?: () => void }).initFlow?.();
+    api.initFlow();
 
     await expect.element(page.getByRole('button', { name: 'AI Edit' })).toBeVisible();
     await page.getByRole('button', { name: 'AI Edit' }).click();
@@ -181,7 +181,7 @@ describe('AiImageEditorPlugin', () => {
     await renderUploader([AiImageEditorPlugin]);
     const api = getApi();
     api.addFileFromUrl(TEST_IMAGE_URL);
-    (api as unknown as { initFlow?: () => void }).initFlow?.();
+    api.initFlow();
 
     // Wait until the source file finished uploading (the AI Edit action only
     // renders once the entry has a uuid).
