@@ -1,9 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { validate } from './uploadcareApiClient.schemas.dev';
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe('uploadcare derivative API dev schema validation', () => {
   it('stays silent for a well-formed generate request body', () => {

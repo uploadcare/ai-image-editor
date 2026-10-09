@@ -13,31 +13,19 @@ describe('cdn helpers', () => {
 
   it('builds a dpr-scaled preview url capped at the CDN limit (resize directive only)', () => {
     vi.stubGlobal('devicePixelRatio', 2);
-    try {
-      // Only the resize directive — the CDN applies format/auto + quality itself.
-      expect(cdnPreviewUrl(UC_URL, 800)).toBe(`${UC_URL}-/preview/1600x1600/`);
-      expect(cdnPreviewUrl(UC_URL, 2000)).toContain(`preview/${CDN_MAX_OUTPUT_DIMENSION}x${CDN_MAX_OUTPUT_DIMENSION}`);
-    } finally {
-      vi.unstubAllGlobals();
-    }
+    // Only the resize directive — the CDN applies format/auto + quality itself.
+    expect(cdnPreviewUrl(UC_URL, 800)).toBe(`${UC_URL}-/preview/1600x1600/`);
+    expect(cdnPreviewUrl(UC_URL, 2000)).toContain(`preview/${CDN_MAX_OUTPUT_DIMENSION}x${CDN_MAX_OUTPUT_DIMENSION}`);
   });
 
   it('scales the preview by devicePixelRatio', () => {
     vi.stubGlobal('devicePixelRatio', 1);
-    try {
-      expect(cdnPreviewUrl(UC_URL, 800)).toBe(`${UC_URL}-/preview/800x800/`);
-    } finally {
-      vi.unstubAllGlobals();
-    }
+    expect(cdnPreviewUrl(UC_URL, 800)).toBe(`${UC_URL}-/preview/800x800/`);
   });
 
   it('builds a dpr-scaled centered square crop-to-fill thumbnail', () => {
     vi.stubGlobal('devicePixelRatio', 2);
-    try {
-      // scale_crop (not preview) so a non-square source fills the square tile sharply.
-      expect(cdnSquareThumbUrl(UC_URL, 48)).toBe(`${UC_URL}-/scale_crop/96x96/center/`);
-    } finally {
-      vi.unstubAllGlobals();
-    }
+    // scale_crop (not preview) so a non-square source fills the square tile sharply.
+    expect(cdnSquareThumbUrl(UC_URL, 48)).toBe(`${UC_URL}-/scale_crop/96x96/center/`);
   });
 });
