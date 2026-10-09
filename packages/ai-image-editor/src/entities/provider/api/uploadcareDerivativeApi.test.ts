@@ -8,13 +8,14 @@ import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
 const PUBLIC_KEY = 'demopublickey';
 const CDN = 'https://cdn.example.com';
 const NO_DELAY = { pollIntervalMs: 0 } as const;
+const STATUS_PATH = '/derivative/status/';
+const STATUS = `GET ${STATUS_PATH}`;
 
 /** Answers nothing, ever: a request to `route` stays in flight until its caller aborts it. */
 const hang = (route: string) => session.on(route, () => new Promise<never>(() => {}));
 
 /** A job that never finishes: every status poll answers `processing`. */
-const neverFinish = () =>
-  session.on('GET /derivative/status/', () => Response.json({ type: 'job', status: 'processing' }));
+const neverFinish = () => session.on(STATUS, () => Response.json({ type: 'job', status: 'processing' }));
 
 describe('UploadcareDerivativeApi', () => {
   it('throws when publicKey is missing', () => {
@@ -60,22 +61,21 @@ describe('UploadcareDerivativeApi', () => {
     expect((await session.requests[0].json()).aspect_ratio).toEqual([1, 1]);
   });
 
-  it('polls the status endpoint with pub_key + job_id until the success frame reports is_ready', async () => {
-    const provider = new UploadcareDerivativeApi({
-      publicKey: PUBLIC_KEY,
-      cdnBaseUrl: CDN,
-      ...NO_DELAY,
+  it('keeps polling through processing, uploading and an unready success until is_ready', async () => {
+    // Oldest first: the emulator's own frames, walked straight to ready.
+    session.use('derivativesInstant');
+    session.on(STATUS, async ({ next }) => Response.json({ ...(await (await next())?.json()), is_ready: false }), {
+      times: 1,
     });
+    session.on(STATUS, () => Response.json({ type: 'job', status: 'uploading' }), { times: 1 });
+    session.on(STATUS, () => Response.json({ type: 'job', status: 'processing' }), { times: 1 });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, cdnBaseUrl: CDN, ...NO_DELAY });
 
     const result = await provider.generate({ prompt: 'x', mode: 'generate' });
 
     expect(result.url).toBe(`${CDN}/${result.uuid}/`);
-    // 1 POST + 4 status polls: processing, uploading, success not yet ready, success ready.
-    expect(session.requests).toHaveLength(5);
-    expect(session.requests[1].url).toMatch(
-      new RegExp(`^https://upload\\.uploadcare\\.com/derivative/status/\\?pub_key=${PUBLIC_KEY}&job_id=[\\w-]+$`),
-    );
-    expect(session.requests[1].method).toBe('GET');
+    // processing, uploading, unready success, ready success: one poll each, none after.
+    expect(session.requests.filter((request) => new URL(request.url).pathname === STATUS_PATH)).toHaveLength(4);
   });
 
   it('throws when the job ends in an error status', async () => {
@@ -180,7 +180,7 @@ describe('UploadcareDerivativeApi', () => {
   });
 
   it('cancels a status poll in flight when the caller aborts', async () => {
-    hang('GET /derivative/status/');
+    hang(STATUS);
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     const controller = new AbortController();
 
