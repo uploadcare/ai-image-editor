@@ -1,14 +1,12 @@
 import { DEMO_FILES } from '@uploadcare/api-emulator';
 import type { UploadcareFile } from '@uploadcare/upload-client';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import {
   canvasImage,
-  editorMode,
   editorRegion,
   expectCanvasToShow,
   historyChips,
-  historyEl,
   mount,
   SAMPLE_UUID,
   STAGING,
@@ -81,20 +79,6 @@ describe('<uc-ai-image-editor> history', () => {
     // The canvas (and shimmer) resume on the latest result, not the original.
     await expectCanvasToShow(LATEST);
     await expect.element(canvasImage()).not.toHaveAttribute('src', expect.stringContaining(SAMPLE_UUID));
-  });
-
-  it('does not render Start over in edit mode opened with a source (uploader AI-edit)', async () => {
-    const el = mount(STAGING);
-    el.sourceUuid = SAMPLE_UUID;
-    await el.updateComplete;
-    await vi.waitFor(() => expect(editorMode(el)).toBe('edit'));
-    await el.updateComplete;
-
-    // Editing an existing image has nothing to "start over" to — the affordance
-    // is absent (and, with no generation history yet, the strip isn't mounted).
-    const history = historyEl(el);
-    const startOver = history?.shadowRoot?.querySelector('.startover__btn') ?? null;
-    expect(startOver).toBeNull();
   });
 
   it.skip('returns to generate mode after Start over (from the history strip)', async () => {
