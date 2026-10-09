@@ -118,14 +118,67 @@ describe('UploadcareDerivativeApi', () => {
     expect(err.message).toContain(jobId);
   });
 
-  it('times out when the job never reaches a terminal state', async () => {
-    neverFinish();
-    const provider = new UploadcareDerivativeApi({
-      publicKey: PUBLIC_KEY,
-      pollIntervalMs: 0,
-      pollTimeoutMs: 5,
+  describe('with the default poll options', () => {
+    // The documented defaults: a poll every 1.5s, giving up after 1,000,000ms.
+    const INTERVAL = 1500;
+    const TIMEOUT = 1_000_000;
+
+    // Only the clock is fake: the emulator's requests still need real I/O turns to complete.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+      return () => vi.useRealTimers();
     });
-    await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/time/i);
+
+    /** Starts a generation and tracks whether it has settled. */
+    const start = () => {
+      const run = { settled: false, pending: Promise.resolve() as Promise<unknown> };
+      run.pending = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY })
+        .generate({ prompt: 'x', mode: 'generate' })
+        .finally(() => {
+          run.settled = true;
+        });
+      run.pending.catch(() => {});
+      return run;
+    };
+
+    /** Lets the in-flight request finish, without moving the clock, until the poll sleeps or `run` settles. */
+    const untilIdle = async (run: { settled: boolean }) => {
+      while (vi.getTimerCount() === 0 && !run.settled) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+    };
+
+    it('waits the default interval between status polls', async () => {
+      const polledAt: number[] = [];
+      session.on(STATUS, () => {
+        polledAt.push(Date.now());
+        return Response.json({ type: 'job', status: 'processing' });
+      });
+      const run = start();
+
+      for (let sleeps = 0; sleeps < 3; sleeps++) {
+        await untilIdle(run);
+        await vi.advanceTimersToNextTimerAsync();
+      }
+      await untilIdle(run);
+
+      expect(polledAt.slice(1).map((at, i) => at - polledAt[i])).toEqual([INTERVAL, INTERVAL, INTERVAL]);
+    });
+
+    it('gives up at the default timeout', async () => {
+      neverFinish();
+      const startedAt = Date.now();
+      const run = start();
+
+      for (;;) {
+        await untilIdle(run);
+        if (run.settled) break;
+        await vi.advanceTimersToNextTimerAsync();
+      }
+
+      expect(Date.now() - startedAt).toBe(TIMEOUT);
+      await expect(run.pending).rejects.toMatchObject({ name: 'AiProviderError', errorCode: 'generation_timeout' });
+    });
   });
 
   it('honours baseUrl + cdnBaseUrl overrides for both generate and status', async () => {
