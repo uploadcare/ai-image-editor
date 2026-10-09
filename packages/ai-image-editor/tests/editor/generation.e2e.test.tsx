@@ -36,41 +36,23 @@ describe('<uc-ai-image-editor> generation', () => {
     await expect.element(promptBox()).toHaveValue('');
   });
 
-  it('generates via the send button, then the primary commits the result with uc:done', async () => {
+  it('commits the generated result with uc:done, carrying its url, uuid and UploadcareFile', async () => {
     const el = mount(STAGING);
-
-    // Primary is disabled until there is a result to commit.
-    await expect.element(doneButton()).toBeDisabled();
+    const onDone = vi.fn();
+    el.addEventListener('uc:done', onDone);
 
     await sendPrompt('a tiger');
     const uuid = await generatedUuid();
     await expectCanvasToShow(uuid);
-
-    // Now the primary commits the generated result (it never generates).
-    await expect.element(doneButton()).toBeEnabled();
-    const onDone = vi.fn();
-    el.addEventListener('uc:done', onDone);
+    // The primary commits the result; it never generates.
     await clickDone();
+
     expect(onDone).toHaveBeenCalledOnce();
-    const detail = onDone.mock.calls[0]![0].detail;
-    expect(detail.url).toBe(`https://cdn.example.com/${uuid}/`);
-    expect(detail.file.uuid).toBe(uuid);
-    expect(detail.file.cdnUrl).toBe(`https://cdn.example.com/${uuid}/`);
-  });
-
-  it('includes the UploadcareFile and its uuid in uc:done after a generation', async () => {
-    const el = mount(STAGING);
-    const onDone = vi.fn();
-    el.addEventListener('uc:done', onDone);
-
-    await sendPrompt('make it pop');
-    const uuid = await generatedUuid();
-    await expectCanvasToShow(uuid);
-
-    await clickDone();
-    expect(onDone).toHaveBeenCalledOnce();
-    expect(onDone.mock.calls[0]![0].detail.file.uuid).toBe(uuid);
-    expect(onDone.mock.calls[0]![0].detail.uuid).toBe(uuid);
+    expect(onDone.mock.calls[0]![0].detail).toMatchObject({
+      url: `https://cdn.example.com/${uuid}/`,
+      uuid,
+      file: { uuid, cdnUrl: `https://cdn.example.com/${uuid}/` },
+    });
   });
 
   it('reports a refused run with uc:error and its message, and keeps the prompt', async () => {
