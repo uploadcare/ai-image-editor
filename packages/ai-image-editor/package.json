@@ -64,6 +64,7 @@
     "@uploadcare/api-emulator": "file:/Users/nd0ut/workspace/uc-586-sync/packages/api-emulator",
     "@uploadcare/file-uploader": "1.34.0",
     "@vitest/browser-playwright": "^4.1.11",
+    "fast-check": "^4.10.2",
     "lit-analyzer": "^2.0.3",
     "playwright": "^1.49.0",
     "typedoc": "^0.28.19",
