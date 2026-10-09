@@ -184,15 +184,16 @@ describe('GenerationController', () => {
     expect(observeSignal()?.aborted).toBe(true);
   });
 
-  it('requests an update on each significant transition', async () => {
+  it('asks the host to re-render when a run starts and again when it settles', async () => {
     const ctrl = new GenerationController(host);
-    const provider: AiProvider = {
-      id: 'fake',
-      generate: async ({ prompt, mode }) => okResult('https://example.com/x.jpg', prompt, mode),
-    };
+    const { provider, setNext } = createDeferredProvider();
+
+    const run = ctrl.run({ provider, prompt: 'x', mode: 'generate' });
+    expect(host.requestUpdate).toHaveBeenCalled();
+
     host.requestUpdate.mockClear();
-    await ctrl.run({ provider, prompt: 'x', mode: 'generate' });
-    // One on enter-busy + one on finally.
-    expect(host.requestUpdate).toHaveBeenCalledTimes(2);
+    setNext(okResult('https://example.com/x.jpg', 'x'));
+    await run;
+    expect(host.requestUpdate).toHaveBeenCalled();
   });
 });
