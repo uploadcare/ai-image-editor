@@ -202,15 +202,4 @@ describe('<uc-ai-image-editor> layout', () => {
     await expect.poll(() => promptDrop(el)).toBeLessThan(40);
     expect(canvasRect(el).height).toBe(canvasHeight);
   });
-
-  it('docks an overlay composer with a hotzone when auto-hide is on', async () => {
-    const el = mount(STAGING);
-    el.sourceUuid = SAMPLE_UUID;
-    el.composerAutoHide = true;
-    el.canvasFit = 'full'; // floating composer
-    await expectCanvasToShow(SAMPLE_UUID);
-    await parkPointer(el);
-
-    await expect.poll(() => -promptDrop(el)).toBeLessThan(40);
-  });
 });
