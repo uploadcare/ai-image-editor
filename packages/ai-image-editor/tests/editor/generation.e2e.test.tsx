@@ -1,15 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
+import { session } from '../emulator';
 import {
-  canvasUrl,
-  clickPrimary,
-  clickSend,
-  editorMode,
+  canvasImage,
+  clickDone,
+  doneButton,
+  editorRegion,
+  expectCanvasToShow,
+  generatedUuid,
   mount,
-  primaryBtn,
+  promptBox,
   SAMPLE_UUID,
+  SECOND_SAMPLE_UUID,
   STAGING,
-  stubFetch,
-  typePrompt,
+  sendPrompt,
 } from './harness';
 
 /**
@@ -18,104 +22,77 @@ import {
  */
 describe('<uc-ai-image-editor> generation', () => {
   it('auto-enters edit mode after the first successful generation', async () => {
-    stubFetch({ uuid: 'result' });
-    const el = mount(STAGING);
-    await el.updateComplete;
-    expect(editorMode(el)).toBe('generate');
-    typePrompt(el, 'a tiger');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(canvasUrl(el)).toBe('https://cdn.example.com/result/'));
-    await el.updateComplete;
-    expect(editorMode(el)).toBe('edit');
+    mount(STAGING);
+    await expect.element(editorRegion('generate')).toBeVisible();
+    await sendPrompt('a tiger');
+    await expectCanvasToShow(await generatedUuid());
+    await expect.element(editorRegion('edit')).toBeVisible();
   });
 
   it('clears the prompt after a successful generation', async () => {
-    stubFetch({ uuid: 'result' });
-    const el = mount(STAGING);
-    await el.updateComplete;
-    const input = el.shadowRoot!.querySelector('uc-ai-prompt-row')!.shadowRoot!.querySelector('textarea')!;
-    typePrompt(el, 'a tiger');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(canvasUrl(el)).toBe('https://cdn.example.com/result/'));
-    await el.updateComplete;
-    expect(input.value).toBe('');
+    mount(STAGING);
+    await sendPrompt('a tiger');
+    await expectCanvasToShow(await generatedUuid());
+    await expect.element(promptBox()).toHaveValue('');
   });
 
-  it('generates via the send button, then the primary commits the result with uc:done', async () => {
-    stubFetch({ uuid: 'result' });
+  it('commits the generated result with uc:done, carrying its url, uuid and UploadcareFile', async () => {
     const el = mount(STAGING);
-    await el.updateComplete;
+    const onDone = vi.fn();
+    el.addEventListener('uc:done', onDone);
 
-    // Primary is disabled until there is a result to commit.
-    expect(primaryBtn(el).disabled).toBe(true);
+    await sendPrompt('a tiger');
+    const uuid = await generatedUuid();
+    await expectCanvasToShow(uuid);
+    // The primary commits the result; it never generates.
+    await clickDone();
 
-    typePrompt(el, 'a tiger');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => {
-      expect(canvasUrl(el)).toBe('https://cdn.example.com/result/');
+    expect(onDone).toHaveBeenCalledOnce();
+    expect(onDone.mock.calls[0]![0].detail).toMatchObject({
+      url: `https://cdn.example.com/${uuid}/`,
+      uuid,
+      file: { uuid, cdnUrl: `https://cdn.example.com/${uuid}/` },
     });
-    await el.updateComplete;
-
-    // Now the primary commits the generated result (it never generates).
-    expect(primaryBtn(el).disabled).toBe(false);
-    const onDone = vi.fn();
-    el.addEventListener('uc:done', onDone);
-    clickPrimary(el);
-    expect(onDone).toHaveBeenCalledTimes(1);
-    const detail = onDone.mock.calls[0]![0].detail;
-    expect(detail.url).toBe('https://cdn.example.com/result/');
-    expect(detail.file.uuid).toBe('result');
-    expect(detail.file.cdnUrl).toBe('https://cdn.example.com/result/');
   });
 
-  it('includes the UploadcareFile and its uuid in uc:done after a generation', async () => {
-    stubFetch({ uuid: 'result-123' });
+  it('reports a refused run with uc:error and its message, and keeps the prompt', async () => {
+    // derivativesInstant again, so it wraps the failure and the error comes on the first poll.
+    session.use('derivativeFailure', { code: 'content_moderated' }).use('derivativesInstant');
     const el = mount(STAGING);
-    await el.updateComplete;
-    const onDone = vi.fn();
-    el.addEventListener('uc:done', onDone);
+    const onError = vi.fn();
+    el.addEventListener('uc:error', onError);
 
-    typePrompt(el, 'make it pop');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(canvasUrl(el)).toBe('https://cdn.example.com/result-123/'));
-    await el.updateComplete;
+    await sendPrompt('a tiger');
+    await expect
+      .element(page.getByRole('alert'))
+      .toHaveTextContent("That prompt isn't allowed. Try describing it differently.");
 
-    clickPrimary(el);
-    expect(onDone).toHaveBeenCalledTimes(1);
-    expect(onDone.mock.calls[0]![0].detail.file.uuid).toBe('result-123');
-    expect(onDone.mock.calls[0]![0].detail.uuid).toBe('result-123');
+    expect(onError).toHaveBeenCalledOnce();
+    expect(onError.mock.calls[0]![0].detail.error.code).toBe('content_moderated');
+    await expect.element(canvasImage()).not.toBeInTheDocument();
+    await expect.element(editorRegion('generate')).toBeVisible();
+    await expect.element(promptBox()).toHaveValue('a tiger');
   });
 
-  it.skip('fires uc:change as the current result appears and clears', async () => {
-    stubFetch({ uuid: 'result' });
+  it('fires uc:change with the result when a run lands, and with null when a new source clears it', async () => {
     const el = mount(STAGING);
-    await el.updateComplete;
     const onChange = vi.fn();
     el.addEventListener('uc:change', onChange);
 
-    typePrompt(el, 'a tiger');
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => {
-      expect(onChange).toHaveBeenCalledTimes(1);
+    await sendPrompt('a tiger');
+    const uuid = await generatedUuid();
+    await expectCanvasToShow(uuid);
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange.mock.calls[0]![0].detail.result).toMatchObject({
+      url: `https://cdn.example.com/${uuid}/`,
+      file: { uuid },
     });
-    const first = onChange.mock.calls[0]![0].detail;
-    expect(first.result.url).toBe('https://cdn.example.com/result/');
-    expect(first.result.file.uuid).toBe('result');
 
-    // Start over clears the current result -> uc:change with null.
-    await el.updateComplete;
-    const history = el.shadowRoot!.querySelector('uc-ai-history')!;
-    const startOver = history.shadowRoot!.querySelector('.startover__btn') as HTMLButtonElement;
-    startOver.click();
-    await vi.waitFor(() => {
-      expect(onChange).toHaveBeenCalledTimes(2);
-    });
-    expect(onChange.mock.calls[1]![0].detail.result).toBeNull();
+    // A host handing over another image drops the result: that source has no history to resume.
+    el.sourceUuid = SAMPLE_UUID;
+    await expectCanvasToShow(SAMPLE_UUID);
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange.mock.calls[1]![0].detail).toEqual({ result: null });
   });
 
   it('dispatches uc:cancel when the cancel button is clicked', async () => {
@@ -123,70 +100,59 @@ describe('<uc-ai-image-editor> generation', () => {
     await el.updateComplete;
     const onCancel = vi.fn();
     el.addEventListener('uc:cancel', onCancel);
-    const footer = el.shadowRoot!.querySelector('uc-ai-footer')!;
-    (footer.shadowRoot!.querySelector('.btn--ghost') as HTMLButtonElement).click();
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    await userEvent.click(page.getByRole('button', { name: 'Cancel', exact: true }));
+    expect(onCancel).toHaveBeenCalledOnce();
   });
 
   it('keeps the primary disabled and fires no uc:done until a result exists (edit mode with a source)', async () => {
     const el = mount(STAGING);
     el.sourceUuid = SAMPLE_UUID;
-    await el.updateComplete;
-    expect(editorMode(el)).toBe('edit');
+    await expect.element(editorRegion('edit')).toBeVisible();
+    await expectCanvasToShow(SAMPLE_UUID);
     const onDone = vi.fn();
     el.addEventListener('uc:done', onDone);
     // A source image alone is not a result — the primary commits results only.
-    expect(primaryBtn(el).disabled).toBe(true);
-    clickPrimary(el);
+    await expect.element(doneButton()).toBeDisabled();
+    await userEvent.click(doneButton(), { force: true });
     expect(onDone).not.toHaveBeenCalled();
   });
 
   it('does not dispatch uc:done when there is no result (generate mode)', async () => {
     const el = mount();
-    await el.updateComplete;
     const onDone = vi.fn();
     el.addEventListener('uc:done', onDone);
-    expect(primaryBtn(el).disabled).toBe(true);
-    primaryBtn(el).click();
+    await expect.element(doneButton()).toBeDisabled();
+    await userEvent.click(doneButton(), { force: true });
     expect(onDone).not.toHaveBeenCalled();
   });
 
   it('applies an async secure-delivery resolver to the canvas preview', async () => {
-    stubFetch({ uuid: 'result' });
     const el = mount(STAGING);
-    el.secureDeliveryProxyUrlResolver = async (url: string) => `https://signed.example/${encodeURIComponent(url)}`;
-    await el.updateComplete;
-    typePrompt(el, 'a tiger');
-    await el.updateComplete;
-    clickSend(el);
-    const raw = 'https://cdn.example.com/result/';
-    await vi.waitFor(() => expect(canvasUrl(el)).toBe(`https://signed.example/${encodeURIComponent(raw)}`));
+    // The signed URL stays on the emulated CDN, so the preview loads instead of reaching for a proxy that doesn't exist.
+    el.secureDeliveryProxyUrlResolver = async (url: string) => `${url}?token=signed`;
+    await sendPrompt('a tiger');
+    const uuid = await generatedUuid();
+    await expect
+      .element(canvasImage())
+      .toHaveAttribute(
+        'src',
+        expect.stringMatching(new RegExp(`^https://cdn\\.example\\.com/${uuid}/.*\\?token=signed$`)),
+      );
   });
 
   it('aborts in-flight generation and shows the new source when source changes', async () => {
-    // Status hangs until the request is aborted.
-    stubFetch({
-      status: (signal) =>
-        new Promise((_res, rej) => {
-          signal?.addEventListener('abort', () => rej(new DOMException('Aborted', 'AbortError')), { once: true });
-        }),
-    });
-    // Non-UUID-shaped ids keep the CDN preview helper from rewriting the URL,
-    // so the canvas URL is the bare resolved source.
-    const el = mount({ ...STAGING, 'source-uuid': 'first-uuid' });
-    await el.updateComplete;
-
-    typePrompt(el, 'try');
-    await el.updateComplete;
-    clickSend(el);
+    // The status poll never answers, so the job is still running when the source changes.
+    session.on('GET /derivative/status/', () => new Promise<never>(() => {}));
+    const el = mount({ ...STAGING, 'source-uuid': SAMPLE_UUID });
+    await sendPrompt('try');
+    // The prompt box locks while the run is in flight.
+    await expect.element(promptBox()).toBeDisabled();
 
     // Change source mid-flight — this aborts the in-flight generation.
-    el.sourceUuid = 'second-uuid';
-    await el.updateComplete;
+    el.sourceUuid = SECOND_SAMPLE_UUID;
 
     // After the abort, the displayed image should be the new source (no result override).
-    await vi.waitFor(() => {
-      expect(canvasUrl(el)).toBe('https://cdn.example.com/second-uuid/');
-    });
+    await expectCanvasToShow(SECOND_SAMPLE_UUID);
+    await expect.element(promptBox()).toBeEnabled();
   });
 });

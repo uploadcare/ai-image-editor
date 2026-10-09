@@ -31,7 +31,8 @@ export class UcAiAspectRatio extends LitElement {
   public busy = false;
 
   /**
-   * Accessible label for the trigger. A plain property (not the inherited
+   * Accessible label for the trigger (which appends the current selection) and
+   * the listbox. A plain property (not the inherited
    * `ariaLabel`) so it doesn't also stamp `aria-label` on the host element.
    */
   @property({ attribute: 'aria-label-text' })
@@ -93,6 +94,7 @@ export class UcAiAspectRatio extends LitElement {
 
   public override render(): TemplateResult {
     const triggerLabel = this._triggerLabel();
+    const label = this.labelText ?? 'Aspect ratio';
 
     return html`
       <button
@@ -100,14 +102,14 @@ export class UcAiAspectRatio extends LitElement {
         class="trigger"
         aria-haspopup="listbox"
         aria-expanded="${this.open ? 'true' : 'false'}"
-        aria-label="${this.labelText ?? 'Aspect ratio'}"
+        aria-label="${triggerLabel ? `${label}: ${triggerLabel}` : label}"
         ?disabled=${this.busy}
         @click=${this._toggle}
       >
         ${this.selected ? unsafeSVG(this._iconFor(this.selected)) : null}
         ${triggerLabel ? html`<span class="trigger-label">${triggerLabel}</span>` : null}
       </button>
-      <div class="popover" popover="auto" role="listbox" @toggle=${this._onToggle}>
+      <div class="popover" popover="auto" role="listbox" aria-label="${label}" @toggle=${this._onToggle}>
         <div class="popover-inner">
           ${this.options.map((option) => {
             const isSelected = this.selected ? aspectRatioValueEquals(option.value, this.selected) : false;

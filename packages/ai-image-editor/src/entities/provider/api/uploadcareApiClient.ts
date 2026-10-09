@@ -21,8 +21,6 @@ export type UploadcareApiClientOptions = {
   publicKey: string;
   /** Base URL for the upload API. Defaults to https://upload.uploadcare.com. */
   baseUrl?: string;
-  /** Override the global fetch — useful for tests. */
-  fetch?: typeof fetch;
   /**
    * JWT for the `Authorization: Bearer` scheme. A plain token, or a resolver
    * called before every request so a long-running job can rotate tokens
@@ -154,6 +152,12 @@ async function readJson(response: Response, action: string): Promise<unknown> {
       `Uploadcare ${action} failed (${response.status} ${response.statusText})${text ? `: ${text}` : ''}`,
     );
   }
+  // Every derivative endpoint answers a JSON object; anything else (a proxy's HTML page, an empty body) is a failure.
+  if (data === null || typeof data !== 'object') {
+    throw new Error(
+      `Uploadcare ${action} failed (${response.status}): the response is not a JSON object${text ? `: ${text}` : ''}`,
+    );
+  }
   return data;
 }
 
@@ -161,7 +165,6 @@ async function readJson(response: Response, action: string): Promise<unknown> {
 export class UploadcareApiClient {
   private readonly publicKey: string;
   private readonly baseUrl: string;
-  private readonly doFetch: typeof fetch;
   private readonly authToken: AuthToken | undefined;
 
   constructor(options: UploadcareApiClientOptions) {
@@ -170,7 +173,6 @@ export class UploadcareApiClient {
     }
     this.publicKey = options.publicKey;
     this.baseUrl = options.baseUrl ?? 'https://upload.uploadcare.com';
-    this.doFetch = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.authToken = options.authToken;
   }
 
@@ -211,7 +213,7 @@ export class UploadcareApiClient {
     url.searchParams.set('pub_key', this.publicKey);
     url.searchParams.set('job_id', jobId);
 
-    const response = await this.doFetch(url.href, {
+    const response = await fetch(url.href, {
       method: 'GET',
       headers: { Accept: 'application/json', ...(await this.authHeaders()) },
       signal,
@@ -233,7 +235,7 @@ export class UploadcareApiClient {
     action: string,
     signal?: AbortSignal,
   ): Promise<UploadcareJobResponse> {
-    const response = await this.doFetch(endpoint.href, {
+    const response = await fetch(endpoint.href, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

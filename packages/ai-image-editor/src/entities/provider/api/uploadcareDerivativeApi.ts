@@ -33,8 +33,6 @@ export type UploadcareDerivativeApiOptions = {
   filename?: string;
   /** Whether to store the generated image. Defaults to "auto" (per server default). */
   store?: 'auto' | boolean;
-  /** Override the global fetch — useful for tests. */
-  fetch?: typeof fetch;
   /**
    * CDN cname for resolving `{uuid}` responses. When left at the default
    * `https://ucarecdn.com` (or already a prefixed base), the actual base is
@@ -91,7 +89,6 @@ export class UploadcareDerivativeApi implements AiProvider {
     this.api = new UploadcareApiClient({
       publicKey: options.publicKey,
       baseUrl: options.baseUrl,
-      fetch: options.fetch,
       authToken: options.authToken,
     });
     this.publicKey = options.publicKey;

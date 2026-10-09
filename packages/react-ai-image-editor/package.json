@@ -35,6 +35,7 @@
     "react": ">= 17.0.0"
   },
   "devDependencies": {
+    "@uploadcare/api-emulator": "file:/Users/nd0ut/workspace/uc-586-sync/packages/api-emulator",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "react": "^19",

@@ -21,7 +21,6 @@ describe('aspectRatiosFromCropPreset', () => {
       [1, 1],
     ]);
     expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
   });
 
   it('falls back to the popular set when only "free" is configured', () => {

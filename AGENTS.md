@@ -76,6 +76,64 @@ packages again would give the plugin two `AuthTokenResolverError` classes:
 `instanceof` fails across them and the editor wraps the uploader's error a
 second time, pushing the original one level deeper on `cause`.
 
+## Tests talk to the Uploadcare API emulator
+
+`@uploadcare/api-emulator` (a devDependency of `packages/ai-image-editor`)
+stands in for the Upload API and CDN; tests should not hand-write Uploadcare
+responses.
+
+- **Specs** (happy-dom) run against `setupEmulator()` from
+  `@uploadcare/api-emulator/node`, started once in `tests/specs/setup.ts`
+  (the `specs` project's setup file). It answers the global `fetch` and
+  `node:http(s)` (upload-client's transport, so `getFileInfo` too), refuses
+  every other origin, and resets the session before every test: import
+  `session` from there to register a scenario or read what was sent from its
+  `requests`. The clients call the global `fetch`; a spec that checks what
+  they pass it uses `vi.spyOn(globalThis, 'fetch')` and restores it after the
+  test.
+- **Browser e2e** run the emulator in the page with
+  `setupEmulator()` from `@uploadcare/api-emulator/browser` (MSW and
+  `@mswjs/interceptors` underneath, both devDependencies of the root
+  `package.json`):
+  `tests/emulator.ts` emulates Uploadcare's hosts and `cdn.example.com` (the
+  tests' CDN cname), fails any other Uploadcare host, passes every
+  non-Uploadcare origin through, and resets the session before every test;
+  import `session` from there to register a scenario or preset, or to read
+  what the editor sent (`requests`) and what a run produced (`files`; the
+  harness's `resultUuid()` answers the one that isn't a `DEMO_FILES` image).
+  A test that checks what the editor passed `fetch` itself uses
+  `vi.spyOn(globalThis, 'fetch')` and restores it after the test. The editor
+  tests apply the `derivativesInstant` preset (`tests/editor/harness.ts`) so
+  a generation finishes on its first poll instead of after the editor's 1.5s
+  interval several times over.
+- **Contract** tests (`tests/contract/`, the `contract` project) hold the
+  derivative API to one set of assertions on two targets: the emulator in
+  every `npm test`, and the real `upload.uploadcare.com` with
+  `npm run test:contract:live -w @uploadcare/ai-image-editor`
+  (`UC_CONTRACT_PUBLIC_KEY` required; the run fails without it). CI runs the
+  live target only by hand (the `contract` workflow).
+- In specs, e2e and contract tests, a request or response that fails the
+  client's dev schemas (`uploadcareApiClient.schemas.dev.ts`) fails the test
+  (`tests/schema-drift.ts`).
+- Steer the emulator per test with `session.on()` and `session.use(preset)`
+  (`session` from the project's setup file); there are no magic keys,
+  prompts or uuids.
+- Bearer tokens must be real: mint them with the emulator's `mintAuthToken()`
+  (WebCrypto, so it works in the page too). The images every fresh session
+  holds are its `DEMO_FILES`.
+- A `session.on()` handler runs before the emulator's routes and can answer
+  any `Response` or a promise that never settles, so a bare non-JSON failure,
+  a job stuck in `processing` or a poll that hangs is a scenario, not a stub.
+  Stub `fetch` only where it is simpler, and say why next to it.
+
+The React wrapper's e2e project runs against the same in-page emulator
+(`packages/react-ai-image-editor/tests/e2e/setup.ts`), so a request the
+element starts making there fails loudly instead of reaching the network.
+
+In both packages the dependency is a TEMPORARY `file:` link to an unreleased
+checkout, so `npm ci` only resolves it on that machine; swap it for a version
+once the package ships.
+
 ## Docs layout
 
 `docs/` is a VitePress site published to GitHub Pages: hand-written guides in

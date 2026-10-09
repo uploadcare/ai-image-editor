@@ -1,6 +1,8 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
-import { cleanup, delay, getCtxName } from './test-renderer';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
+import type { UcAiImageEditor } from '../src/index';
+import { session } from './emulator';
+import { cleanup, getCtxName } from './test-renderer';
 
 const TEST_IMAGE_URL =
   'https://images.unsplash.com/photo-1699102241946-45c5e1937d69?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=640';
@@ -13,6 +15,7 @@ type UploadCtxProvider = HTMLElement & {
     initFlow: () => void;
     removeAllFiles: () => void;
     getOutputCollectionState: () => { allEntries: OutputEntry[] };
+    l10n: (key: string) => string;
   };
 };
 
@@ -23,7 +26,7 @@ async function renderUploader(plugins: unknown[] = []) {
      <uc-config ctx-name="${ctxName}" pubkey="demopublickey" test-mode debug></uc-config>
      <uc-upload-ctx-provider ctx-name="${ctxName}"></uc-upload-ctx-provider>`,
   );
-  await delay(0);
+  await customElements.whenDefined('uc-config');
   const config = document.querySelector(`uc-config[ctx-name="${ctxName}"]`) as Config;
   config.plugins = plugins;
   return { ctxName, config };
@@ -38,6 +41,16 @@ function addSource(config: Config, sourceId: string) {
   config.sourceList += `,${sourceId}`;
 }
 
+/** Waits for the plugin's editor to open in `mode` (its region is named after the mode) and answers the element. */
+async function openedEditor(mode: 'generate' | 'edit'): Promise<UcAiImageEditor> {
+  const name = mode === 'edit' ? 'Edit image' : 'Generate image';
+  await expect.element(page.getByRole('region', { name, exact: true })).toBeVisible();
+  return document.querySelector('uc-ai-image-editor') as UcAiImageEditor;
+}
+
+/** The plugin's editor, for locators scoped to it (the uploader around it has its own Cancel). */
+const editorLocator = () => page.elementLocator(document.querySelector('uc-ai-image-editor')!);
+
 async function openModal() {
   await page.getByText('Upload files', { exact: true }).click();
 }
@@ -50,6 +63,23 @@ beforeAll(async () => {
   UC.defineLocale('de', () => import('@uploadcare/file-uploader/locales/file-uploader/de.js').then((m) => m.default));
   // Registers <uc-ai-image-editor> and sub-elements
   await import('../src/index');
+});
+
+/*
+ * The editor harness forces the dot grid's 2D path with `shimmerConfig = { useWebgl: false }`, but the plugin creates
+ * its own editor, and the canvas picks its backend before a test can reach it. Headless Chromium's WebGL is software
+ * (swiftshader): the generating shimmer's per-frame GL work starves the main thread, which is also where the emulator
+ * answers, so a single edit took ~5s instead of ~0.3s and, under a loaded suite, ran the test past its timeout. With no
+ * webgl2 context on offer the grid falls back to 2D, as it does in a browser without WebGL. Restored after each test.
+ */
+beforeEach(() => {
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (
+    this: HTMLCanvasElement,
+    ...args: Parameters<HTMLCanvasElement['getContext']>
+  ) {
+    return args[0] === 'webgl2' ? null : getContext.apply(this, args);
+  } as HTMLCanvasElement['getContext']);
 });
 
 describe('AiImageEditorPlugin', () => {
@@ -74,13 +104,7 @@ describe('AiImageEditorPlugin', () => {
     await openModal();
     await page.getByText('Generate image').click();
 
-    await vi.waitFor(() => {
-      expect(document.querySelector('uc-ai-image-editor')).toBeTruthy();
-    });
-    const editor = document.querySelector('uc-ai-image-editor') as Element & {
-      authToken?: unknown;
-      cacheAuthToken?: boolean;
-    };
+    const editor = await openedEditor('generate');
 
     expect(editor.cacheAuthToken).toBe(false);
     expect(typeof editor.authToken).toBe('function');
@@ -90,7 +114,7 @@ describe('AiImageEditorPlugin', () => {
     const resolve = editor.authToken as () => Promise<string>;
     await expect(resolve()).resolves.toBe('eyJ.uploader.sig');
     await expect(resolve()).resolves.toBe('eyJ.uploader.sig');
-    expect(fetchToken).toHaveBeenCalledTimes(1);
+    expect(fetchToken).toHaveBeenCalledOnce();
     cleanup();
   });
 
@@ -100,29 +124,14 @@ describe('AiImageEditorPlugin', () => {
     addSource(config, 'ai-image-editor');
     await openModal();
     await page.getByText('Generate image').click();
-    await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-image-editor') as (Element & { sourceFileInfo?: unknown }) | null;
-      expect(editor).toBeTruthy();
-      // No source → derived generate mode (read off the prompt-row child).
-      const promptRow = editor?.shadowRoot?.querySelector('uc-ai-prompt-row') as (Element & { mode?: string }) | null;
-      expect(promptRow?.mode).toBe('generate');
-      expect(editor?.sourceFileInfo).toBeFalsy();
-    });
+    // No source → derived generate mode.
+    const editor = await openedEditor('generate');
+    expect(editor.sourceFileInfo).toBeUndefined();
     cleanup();
   });
 
-  // The editor renders the active locale's generate-button label as the prompt
-  // row's `send-aria-label`, and the cancel label as the footer's `cancel-label`.
-  const generateLabel = () =>
-    document
-      .querySelector('uc-ai-image-editor')
-      ?.shadowRoot?.querySelector('uc-ai-prompt-row')
-      ?.getAttribute('send-aria-label');
-  const cancelLabel = () =>
-    document
-      .querySelector('uc-ai-image-editor')
-      ?.shadowRoot?.querySelector('uc-ai-footer')
-      ?.getAttribute('cancel-label');
+  /** The editor's button named `name`. */
+  const editorButton = (name: string) => editorLocator().getByRole('button', { name, exact: true });
 
   it('feeds editor locale overrides from the uploader config (localeDefinitionOverride)', async () => {
     const { AiImageEditorPlugin } = await import('../src/plugin');
@@ -134,14 +143,16 @@ describe('AiImageEditorPlugin', () => {
     addSource(config, 'ai-image-editor');
     await openModal();
     await page.getByText('Generate image').click();
+    // The send button shows once the prompt holds text.
+    await userEvent.fill(editorLocator().getByRole('textbox'), 'a tiger');
 
-    await vi.waitFor(() => expect(generateLabel()).toBe('Make it!'));
+    await expect.element(editorButton('Make it!')).toBeVisible();
 
     // Reactive: changing the override after the editor is open updates it.
     (config as unknown as L10nConfig).localeDefinitionOverride = {
       en: { 'ai-image-editor-generate-btn': 'Generate now' },
     };
-    await vi.waitFor(() => expect(generateLabel()).toBe('Generate now'));
+    await expect.element(editorButton('Generate now')).toBeVisible();
     cleanup();
   });
 
@@ -153,11 +164,16 @@ describe('AiImageEditorPlugin', () => {
     await page.getByText('Generate image').click();
 
     // Defaults to English.
-    await vi.waitFor(() => expect(cancelLabel()).toBe('Cancel'));
+    await openedEditor('generate');
+    await expect.element(editorButton('Cancel')).toBeVisible();
 
     // Switching localeName lazy-loads and applies the German strings.
     (config as unknown as { localeName: string }).localeName = 'de';
-    await vi.waitFor(() => expect(cancelLabel()).toBe('Abbrechen'));
+    await expect.element(editorButton('Abbrechen')).toBeVisible();
+    // The editor loads its own strings; the uploader loads its locale separately
+    // and may still be resolving. Tearing it down mid-load is a file-uploader bug
+    // (fixed upstream, not yet released), so let the uploader finish switching too.
+    await vi.waitFor(() => expect(getApi().l10n('cancel')).toBe('Abbrechen'));
     cleanup();
   });
 
@@ -166,18 +182,14 @@ describe('AiImageEditorPlugin', () => {
     await renderUploader([AiImageEditorPlugin]);
     const api = getApi();
     api.addFileFromUrl(TEST_IMAGE_URL);
-    (api as unknown as { initFlow?: () => void }).initFlow?.();
+    api.initFlow();
 
     await expect.element(page.getByRole('button', { name: 'AI Edit' })).toBeVisible();
     await page.getByRole('button', { name: 'AI Edit' }).click();
 
-    await vi.waitFor(() => {
-      const editor = document.querySelector('uc-ai-image-editor') as (Element & { sourceFileInfo?: unknown }) | null;
-      expect(editor?.sourceFileInfo).toBeTruthy();
-      // A source file → derived edit mode (read off the prompt-row child).
-      const promptRow = editor?.shadowRoot?.querySelector('uc-ai-prompt-row') as (Element & { mode?: string }) | null;
-      expect(promptRow?.mode).toBe('edit');
-    });
+    // A source file → derived edit mode, on the uploaded file.
+    const editor = await openedEditor('edit');
+    expect(editor.sourceFileInfo).toMatchObject({ uuid: api.getOutputCollectionState().allEntries[0]!.uuid });
     cleanup();
   });
 
@@ -186,7 +198,7 @@ describe('AiImageEditorPlugin', () => {
     await renderUploader([AiImageEditorPlugin]);
     const api = getApi();
     api.addFileFromUrl(TEST_IMAGE_URL);
-    (api as unknown as { initFlow?: () => void }).initFlow?.();
+    api.initFlow();
 
     // Wait until the source file finished uploading (the AI Edit action only
     // renders once the entry has a uuid).
@@ -196,45 +208,34 @@ describe('AiImageEditorPlugin', () => {
     const originalUuid = before[0]!.uuid;
     const originalInternalId = before[0]!.internalId;
     const originalName = before[0]!.name;
-    expect(originalName).toBeTruthy();
+    expect(originalName).toMatch(/.+/);
 
     await page.getByRole('button', { name: 'AI Edit' }).click();
-    const editor = (await vi.waitFor(() => {
-      const el = document.querySelector('uc-ai-image-editor');
-      expect(el).toBeTruthy();
-      return el!;
-    })) as Element & { sourceFileInfo?: { uuid?: string; originalFilename?: string } };
+    const editor = await openedEditor('edit');
 
     // The plugin hands the source entry's file info to the editor (so it can
     // frame the canvas and name the result after the original) — verify it's the
     // source file's info that was wired through.
     expect(editor.sourceFileInfo?.uuid).toBe(originalUuid);
 
-    // The edit produced this already-uploaded result. Drive uc:done directly so
-    // the test doesn't depend on the generation backend.
-    const resultFile = {
-      uuid: 'edited-result',
-      cdnUrl: 'https://cdn.example.com/edited-result/',
-      originalFilename: originalName,
-      size: 4242,
-      isImage: true,
-      mimeType: 'image/png',
-      contentInfo: { mime: { mime: 'image/png' } },
-    };
-    editor.dispatchEvent(
-      new CustomEvent('uc:done', {
-        detail: { url: resultFile.cdnUrl, file: resultFile },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    // Run the edit against the emulator and commit its result.
+    session.use('derivativesInstant');
+    await userEvent.fill(editorLocator().getByRole('textbox'), 'add a hat');
+    await userEvent.click(editorButton('Generate'));
+    await expect.element(editorButton('Done')).toBeEnabled();
+    const onDone = vi.fn();
+    editor.addEventListener('uc:done', onDone);
+    await userEvent.click(editorButton('Done'));
+    expect(onDone).toHaveBeenCalledOnce();
+    const resultUuid: string = onDone.mock.calls[0]![0].detail.file.uuid;
+    expect(resultUuid).not.toBe(originalUuid);
+    expect(session.files.get(resultUuid)).toBeDefined();
 
     await vi.waitFor(() => {
       const after = api.getOutputCollectionState().allEntries;
       // Replaced in place: still a single entry, now carrying the edited result.
       expect(after).toHaveLength(1);
-      expect(after[0]!.uuid).toBe('edited-result');
-      expect(after[0]!.uuid).not.toBe(originalUuid);
+      expect(after[0]!.uuid).toBe(resultUuid);
       // It's a fresh entry (remove + add), so the internalId changed...
       expect(after[0]!.internalId).not.toBe(originalInternalId);
       // ...the replacement is attributed to the AI Image Editor...
@@ -252,11 +253,7 @@ describe('AiImageEditorPlugin', () => {
     await openModal();
     await page.getByText('Generate image').click();
 
-    const editor = (await vi.waitFor(() => {
-      const el = document.querySelector('uc-ai-image-editor');
-      expect(el).toBeTruthy();
-      return el as HTMLElement;
-    })) as HTMLElement;
+    const editor = await openedEditor('generate');
 
     // The plugin must NOT map `--uc-ai-floating` to the (undefined) `--uc-floating`
     // token — doing so resolves to an invalid value and blanks every panel.
@@ -264,11 +261,9 @@ describe('AiImageEditorPlugin', () => {
 
     // The prompt row's card mixes `--uc-ai-floating`; with a real default it paints.
     const card = await vi.waitFor(() => {
-      const c = editor.shadowRoot
-        ?.querySelector('uc-ai-prompt-row')
-        ?.shadowRoot?.querySelector('.card') as HTMLElement | null;
-      expect(c).toBeTruthy();
-      return c!;
+      const c = editor.shadowRoot?.querySelector('uc-ai-prompt-row')?.shadowRoot?.querySelector('.card');
+      expect(c).toBeInstanceOf(HTMLElement);
+      return c as HTMLElement;
     });
     const bg = getComputedStyle(card).backgroundColor;
     expect(bg).not.toBe('rgba(0, 0, 0, 0)');

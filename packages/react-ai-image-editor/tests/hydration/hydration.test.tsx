@@ -6,77 +6,12 @@ import { expect, it, vi } from 'vitest';
 import { AiImageEditor } from '../../src';
 import { setupContainers } from '../support/containers';
 
-// Deterministic stand-in for the real Lit element: accessors live on the
-// prototype (like Lit's @property) so the adapter's prop-splitting treats them
-// as element properties. The import is gated so the first test can observe the
-// pre-resolution fallback state.
-let releaseImport: () => void;
-const importGate = new Promise<void>((resolve) => {
-  releaseImport = resolve;
-});
-
-vi.mock('@uploadcare/ai-image-editor', async () => {
-  await importGate;
-  class UcAiImageEditor extends HTMLElement {
-    #pubkey = '';
-    get pubkey() {
-      return this.#pubkey;
-    }
-    set pubkey(value: string) {
-      this.#pubkey = value;
-    }
-  }
-  customElements.define('uc-ai-image-editor', UcAiImageEditor);
-  return { UcAiImageEditor };
-});
+vi.mock('@uploadcare/ai-image-editor', async () => (await import('../support/fake-editor')).defineFakeEditor());
 
 const makeContainer = setupContainers();
 
-it('shows the fallback until the engine loads, then swaps in the element with wired props and events', async () => {
-  const container = makeContainer();
-  const onDone = vi.fn();
-  const apiRef = React.createRef<HTMLElement>();
-
-  const root = createRoot(container);
-  root.render(
-    <AiImageEditor
-      pubkey="test-pubkey"
-      className="my-class"
-      apiRef={apiRef}
-      onDone={onDone}
-      fallback={<div data-testid="skeleton" />}
-    />,
-  );
-
-  // engine import is still gated: fallback must be visible
-  await vi.waitFor(() => {
-    expect(container.querySelector('[data-testid="skeleton"]')).not.toBeNull();
-  });
-  expect(container.querySelector('uc-ai-image-editor')).toBeNull();
-
-  releaseImport();
-
-  await vi.waitFor(() => {
-    expect(container.querySelector('uc-ai-image-editor')).not.toBeNull();
-  });
-  const el = container.querySelector('uc-ai-image-editor') as HTMLElement & { pubkey: string };
-  expect(container.querySelector('[data-testid="skeleton"]')).toBeNull();
-  expect(el.pubkey).toBe('test-pubkey');
-  expect(el.getAttribute('class')).toBe('my-class');
-  expect(apiRef.current).toBe(el);
-
-  el.dispatchEvent(new CustomEvent('uc:done', { detail: { some: 'detail' } }));
-  expect(onDone).toHaveBeenCalledWith({ some: 'detail' });
-
-  root.unmount();
-  expect(container.querySelector('uc-ai-image-editor')).toBeNull();
-});
-
 it('hydrates server HTML without hydration mismatches', async () => {
-  releaseImport(); // in case the first test didn't run (order independence)
-  const ui = (
-    <AiImageEditor pubkey="test-pubkey" fallback={<div data-testid="skeleton">loading</div>} />
-  );
+  const ui = <AiImageEditor pubkey="test-pubkey" fallback={<div data-testid="skeleton">loading</div>} />;
   const serverHtml = renderToString(ui);
   expect(serverHtml).toContain('skeleton');
 
@@ -97,7 +32,6 @@ it('hydrates server HTML without hydration mismatches', async () => {
 });
 
 it('uc:cancel and uc:error events reach their callbacks', async () => {
-  releaseImport(); // in case the first test didn't run (order independence)
   const container = makeContainer();
   const onCancel = vi.fn();
   const onError = vi.fn();
