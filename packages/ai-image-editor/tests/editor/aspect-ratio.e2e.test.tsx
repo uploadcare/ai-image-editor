@@ -1,21 +1,44 @@
+import type { UploadcareFile } from '@uploadcare/upload-client';
 import { describe, expect, it, vi } from 'vitest';
 import { session } from '../emulator';
-import { clickSend, editorMode, mount, SAMPLE_UUID, STAGING, typePrompt } from './harness';
+import {
+  canvasUrl,
+  clickPrimary,
+  clickSend,
+  editorMode,
+  mount,
+  resultUuid,
+  SAMPLE_UUID,
+  STAGING,
+  typePrompt,
+  type UcAiImageEditorType,
+} from './harness';
 
 /**
- * The body of every derivative POST (generate or edit) the emulator received. The
- * emulator ignores the ratio, so the request is the only place it shows.
+ * Waits for the run's result on the canvas, commits it, and returns the image info of the file `uc:done` hands the
+ * host. The emulator draws a result at the requested ratio (or keeps the source's size when none is sent), so the
+ * dimensions show which ratio the editor asked for.
  */
-const derivativeBodies = (): Promise<Array<Record<string, unknown>>> =>
-  Promise.all(
-    session.requests
-      .filter((request) => request.method === 'POST' && new URL(request.url).pathname.startsWith('/derivative/'))
-      .map((request) => request.clone().json()),
-  );
+async function committedImage(el: UcAiImageEditorType): Promise<UploadcareFile['imageInfo']> {
+  await vi.waitFor(() => {
+    const uuid = resultUuid();
+    expect(uuid).toBeDefined();
+    expect(canvasUrl(el)).toContain(`/${uuid}/`);
+  });
+  await el.updateComplete;
+  const onDone = vi.fn();
+  el.addEventListener('uc:done', onDone);
+  clickPrimary(el);
+  expect(onDone).toHaveBeenCalledOnce();
+  return (onDone.mock.calls[0]![0] as CustomEvent<{ file: UploadcareFile }>).detail.file.imageInfo;
+}
 
-/** The ratio picker: what it offers per mode, what it sends, what it restores. */
+/** A result's width over its height. */
+const ratioOf = (image: UploadcareFile['imageInfo']) => (image?.width ?? Number.NaN) / (image?.height ?? Number.NaN);
+
+/** The ratio picker: what it offers per mode, the shape of the image it produces, what it restores. */
 describe('<uc-ai-image-editor> aspect ratio', () => {
-  it('renders the aspect-ratio picker in generate mode (no Auto) and sends the selected ratio', async () => {
+  it('renders the aspect-ratio picker in generate mode (no Auto) and generates at the selected ratio', async () => {
     // 3:2: neither the picker's default (the first ratio) nor the provider's fallback (1:1).
     const el = mount({ ...STAGING, 'aspect-ratios': '16:9 3:2' });
     await el.updateComplete;
@@ -35,12 +58,10 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
     typePrompt(el, 'mountain');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(async () => expect(await derivativeBodies()).toHaveLength(1));
-    const [body] = await derivativeBodies();
-    expect(body!.aspect_ratio).toEqual([3, 2]);
+    expect(ratioOf(await committedImage(el))).toBe(3 / 2);
   });
 
-  it('defaults edit mode to "Auto" and omits aspect_ratio (preserving the source AR)', async () => {
+  it('defaults edit mode to "Auto", which keeps the dimensions of the source image', async () => {
     const el = mount(STAGING);
     el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
@@ -58,11 +79,9 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
     typePrompt(el, 'add a hat');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(async () => expect(await derivativeBodies()).toHaveLength(1));
-    const [body] = await derivativeBodies();
-    // Auto is the default → no aspect_ratio on the wire; backend preserves it.
-    expect(body!.aspect_ratio).toBeUndefined();
-    expect(body!.source).toBe(SAMPLE_UUID);
+    // Auto is the default → no aspect_ratio is sent, so the result keeps the source's size.
+    const source = session.files.get(SAMPLE_UUID)!.image!;
+    expect(await committedImage(el)).toMatchObject({ width: source.width, height: source.height });
   });
 
   it('renders the aspect-ratio picker in edit mode too', async () => {
@@ -73,7 +92,7 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
     expect(el.shadowRoot!.querySelector('uc-ai-aspect-ratio')).toBeTruthy();
   });
 
-  it('sends an explicit ratio when the user reshapes in edit mode', async () => {
+  it('reshapes the result to a ratio the user picks in edit mode', async () => {
     const el = mount({ ...STAGING, 'aspect-ratios': '1:1' });
     el.sourceUuid = SAMPLE_UUID;
     await el.updateComplete;
@@ -90,9 +109,8 @@ describe('<uc-ai-image-editor> aspect ratio', () => {
     typePrompt(el, 'make it square');
     await el.updateComplete;
     clickSend(el);
-    await vi.waitFor(async () => expect(await derivativeBodies()).toHaveLength(1));
-    const [body] = await derivativeBodies();
-    expect(body!.aspect_ratio).toEqual([1, 1]);
+    // The source is not square, so a square result means the 1:1 was sent rather than Auto.
+    expect(ratioOf(await committedImage(el))).toBe(1);
   });
 
   it('records the aspect ratio on a history entry and restores it when re-selected', async () => {
