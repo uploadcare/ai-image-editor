@@ -74,6 +74,10 @@ export const canvasImage = () => page.getByRole('img');
 /** The result chips in the history strip, each named after the prompt that made it. */
 export const historyChips = () => page.getByRole('toolbar', { name: 'Recent prompts' }).getByRole('button');
 
+/** The history chip of the run that `prompt` made. */
+export const historyChip = (prompt: string) =>
+  page.getByRole('toolbar', { name: 'Recent prompts' }).getByRole('button', { name: prompt, exact: true });
+
 export const fillPrompt = (value: string) => userEvent.fill(promptBox(), value);
 
 export const clickDone = () => userEvent.click(doneButton());

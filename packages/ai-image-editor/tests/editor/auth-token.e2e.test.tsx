@@ -2,7 +2,7 @@ import { mintAuthToken } from '@uploadcare/api-emulator';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { session } from '../emulator';
 import type { UcAiImageEditorType } from './harness';
-import { clickSend, historyEl, mount, STAGING, typePrompt } from './harness';
+import { historyChip, mount, STAGING, sendPrompt } from './harness';
 
 /**
  * The project here has Signed Uploads on, so the emulator refuses every
@@ -17,28 +17,22 @@ describe('<uc-ai-image-editor> authToken', () => {
   });
 
   /**
-   * Runs one generation and waits for it to land in the history, counted rather
-   * than observed through the canvas: after the first run the canvas already
-   * holds a result URL, so waiting on it would return immediately and the
-   * second generation would never be awaited.
+   * Runs one generation and waits for its chip, named after the prompt, in the
+   * history: after the first run the canvas already holds a result, so waiting
+   * on it would return immediately and the second generation would never be
+   * awaited.
    */
-  const generate = async (el: UcAiImageEditorType, prompt: string) => {
-    const before = historyEl(el)?.entries.length ?? 0;
-    typePrompt(el, prompt);
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(historyEl(el)?.entries).toHaveLength(before + 1));
-    await el.updateComplete;
+  const generate = async (prompt: string) => {
+    await sendPrompt(prompt);
+    await expect.element(historyChip(prompt)).toBeVisible();
   };
 
   /** Runs one generation and answers the `uc:error` the signing gate's refusal raises. */
   const generateRefused = async (el: UcAiImageEditorType, prompt: string) => {
     const onError = vi.fn();
     el.addEventListener('uc:error', onError);
-    typePrompt(el, prompt);
-    await el.updateComplete;
-    clickSend(el);
-    await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    await sendPrompt(prompt);
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledOnce());
     el.removeEventListener('uc:error', onError);
     return onError.mock.calls[0]![0].detail.error;
   };
@@ -61,7 +55,7 @@ describe('<uc-ai-image-editor> authToken', () => {
 
     el.authToken = await mintAuthToken({ tokenId: 'plain' });
     await el.updateComplete;
-    await generate(el, 'a lion');
+    await generate('a lion');
 
     el.authToken = undefined;
     await el.updateComplete;
@@ -77,9 +71,9 @@ describe('<uc-ai-image-editor> authToken', () => {
     el.authToken = fetchToken;
     await el.updateComplete;
 
-    await generate(el, 'a tiger');
+    await generate('a tiger');
 
-    expect(fetchToken).toHaveBeenCalledTimes(1);
+    expect(fetchToken).toHaveBeenCalledOnce();
   });
 
   it('keeps the cached token when the function identity changes', async () => {
@@ -92,14 +86,14 @@ describe('<uc-ai-image-editor> authToken', () => {
     const el = mount(STAGING);
     el.authToken = first;
     await el.updateComplete;
-    await generate(el, 'a tiger');
+    await generate('a tiger');
 
     const second = vi.fn(async () => secondToken);
     el.authToken = second;
     await el.updateComplete;
-    await generate(el, 'a lion');
+    await generate('a lion');
 
-    expect(first).toHaveBeenCalledTimes(1);
+    expect(first).toHaveBeenCalledOnce();
     expect(second).not.toHaveBeenCalled();
   });
 
@@ -111,11 +105,11 @@ describe('<uc-ai-image-editor> authToken', () => {
     const el = mount(STAGING);
     el.authToken = fetchToken;
     await el.updateComplete;
-    await generate(el, 'a tiger');
-    expect(fetchToken).toHaveBeenCalledTimes(1);
+    await generate('a tiger');
+    expect(fetchToken).toHaveBeenCalledOnce();
 
     el.invalidateAuthToken();
-    await generate(el, 'a lion');
+    await generate('a lion');
 
     expect(fetchToken).toHaveBeenCalledTimes(2);
   });
@@ -130,7 +124,7 @@ describe('<uc-ai-image-editor> authToken', () => {
     el.authToken = fetchToken;
     await el.updateComplete;
 
-    await generate(el, 'a tiger');
+    await generate('a tiger');
 
     expect(fetchToken.mock.calls.length).toBeGreaterThan(1);
   });
@@ -145,7 +139,7 @@ describe('<uc-ai-image-editor> authToken', () => {
     el.authToken = { getToken, invalidate };
     await el.updateComplete;
 
-    await generate(el, 'a tiger');
+    await generate('a tiger');
 
     // Called per request: the provider decides what to cache, not the editor.
     expect(getToken.mock.calls.length).toBeGreaterThan(1);
@@ -160,6 +154,6 @@ describe('<uc-ai-image-editor> authToken', () => {
 
     el.invalidateAuthToken();
 
-    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(invalidate).toHaveBeenCalledOnce();
   });
 });
