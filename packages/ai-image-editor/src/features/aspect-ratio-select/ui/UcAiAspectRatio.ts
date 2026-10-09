@@ -31,7 +31,8 @@ export class UcAiAspectRatio extends LitElement {
   public busy = false;
 
   /**
-   * Accessible label for the trigger. A plain property (not the inherited
+   * Accessible label for the trigger (which appends the current selection) and
+   * the listbox. A plain property (not the inherited
    * `ariaLabel`) so it doesn't also stamp `aria-label` on the host element.
    */
   @property({ attribute: 'aria-label-text' })
@@ -101,7 +102,7 @@ export class UcAiAspectRatio extends LitElement {
         class="trigger"
         aria-haspopup="listbox"
         aria-expanded="${this.open ? 'true' : 'false'}"
-        aria-label="${label}"
+        aria-label="${triggerLabel ? `${label}: ${triggerLabel}` : label}"
         ?disabled=${this.busy}
         @click=${this._toggle}
       >
