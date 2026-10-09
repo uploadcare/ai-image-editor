@@ -430,6 +430,19 @@ describe('UploadcareDerivativeApi', () => {
       expect(session.requests).toHaveLength(2);
     });
 
+    it("rejects with the token function's own error and sends nothing when it throws", async () => {
+      const provider = new UploadcareDerivativeApi({
+        publicKey: PUBLIC_KEY,
+        authToken: async () => {
+          throw new Error('token service down');
+        },
+        ...NO_DELAY,
+      });
+
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow('token service down');
+      expect(session.requests).toHaveLength(0);
+    });
+
     it('follows a token that changes, on both network paths', async () => {
       // The provider holds one resolver for its lifetime; whoever owns the
       // token changes what that resolver returns, and nothing is pushed in.
