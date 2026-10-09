@@ -118,6 +118,25 @@ describe('UploadcareDerivativeApi', () => {
     await expect(pending).rejects.toThrow(jobId);
   });
 
+  describe('when a status poll fails mid-job', () => {
+    /** The job's status polls, in order. */
+    const statusPolls = () => session.requests.filter((request) => new URL(request.url).pathname === STATUS_PATH);
+
+    /** The job's first poll answers `processing`; the next one answers `failure`. */
+    const failSecondPoll = (failure: () => Response) => {
+      session.on(STATUS, failure, { times: 1 });
+      session.on(STATUS, () => Response.json({ type: 'job', status: 'processing' }), { times: 1 });
+    };
+
+    it('rejects with the status of a 5xx, and polls no more', async () => {
+      failSecondPoll(() => new Response('upstream down', { status: 503, statusText: 'Service Unavailable' }));
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/503 Service Unavailable/);
+      expect(statusPolls()).toHaveLength(2);
+    });
+  });
+
   describe('with the default poll options', () => {
     // The documented defaults: a poll every 1.5s, giving up after 1,000,000ms.
     const INTERVAL = 1500;
