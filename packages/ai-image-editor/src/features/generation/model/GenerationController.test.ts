@@ -16,8 +16,17 @@ const okResult = (url: string, prompt: string, mode: AiEditorMode = 'generate'):
 class FakeHost implements ReactiveControllerHost {
   public requestUpdate = vi.fn();
   public updateComplete = Promise.resolve(true);
-  public addController = vi.fn<(controller: ReactiveController) => void>();
   public removeController = vi.fn();
+  private readonly controllers: ReactiveController[] = [];
+
+  public addController(controller: ReactiveController): void {
+    this.controllers.push(controller);
+  }
+
+  /** What a Lit element does when it leaves the DOM. */
+  public disconnect(): void {
+    for (const controller of this.controllers) controller.hostDisconnected?.();
+  }
 }
 
 /** Provider whose generate() resolves with the next value supplied via setNext(). */
@@ -56,11 +65,6 @@ describe('GenerationController', () => {
 
   beforeEach(() => {
     host = new FakeHost();
-  });
-
-  it('registers itself with the host on construction', () => {
-    const ctrl = new GenerationController(host);
-    expect(host.addController).toHaveBeenCalledWith(ctrl);
   });
 
   it('starts with busy=false, no result, no error, empty history', () => {
@@ -176,11 +180,11 @@ describe('GenerationController', () => {
     expect(host.requestUpdate).toHaveBeenCalled();
   });
 
-  it('hostDisconnected aborts the in-flight request', () => {
+  it('aborts the in-flight request when its host disconnects', () => {
     const ctrl = new GenerationController(host);
     const { provider, observeSignal } = createDeferredProvider();
     void ctrl.run({ provider, prompt: 'x', mode: 'generate' });
-    ctrl.hostDisconnected();
+    host.disconnect();
     expect(observeSignal()?.aborted).toBe(true);
   });
 
