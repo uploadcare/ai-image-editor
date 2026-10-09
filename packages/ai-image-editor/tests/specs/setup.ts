@@ -13,6 +13,12 @@ const emulator = setupEmulator({ cdnHosts: ['upload.example.com'] });
 /** The current test's emulator session, for a spec that registers a scenario or reads `requests`. */
 export let session: EmulatorSession;
 
+/** The current test's requests to `route` (`'METHOD /path/'`, on any host), oldest first. */
+export const requestsTo = (route: string) => {
+  const [method, path] = route.split(' ');
+  return session.requests.filter((request) => request.method === method && new URL(request.url).pathname === path);
+};
+
 /** Every test starts against an empty session. */
 beforeEach(async () => {
   session = await emulator.reset();

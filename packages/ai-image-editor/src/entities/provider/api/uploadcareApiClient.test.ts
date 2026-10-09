@@ -1,10 +1,13 @@
 import { DEMO_IMAGE_UUID, mintAuthToken } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
-import { session } from '../../../../tests/specs/setup';
+import { requestsTo, session } from '../../../../tests/specs/setup';
 import { AiProviderError } from '../model/types';
 import { UploadcareApiClient } from './uploadcareApiClient';
 
 const PUBLIC_KEY = 'demopublickey';
+const GENERATE = 'POST /derivative/image/generate/';
+const EDIT = 'POST /derivative/image/edit/';
+const STATUS = 'GET /derivative/status/';
 
 /** Answers nothing, ever: a request to `route` stays in flight until its caller aborts it. */
 const hang = (route: string) => session.on(route, () => new Promise<never>(() => {}));
@@ -20,7 +23,7 @@ describe('UploadcareApiClient', () => {
 
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
 
-      expect(session.requests[0].headers.get('Authorization')).toBeNull();
+      expect(requestsTo(GENERATE)[0].headers.get('Authorization')).toBeNull();
     });
 
     it('sends a plain token as a bearer header', async () => {
@@ -29,7 +32,7 @@ describe('UploadcareApiClient', () => {
 
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
 
-      expect(session.requests[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
+      expect(requestsTo(GENERATE)[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
     });
 
     it('re-resolves a resolver per request, so a job can rotate tokens mid-flight', async () => {
@@ -40,8 +43,8 @@ describe('UploadcareApiClient', () => {
       const { job_id } = await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
       await client.getJobStatus(job_id!);
 
-      expect(session.requests[0].headers.get('Authorization')).toBe(`Bearer ${first}`);
-      expect(session.requests[1].headers.get('Authorization')).toBe(`Bearer ${second}`);
+      expect(requestsTo(GENERATE)[0].headers.get('Authorization')).toBe(`Bearer ${first}`);
+      expect(requestsTo(STATUS)[0].headers.get('Authorization')).toBe(`Bearer ${second}`);
     });
   });
 
@@ -52,9 +55,10 @@ describe('UploadcareApiClient', () => {
       const job = await client.generate({ prompt: 'a hat', aspectRatio: [16, 9], filename: 'generated.png' });
 
       expect(job).toEqual({ type: 'job', job_id: expect.any(String) });
-      expect(session.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/generate/');
-      expect(session.requests[0].method).toBe('POST');
-      expect(await session.requests[0].json()).toMatchObject({
+      expect(requestsTo(GENERATE)).toHaveLength(1);
+      const [sent] = requestsTo(GENERATE);
+      expect(sent.url).toBe('https://upload.uploadcare.com/derivative/image/generate/');
+      expect(await sent.json()).toMatchObject({
         pub_key: PUBLIC_KEY,
         prompt: 'a hat',
         aspect_ratio: [16, 9],
@@ -68,8 +72,8 @@ describe('UploadcareApiClient', () => {
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png', store: true });
 
-      expect((await session.requests[0].json()).store).toBeUndefined();
-      expect((await session.requests[1].json()).store).toBe(true);
+      expect((await requestsTo(GENERATE)[0].json()).store).toBeUndefined();
+      expect((await requestsTo(GENERATE)[1].json()).store).toBe(true);
     });
 
     it('includes metadata only when provided', async () => {
@@ -83,8 +87,8 @@ describe('UploadcareApiClient', () => {
         metadata: { source: 'ai-image-editor' },
       });
 
-      expect((await session.requests[0].json()).metadata).toBeUndefined();
-      expect((await session.requests[1].json()).metadata).toEqual({ source: 'ai-image-editor' });
+      expect((await requestsTo(GENERATE)[0].json()).metadata).toBeUndefined();
+      expect((await requestsTo(GENERATE)[1].json()).metadata).toEqual({ source: 'ai-image-editor' });
     });
 
     it('honours baseUrl override', async () => {
@@ -93,7 +97,7 @@ describe('UploadcareApiClient', () => {
         baseUrl: 'https://upload.example.com/',
       });
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
-      expect(session.requests[0].url).toBe('https://upload.example.com/derivative/image/generate/');
+      expect(requestsTo(GENERATE)[0].url).toBe('https://upload.example.com/derivative/image/generate/');
     });
 
     it('throws with status text on a non-2xx response that is not the error envelope', async () => {
@@ -106,7 +110,7 @@ describe('UploadcareApiClient', () => {
     });
 
     it('gives up on a hanging request when the caller aborts', async () => {
-      hang('POST /derivative/image/generate/');
+      hang(GENERATE);
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
 
@@ -116,7 +120,7 @@ describe('UploadcareApiClient', () => {
         filename: 'f.png',
         signal: controller.signal,
       });
-      await vi.waitFor(() => expect(session.requests).toHaveLength(1));
+      await vi.waitFor(() => expect(requestsTo(GENERATE)).toHaveLength(1));
       controller.abort();
 
       await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
@@ -125,7 +129,7 @@ describe('UploadcareApiClient', () => {
     it('sends Accept: application/json', async () => {
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
-      expect(session.requests[0].headers.get('Accept')).toBe('application/json');
+      expect(requestsTo(GENERATE)[0].headers.get('Accept')).toBe('application/json');
     });
 
     it('surfaces a platform error envelope as an AiProviderError with its code', async () => {
@@ -146,9 +150,10 @@ describe('UploadcareApiClient', () => {
       const job = await client.edit({ prompt: 'remove the cat', source: DEMO_IMAGE_UUID, filename: 'edited.png' });
 
       expect(job).toEqual({ type: 'job', job_id: expect.any(String) });
-      expect(session.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-      expect(session.requests[0].method).toBe('POST');
-      expect(await session.requests[0].json()).toMatchObject({
+      expect(requestsTo(EDIT)).toHaveLength(1);
+      const [sent] = requestsTo(EDIT);
+      expect(sent.url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
+      expect(await sent.json()).toMatchObject({
         pub_key: PUBLIC_KEY,
         prompt: 'remove the cat',
         source: DEMO_IMAGE_UUID,
@@ -162,8 +167,8 @@ describe('UploadcareApiClient', () => {
       await client.edit({ prompt: 'x', source: DEMO_IMAGE_UUID, filename: 'f.png' });
       await client.edit({ prompt: 'x', source: DEMO_IMAGE_UUID, filename: 'f.png', aspectRatio: [16, 9] });
 
-      expect((await session.requests[0].json()).aspect_ratio).toBeUndefined();
-      expect((await session.requests[1].json()).aspect_ratio).toEqual([16, 9]);
+      expect((await requestsTo(EDIT)[0].json()).aspect_ratio).toBeUndefined();
+      expect((await requestsTo(EDIT)[1].json()).aspect_ratio).toEqual([16, 9]);
     });
 
     it('includes metadata only when provided', async () => {
@@ -177,8 +182,8 @@ describe('UploadcareApiClient', () => {
         metadata: { source: 'ai-image-editor' },
       });
 
-      expect((await session.requests[0].json()).metadata).toBeUndefined();
-      expect((await session.requests[1].json()).metadata).toEqual({ source: 'ai-image-editor' });
+      expect((await requestsTo(EDIT)[0].json()).metadata).toBeUndefined();
+      expect((await requestsTo(EDIT)[1].json()).metadata).toEqual({ source: 'ai-image-editor' });
     });
 
     it('surfaces a source the project does not have as an AiProviderError', async () => {
@@ -199,7 +204,7 @@ describe('UploadcareApiClient', () => {
     });
 
     it('gives up on a hanging request when the caller aborts', async () => {
-      hang('POST /derivative/image/edit/');
+      hang(EDIT);
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
 
@@ -209,7 +214,7 @@ describe('UploadcareApiClient', () => {
         filename: 'f.png',
         signal: controller.signal,
       });
-      await vi.waitFor(() => expect(session.requests).toHaveLength(1));
+      await vi.waitFor(() => expect(requestsTo(EDIT)).toHaveLength(1));
       controller.abort();
 
       await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
@@ -227,10 +232,10 @@ describe('UploadcareApiClient', () => {
       const status = await client.getJobStatus(jobId);
 
       expect(status).toEqual({ type: 'job', status: 'processing' });
-      expect(session.requests[1].url).toBe(
+      expect(requestsTo(STATUS)).toHaveLength(1);
+      expect(requestsTo(STATUS)[0].url).toBe(
         `https://upload.uploadcare.com/derivative/status/?pub_key=${PUBLIC_KEY}&job_id=${jobId}`,
       );
-      expect(session.requests[1].method).toBe('GET');
     });
 
     it('throws with status text on a non-2xx response that is not the error envelope', async () => {
@@ -250,13 +255,13 @@ describe('UploadcareApiClient', () => {
     });
 
     it('gives up on a hanging request when the caller aborts', async () => {
-      hang('GET /derivative/status/');
+      hang(STATUS);
       const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const jobId = await startJob(client);
       const controller = new AbortController();
 
       const pending = client.getJobStatus(jobId, controller.signal);
-      await vi.waitFor(() => expect(session.requests).toHaveLength(2));
+      await vi.waitFor(() => expect(requestsTo(STATUS)).toHaveLength(1));
       controller.abort();
 
       await expect(pending).rejects.toMatchObject({ name: 'AbortError' });

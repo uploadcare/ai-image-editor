@@ -2,15 +2,16 @@ import { DEMO_IMAGE_UUID, mintAuthToken } from '@uploadcare/api-emulator';
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { session } from '../../../../tests/specs/setup';
+import { requestsTo, session } from '../../../../tests/specs/setup';
 import { AiProviderError } from '../model/types';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
 
 const PUBLIC_KEY = 'demopublickey';
 const CDN = 'https://cdn.example.com';
 const NO_DELAY = { pollIntervalMs: 0 } as const;
-const STATUS_PATH = '/derivative/status/';
-const STATUS = `GET ${STATUS_PATH}`;
+const GENERATE = 'POST /derivative/image/generate/';
+const EDIT = 'POST /derivative/image/edit/';
+const STATUS = 'GET /derivative/status/';
 
 /** A result's width over its height. */
 const ratioOf = (file: UploadcareFile) =>
@@ -42,7 +43,7 @@ describe('UploadcareDerivativeApi', () => {
   it('forwards request metadata to the generate endpoint', async () => {
     const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     await provider.generate({ prompt: 'x', mode: 'generate', metadata: { source: 'ai-image-editor' } });
-    expect((await session.requests[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
+    expect((await requestsTo(GENERATE)[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
   });
 
   it('forwards request metadata to the edit endpoint', async () => {
@@ -53,8 +54,7 @@ describe('UploadcareDerivativeApi', () => {
       source: DEMO_IMAGE_UUID,
       metadata: { source: 'ai-image-editor' },
     });
-    expect(session.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-    expect((await session.requests[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
+    expect((await requestsTo(EDIT)[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
   });
 
   it.each([
@@ -85,7 +85,7 @@ describe('UploadcareDerivativeApi', () => {
 
     expect(result.url).toBe(`${CDN}/${result.uuid}/`);
     // processing, uploading, unready success, ready success: one poll each, none after.
-    expect(session.requests.filter((request) => new URL(request.url).pathname === STATUS_PATH)).toHaveLength(4);
+    expect(requestsTo(STATUS)).toHaveLength(4);
   });
 
   it('throws when the job ends in an error status', async () => {
@@ -120,7 +120,7 @@ describe('UploadcareDerivativeApi', () => {
 
   describe('when a status poll fails mid-job', () => {
     /** The job's status polls, in order. */
-    const statusPolls = () => session.requests.filter((request) => new URL(request.url).pathname === STATUS_PATH);
+    const statusPolls = () => requestsTo(STATUS);
 
     /** The job's first poll answers `processing`; the next one answers `failure`. */
     const failSecondPoll = (failure: () => Response) => {
@@ -227,8 +227,8 @@ describe('UploadcareDerivativeApi', () => {
       ...NO_DELAY,
     });
     const result = await provider.generate({ prompt: 'x', mode: 'generate' });
-    expect(session.requests[0].url).toBe('https://upload.example.com/derivative/image/generate/');
-    expect(session.requests[1].url).toMatch(
+    expect(requestsTo(GENERATE)[0].url).toBe('https://upload.example.com/derivative/image/generate/');
+    expect(requestsTo(STATUS)[0].url).toMatch(
       new RegExp(`^https://upload\\.example\\.com/derivative/status/\\?pub_key=${PUBLIC_KEY}&job_id=`),
     );
     expect(result.url).toBe(`${CDN}/${result.uuid}/`);
@@ -274,7 +274,7 @@ describe('UploadcareDerivativeApi', () => {
     const controller = new AbortController();
 
     const pending = provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
-    await vi.waitFor(() => expect(session.requests).toHaveLength(1));
+    await vi.waitFor(() => expect(requestsTo(GENERATE)).toHaveLength(1));
     controller.abort();
 
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
@@ -286,8 +286,7 @@ describe('UploadcareDerivativeApi', () => {
     const controller = new AbortController();
 
     const pending = provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
-    // The start, then the first status poll.
-    await vi.waitFor(() => expect(session.requests).toHaveLength(2));
+    await vi.waitFor(() => expect(requestsTo(STATUS)).toHaveLength(1));
     controller.abort();
 
     await expect(pending).rejects.toThrow(/cancel/i);
@@ -318,7 +317,7 @@ describe('UploadcareDerivativeApi', () => {
         aspectRatio: [16, 9],
       });
 
-      expect(session.requests[0].url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
+      expect(requestsTo(EDIT)).toHaveLength(1);
       expect(result.uuid).not.toBe(DEMO_IMAGE_UUID);
       expect(ratioOf(result.file)).toBe(16 / 9);
       expect(result.url).toBe(`${CDN}/${result.uuid}/`);
@@ -392,7 +391,7 @@ describe('UploadcareDerivativeApi', () => {
       });
 
       await provider.generate({ prompt: 'x', mode: 'generate' });
-      expect(session.requests[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
+      expect(requestsTo(GENERATE)[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
 
       await expect(provider.getFileInfo(DEMO_IMAGE_UUID)).resolves.toMatchObject({ uuid: DEMO_IMAGE_UUID });
     });
@@ -413,7 +412,7 @@ describe('UploadcareDerivativeApi', () => {
         name: 'AiProviderError',
         errorCode: 'AccessTokenInvalidError',
       });
-      expect(session.requests).toHaveLength(1);
+      expect(requestsTo(STATUS)).toHaveLength(0);
     });
 
     it('surfaces a token that expires mid-job as AccessTokenExpiredError on the next poll', async () => {
@@ -427,7 +426,7 @@ describe('UploadcareDerivativeApi', () => {
         errorCode: 'AccessTokenExpiredError',
       });
       // The start went through on the fresh token; the first poll, on the expired one, ended the job.
-      expect(session.requests).toHaveLength(2);
+      expect(requestsTo(STATUS)).toHaveLength(1);
     });
 
     it("rejects with the token function's own error and sends nothing when it throws", async () => {
