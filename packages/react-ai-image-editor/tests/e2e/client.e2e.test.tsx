@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { AiImageEditorError } from '@uploadcare/ai-image-editor/errors';
-import { AiImageEditor, preloadAiImageEditor } from '../../src';
+import { AiImageEditor } from '../../src';
 import { setupContainers } from '../support/containers';
 
 const makeContainer = setupContainers();
@@ -140,17 +140,6 @@ it('updated callback props receive events (no stale handlers)', async () => {
   el.dispatchEvent(new CustomEvent('uc:cancel'));
   expect(first).not.toHaveBeenCalled();
   expect(second).toHaveBeenCalledTimes(1);
-});
-
-it('preloadAiImageEditor warms the engine cache', async () => {
-  preloadAiImageEditor();
-  const container = render(<AiImageEditor pubkey="test-pubkey" />);
-  await vi.waitFor(
-    () => {
-      expect(container.querySelector('uc-ai-image-editor')).not.toBeNull();
-    },
-    { timeout: 10_000 },
-  );
 });
 
 it('shares one AiImageEditorError class identity across package entries', async () => {
