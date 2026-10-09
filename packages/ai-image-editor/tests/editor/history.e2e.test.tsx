@@ -1,7 +1,6 @@
 import { DEMO_FILES } from '@uploadcare/api-emulator';
 import type { UploadcareFile } from '@uploadcare/upload-client';
 import { describe, expect, it } from 'vitest';
-import { page, userEvent } from 'vitest/browser';
 import {
   canvasImage,
   editorRegion,
@@ -79,17 +78,5 @@ describe('<uc-ai-image-editor> history', () => {
     // The canvas (and shimmer) resume on the latest result, not the original.
     await expectCanvasToShow(LATEST);
     await expect.element(canvasImage()).not.toHaveAttribute('src', expect.stringContaining(SAMPLE_UUID));
-  });
-
-  it.skip('returns to generate mode after Start over (from the history strip)', async () => {
-    mount(STAGING);
-    await sendPrompt('a tiger');
-    await expect.element(editorRegion('edit')).toBeVisible();
-
-    await userEvent.click(page.getByRole('button', { name: 'Start over' }));
-    await expect.element(editorRegion('generate')).toBeVisible();
-    await expect.element(canvasImage()).not.toBeInTheDocument();
-    // Start over also clears the prompt history (the strip unmounts).
-    await expect.element(page.getByRole('toolbar', { name: 'Recent prompts' })).not.toBeInTheDocument();
   });
 });

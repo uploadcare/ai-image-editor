@@ -37,7 +37,6 @@ async function mount(overrides: Partial<UcAiHistory> = {}): Promise<UcAiHistory>
 }
 
 const chips = (el: UcAiHistory) => [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.chip')];
-const startOver = (el: UcAiHistory) => el.shadowRoot!.querySelector<HTMLButtonElement>('.startover__btn');
 const prev = (el: UcAiHistory) => el.shadowRoot!.querySelector<HTMLButtonElement>('.nav--prev');
 const next = (el: UcAiHistory) => el.shadowRoot!.querySelector<HTMLButtonElement>('.nav--next');
 
@@ -53,7 +52,6 @@ describe('UcAiHistory', () => {
   it('renders nothing in generate mode with no results', async () => {
     const el = await mount({ entries: [], showStartOver: false });
     expect(chips(el)).toHaveLength(0);
-    expect(startOver(el)).toBeNull();
     expect(el.shadowRoot!.querySelector('.strip')).toBeNull();
   });
 
@@ -248,16 +246,5 @@ describe('UcAiHistory', () => {
       expect(next(el)).not.toBeNull();
       expect(el.shadowRoot!.querySelector('.chips--carousel')).toBeNull();
     });
-  });
-
-  it.skip('shows a Start over control in edit mode and emits uc:start-over', async () => {
-    const el = await mount({ entries: [], showStartOver: true, startOverLabel: 'Start over' });
-    expect(el.shadowRoot!.querySelector('.strip')).toBeTruthy();
-    expect(startOver(el)?.textContent).toContain('Start over');
-
-    const onStartOver = vi.fn();
-    el.addEventListener('uc:start-over', onStartOver);
-    startOver(el)!.click();
-    expect(onStartOver).toHaveBeenCalledOnce();
   });
 });
