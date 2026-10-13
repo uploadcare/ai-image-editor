@@ -1,8 +1,12 @@
 import { playwright } from '@vitest/browser-playwright';
+import { msw } from 'msw/vite';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // Every spy and stubbed global is undone before the next test, so none leaks into a test that runs after it.
+    restoreMocks: true,
+    unstubGlobals: true,
     projects: [
       {
         extends: true,
@@ -40,9 +44,12 @@ export default defineConfig({
       },
       {
         extends: true,
+        // Serves msw 3's /mockServiceWorker.js for the in-page emulator (tests/e2e/setup.ts).
+        plugins: [msw({ mode: 'worker-only' })],
         test: {
           name: 'e2e',
           include: ['tests/e2e/**/*.test.{ts,tsx}'],
+          setupFiles: ['tests/e2e/setup.ts'],
           browser: {
             provider: playwright(),
             instances: [{ browser: 'chromium' }],

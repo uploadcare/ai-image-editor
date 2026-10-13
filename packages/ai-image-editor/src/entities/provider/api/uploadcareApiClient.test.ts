@@ -1,14 +1,16 @@
+import { DEMO_IMAGE_UUID, mintAuthToken } from '@uploadcare/api-emulator';
 import { describe, expect, it, vi } from 'vitest';
+import { requestsTo, session } from '../../../../tests/specs/setup';
 import { AiProviderError } from '../model/types';
 import { UploadcareApiClient } from './uploadcareApiClient';
 
-function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  });
-}
+const PUBLIC_KEY = 'demopublickey';
+const GENERATE = 'POST /derivative/image/generate/';
+const EDIT = 'POST /derivative/image/edit/';
+const STATUS = 'GET /derivative/status/';
+
+/** Answers nothing, ever: a request to `route` stays in flight until its caller aborts it. */
+const hang = (route: string) => session.on(route, () => new Promise<never>(() => {}));
 
 describe('UploadcareApiClient', () => {
   it('throws when publicKey is missing', () => {
@@ -16,55 +18,48 @@ describe('UploadcareApiClient', () => {
   });
 
   describe('authToken', () => {
-    const headersOf = (call: unknown) => new Headers((call as [string, RequestInit])[1].headers);
-
     it('sends no Authorization header when unset', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'j' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
 
-      expect(headersOf(fetchImpl.mock.calls[0]!).has('Authorization')).toBe(false);
+      expect(requestsTo(GENERATE)[0].headers.get('Authorization')).toBeNull();
     });
 
     it('sends a plain token as a bearer header', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'j' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl, authToken: 'eyJ' });
+      const token = await mintAuthToken();
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, authToken: token });
 
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
 
-      expect(headersOf(fetchImpl.mock.calls[0]!).get('Authorization')).toBe('Bearer eyJ');
+      expect(requestsTo(GENERATE)[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
     });
 
     it('re-resolves a resolver per request, so a job can rotate tokens mid-flight', async () => {
-      const fetchImpl = vi
-        .fn<typeof fetch>()
-        .mockResolvedValueOnce(jsonResponse({ type: 'job', job_id: 'j' }))
-        .mockResolvedValueOnce(jsonResponse({ type: 'status', status: 'pending' }));
-      const authToken = vi.fn().mockResolvedValueOnce('first').mockResolvedValueOnce('second');
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl, authToken });
+      const [first, second] = [await mintAuthToken({ tokenId: 'first' }), await mintAuthToken({ tokenId: 'second' })];
+      const authToken = vi.fn().mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY, authToken });
 
-      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
-      await client.getJobStatus('j');
+      const { job_id } = await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
+      await client.getJobStatus(job_id!);
 
-      expect(headersOf(fetchImpl.mock.calls[0]!).get('Authorization')).toBe('Bearer first');
-      expect(headersOf(fetchImpl.mock.calls[1]!).get('Authorization')).toBe('Bearer second');
+      expect(requestsTo(GENERATE)[0].headers.get('Authorization')).toBe(`Bearer ${first}`);
+      expect(requestsTo(STATUS)[0].headers.get('Authorization')).toBe(`Bearer ${second}`);
     });
   });
 
   describe('generate', () => {
     it('POSTs pub_key + prompt + aspect_ratio + filename and returns the job', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'job-1' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
       const job = await client.generate({ prompt: 'a hat', aspectRatio: [16, 9], filename: 'generated.png' });
 
-      expect(job).toEqual({ type: 'job', job_id: 'job-1' });
-      const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect(url).toBe('https://upload.uploadcare.com/derivative/image/generate/');
-      expect(init.method).toBe('POST');
-      expect(JSON.parse(init.body as string)).toMatchObject({
-        pub_key: 'pk',
+      expect(job).toEqual({ type: 'job', job_id: expect.any(String) });
+      expect(requestsTo(GENERATE)).toHaveLength(1);
+      const [sent] = requestsTo(GENERATE);
+      expect(sent.url).toBe('https://upload.uploadcare.com/derivative/image/generate/');
+      expect(await sent.json()).toMatchObject({
+        pub_key: PUBLIC_KEY,
         prompt: 'a hat',
         aspect_ratio: [16, 9],
         filename: 'generated.png',
@@ -72,194 +67,204 @@ describe('UploadcareApiClient', () => {
     });
 
     it('includes store only when provided', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'j' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
+
+      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png', store: true });
-      const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect(JSON.parse(init.body as string).store).toBe(true);
+
+      expect((await requestsTo(GENERATE)[0].json()).store).toBeUndefined();
+      expect((await requestsTo(GENERATE)[1].json()).store).toBe(true);
     });
 
     it('includes metadata only when provided', async () => {
-      const fetchImpl = vi
-        .fn<typeof fetch>()
-        .mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
-      expect(JSON.parse((fetchImpl.mock.calls[0]![1] as RequestInit).body as string).metadata).toBeUndefined();
-
       await client.generate({
         prompt: 'x',
         aspectRatio: [1, 1],
         filename: 'f.png',
         metadata: { source: 'ai-image-editor' },
       });
-      expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).metadata).toEqual({
-        source: 'ai-image-editor',
-      });
+
+      expect((await requestsTo(GENERATE)[0].json()).metadata).toBeUndefined();
+      expect((await requestsTo(GENERATE)[1].json()).metadata).toEqual({ source: 'ai-image-editor' });
     });
 
     it('honours baseUrl override', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'j' }));
       const client = new UploadcareApiClient({
-        publicKey: 'pk',
+        publicKey: PUBLIC_KEY,
         baseUrl: 'https://upload.example.com/',
-        fetch: fetchImpl,
       });
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
-      const [url] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect(url).toBe('https://upload.example.com/derivative/image/generate/');
+      expect(requestsTo(GENERATE)[0].url).toBe('https://upload.example.com/derivative/image/generate/');
     });
 
-    it('throws with status text on non-2xx', async () => {
-      const fetchImpl = vi
-        .fn<typeof fetch>()
-        .mockResolvedValue(new Response('bad ratio', { status: 400, statusText: 'Bad Request' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+    it('throws with status text on a non-2xx response that is not the error envelope', async () => {
+      session.on(
+        'POST /derivative/image/generate/',
+        () => new Response('upstream failure', { status: 400, statusText: 'Bad Request' }),
+      );
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await expect(client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' })).rejects.toThrow(/400/);
     });
 
-    it('forwards the abort signal', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
-        expect(init?.signal).toBeInstanceOf(AbortSignal);
-        return jsonResponse({ type: 'job', job_id: 'j' });
-      });
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+    it('gives up on a hanging request when the caller aborts', async () => {
+      hang(GENERATE);
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
-      await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png', signal: controller.signal });
+
+      const pending = client.generate({
+        prompt: 'x',
+        aspectRatio: [1, 1],
+        filename: 'f.png',
+        signal: controller.signal,
+      });
+      await vi.waitFor(() => expect(requestsTo(GENERATE)).toHaveLength(1));
+      controller.abort();
+
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     });
 
     it('sends Accept: application/json', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'j' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' });
-      const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect((init.headers as Record<string, string>).Accept).toBe('application/json');
+      expect(requestsTo(GENERATE)[0].headers.get('Accept')).toBe('application/json');
     });
 
     it('surfaces a platform error envelope as an AiProviderError with its code', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-        jsonResponse({
-          error: { status_code: 400, error_code: 'canvas_too_large', content: 'Canvas size exceeds the 4MP limit.' },
-        }),
-      );
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      session.use('derivativesDisabled');
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await expect(client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' })).rejects.toMatchObject({
         name: 'AiProviderError',
-        errorCode: 'canvas_too_large',
-        message: 'Canvas size exceeds the 4MP limit.',
+        errorCode: 'derivative_disabled',
+        message: 'Derivatives are not enabled for this project.',
       });
     });
   });
 
   describe('edit', () => {
     it('POSTs pub_key + prompt + source uuid + filename to the edit endpoint', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', job_id: 'job-e' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
-      const job = await client.edit({ prompt: 'remove the cat', source: 'src-uuid', filename: 'edited.png' });
+      const job = await client.edit({ prompt: 'remove the cat', source: DEMO_IMAGE_UUID, filename: 'edited.png' });
 
-      expect(job).toEqual({ type: 'job', job_id: 'job-e' });
-      const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect(url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-      expect(init.method).toBe('POST');
-      expect(JSON.parse(init.body as string)).toMatchObject({
-        pub_key: 'pk',
+      expect(job).toEqual({ type: 'job', job_id: expect.any(String) });
+      expect(requestsTo(EDIT)).toHaveLength(1);
+      const [sent] = requestsTo(EDIT);
+      expect(sent.url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
+      expect(await sent.json()).toMatchObject({
+        pub_key: PUBLIC_KEY,
         prompt: 'remove the cat',
-        source: 'src-uuid',
+        source: DEMO_IMAGE_UUID,
         filename: 'edited.png',
       });
     });
 
     it('includes aspect_ratio only when provided', async () => {
-      // Fresh Response per call — a single shared Response body can be read once.
-      const fetchImpl = vi
-        .fn<typeof fetch>()
-        .mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
-      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png' });
-      expect(JSON.parse((fetchImpl.mock.calls[0]![1] as RequestInit).body as string).aspect_ratio).toBeUndefined();
+      await client.edit({ prompt: 'x', source: DEMO_IMAGE_UUID, filename: 'f.png' });
+      await client.edit({ prompt: 'x', source: DEMO_IMAGE_UUID, filename: 'f.png', aspectRatio: [16, 9] });
 
-      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png', aspectRatio: [16, 9] });
-      expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).aspect_ratio).toEqual([16, 9]);
+      expect((await requestsTo(EDIT)[0].json()).aspect_ratio).toBeUndefined();
+      expect((await requestsTo(EDIT)[1].json()).aspect_ratio).toEqual([16, 9]);
     });
 
     it('includes metadata only when provided', async () => {
-      const fetchImpl = vi
-        .fn<typeof fetch>()
-        .mockImplementation(async () => jsonResponse({ type: 'job', job_id: 'j' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
 
-      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png' });
-      expect(JSON.parse((fetchImpl.mock.calls[0]![1] as RequestInit).body as string).metadata).toBeUndefined();
+      await client.edit({ prompt: 'x', source: DEMO_IMAGE_UUID, filename: 'f.png' });
+      await client.edit({
+        prompt: 'x',
+        source: DEMO_IMAGE_UUID,
+        filename: 'f.png',
+        metadata: { source: 'ai-image-editor' },
+      });
 
-      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png', metadata: { source: 'ai-image-editor' } });
-      expect(JSON.parse((fetchImpl.mock.calls[1]![1] as RequestInit).body as string).metadata).toEqual({
-        source: 'ai-image-editor',
+      expect((await requestsTo(EDIT)[0].json()).metadata).toBeUndefined();
+      expect((await requestsTo(EDIT)[1].json()).metadata).toEqual({ source: 'ai-image-editor' });
+    });
+
+    it('surfaces a source the project does not have as an AiProviderError', async () => {
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
+      await expect(client.edit({ prompt: 'x', source: 'missing', filename: 'f.png' })).rejects.toMatchObject({
+        name: 'AiProviderError',
+        errorCode: 'source_not_found',
       });
     });
 
-    it('throws with status text on non-2xx', async () => {
-      const fetchImpl = vi
-        .fn<typeof fetch>()
-        .mockResolvedValue(new Response('bad source', { status: 400, statusText: 'Bad Request' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+    it('throws with status text on a non-2xx response that is not the error envelope', async () => {
+      session.on(
+        'POST /derivative/image/edit/',
+        () => new Response('upstream failure', { status: 400, statusText: 'Bad Request' }),
+      );
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await expect(client.edit({ prompt: 'x', source: 'u', filename: 'f.png' })).rejects.toThrow(/400/);
     });
 
-    it('forwards the abort signal', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
-        expect(init?.signal).toBeInstanceOf(AbortSignal);
-        return jsonResponse({ type: 'job', job_id: 'j' });
-      });
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+    it('gives up on a hanging request when the caller aborts', async () => {
+      hang(EDIT);
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
-      await client.edit({ prompt: 'x', source: 'u', filename: 'f.png', signal: controller.signal });
+
+      const pending = client.edit({
+        prompt: 'x',
+        source: DEMO_IMAGE_UUID,
+        filename: 'f.png',
+        signal: controller.signal,
+      });
+      await vi.waitFor(() => expect(requestsTo(EDIT)).toHaveLength(1));
+      controller.abort();
+
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     });
   });
 
   describe('getJobStatus', () => {
-    it('GETs the status endpoint with pub_key + job_id and returns the parsed status', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ type: 'job', status: 'processing' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+    const startJob = async (client: UploadcareApiClient) =>
+      (await client.generate({ prompt: 'x', aspectRatio: [1, 1], filename: 'f.png' })).job_id!;
 
-      const status = await client.getJobStatus('job-42');
+    it('GETs the status endpoint with pub_key + job_id and returns the parsed status', async () => {
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
+      const jobId = await startJob(client);
+
+      const status = await client.getJobStatus(jobId);
 
       expect(status).toEqual({ type: 'job', status: 'processing' });
-      const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect(url).toBe('https://upload.uploadcare.com/derivative/status/?pub_key=pk&job_id=job-42');
-      expect((init?.method ?? 'GET').toUpperCase()).toBe('GET');
+      expect(requestsTo(STATUS)).toHaveLength(1);
+      expect(requestsTo(STATUS)[0].url).toBe(
+        `https://upload.uploadcare.com/derivative/status/?pub_key=${PUBLIC_KEY}&job_id=${jobId}`,
+      );
     });
 
-    it('throws with status text on non-2xx', async () => {
-      const fetchImpl = vi
-        .fn<typeof fetch>()
-        .mockResolvedValue(new Response('nope', { status: 404, statusText: 'Not Found' }));
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+    it('throws with status text on a non-2xx response that is not the error envelope', async () => {
+      session.on(
+        'GET /derivative/status/',
+        () => new Response('upstream failure', { status: 404, statusText: 'Not Found' }),
+      );
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
       await expect(client.getJobStatus('job-1')).rejects.toThrow(/404/);
     });
 
     it('surfaces a platform error envelope (e.g. job_not_found) as an AiProviderError', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-        jsonResponse({
-          error: { status_code: 404, error_code: 'job_not_found', content: 'Derivative job is not found.' },
-        }),
-      );
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
-      const err = await client.getJobStatus('job-1').catch((e) => e);
-      expect(err).toBeInstanceOf(AiProviderError);
-      expect(err.errorCode).toBe('job_not_found');
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
+      const pending = client.getJobStatus('job-1');
+      await expect(pending).rejects.toBeInstanceOf(AiProviderError);
+      await expect(pending).rejects.toMatchObject({ errorCode: 'job_not_found' });
     });
 
-    it('forwards the abort signal', async () => {
-      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
-        expect(init?.signal).toBeInstanceOf(AbortSignal);
-        return jsonResponse({ type: 'job', status: 'processing' });
-      });
-      const client = new UploadcareApiClient({ publicKey: 'pk', fetch: fetchImpl });
+    it('gives up on a hanging request when the caller aborts', async () => {
+      hang(STATUS);
+      const client = new UploadcareApiClient({ publicKey: PUBLIC_KEY });
+      const jobId = await startJob(client);
       const controller = new AbortController();
-      await client.getJobStatus('job-1', controller.signal);
+
+      const pending = client.getJobStatus(jobId, controller.signal);
+      await vi.waitFor(() => expect(requestsTo(STATUS)).toHaveLength(1));
+      controller.abort();
+
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     });
   });
 });

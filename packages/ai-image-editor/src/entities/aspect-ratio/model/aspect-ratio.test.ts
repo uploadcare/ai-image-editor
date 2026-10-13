@@ -1,3 +1,4 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
   aspectRatioEquals,
@@ -107,6 +108,31 @@ describe('parseAspectRatioList', () => {
     expect(parseAspectRatioList('')).toEqual([]);
     expect(parseAspectRatioList('   ')).toEqual([]);
   });
+
+  /** A side length, as a host might write it: whole or fractional, tiny to huge. */
+  const side = fc.double({ min: 0.001, max: 10_000, noNaN: true });
+  const validRatio = fc.tuple(side, side).filter((ratio) => isValidAspectRatio(ratio));
+  const separator = fc.constantFrom(',', ' ', ', ', ' , ', ',,', '\n', '\t');
+
+  it('reads back any list of valid ratios, in order, whatever separates them', () => {
+    fc.assert(
+      fc.property(fc.array(validRatio), separator, (ratios, sep) => {
+        expect(parseAspectRatioList(ratios.map(aspectRatioKey).join(sep))).toEqual(ratios);
+      }),
+    );
+  });
+
+  it('answers only valid ratios, whatever it is given', () => {
+    // Any string, or "w:h" pairs of any doubles (NaN, ±Infinity, -0, negatives, out of the 10:1 bound).
+    const pairs = fc
+      .array(fc.tuple(fc.double(), fc.double()))
+      .map((list) => list.map(([w, h]) => `${w}:${h}`).join(','));
+    fc.assert(
+      fc.property(fc.oneof(fc.string(), pairs), (input) => {
+        expect(parseAspectRatioList(input).filter((ratio) => !isValidAspectRatio(ratio))).toEqual([]);
+      }),
+    );
+  });
 });
 
 describe('aspectRatioEquals', () => {
@@ -120,10 +146,8 @@ describe('aspectRatioEquals', () => {
 });
 
 describe('POPULAR_ASPECT_RATIOS', () => {
-  it('contains only valid ratios', () => {
-    for (const ratio of POPULAR_ASPECT_RATIOS) {
-      expect(isValidAspectRatio(ratio)).toBe(true);
-    }
+  it.each(POPULAR_ASPECT_RATIOS)('offers %i:%i, a valid ratio', (w, h) => {
+    expect(isValidAspectRatio([w, h])).toBe(true);
   });
 
   it('contains 1:1', () => {

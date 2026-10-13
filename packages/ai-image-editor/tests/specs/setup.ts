@@ -1,0 +1,30 @@
+import type { EmulatorSession } from '@uploadcare/api-emulator';
+import { setupEmulator } from '@uploadcare/api-emulator/node';
+import { afterAll, beforeEach } from 'vitest';
+import { failOnSchemaDrift } from '../schema-drift';
+
+/**
+ * The Uploadcare emulator behind this process's `fetch` and `node:http(s)`, for Uploadcare's hosts and
+ * `upload.example.com` (the specs' custom `baseUrl`; the emulator routes by path, so it answers there too). Every
+ * other origin fails.
+ */
+const emulator = setupEmulator({ cdnHosts: ['upload.example.com'] });
+
+/** The current test's emulator session, for a spec that registers a scenario or reads `requests`. */
+export let session: EmulatorSession;
+
+/** The current test's requests to `route` (`'METHOD /path/'`, on any host), oldest first. */
+export const requestsTo = (route: string) => {
+  const [method, path] = route.split(' ');
+  return session.requests.filter((request) => request.method === method && new URL(request.url).pathname === path);
+};
+
+/** Every test starts against an empty session. */
+beforeEach(async () => {
+  session = await emulator.reset();
+});
+
+failOnSchemaDrift();
+
+/** Removes the emulator's global patches, so a worker shared with a later file starts clean. */
+afterAll(() => emulator.stop());
