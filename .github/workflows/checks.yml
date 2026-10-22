@@ -91,7 +91,9 @@ jobs:
 
       - run: npm run build --workspaces --if-present
 
-      - run: npm run test --workspaces --if-present
+      # shuffled so a test that only passes after another one fails here; the seed is the run id, so a failure
+      # reproduces locally with `npm test -- --sequence.shuffle --sequence.seed=<run id>`
+      - run: npm run test --workspaces --if-present -- --sequence.shuffle --sequence.seed=${{ github.run_id }}
 
   next-fixture:
     if: startsWith(github.head_ref, 'release-please--')

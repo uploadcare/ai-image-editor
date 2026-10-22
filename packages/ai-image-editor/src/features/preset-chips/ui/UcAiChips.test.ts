@@ -28,7 +28,8 @@ describe('UcAiChips', () => {
 
   it('renders chips as plain buttons (no sticky pressed state)', async () => {
     const el = await mount({ mode: 'generate' });
-    expect(chips(el).some((c) => c.hasAttribute('aria-pressed'))).toBe(false);
+    expect(chips(el)).not.toHaveLength(0);
+    expect(chips(el).filter((c) => c.hasAttribute('aria-pressed'))).toEqual([]);
   });
 
   it('emits uc:select with the preset when a chip is clicked', async () => {
@@ -44,6 +45,6 @@ describe('UcAiChips', () => {
 
   it('disables the chips while busy', async () => {
     const el = await mount({ mode: 'generate', busy: true });
-    expect(chips(el).every((c) => c.disabled)).toBe(true);
+    expect(chips(el).map((c) => c.disabled)).toEqual(MODES.generate.presets.map(() => true));
   });
 });

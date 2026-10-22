@@ -1,3 +1,4 @@
+import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CDN_MAX_OUTPUT_DIMENSION, cdnPreviewUrl, cdnSquareThumbUrl } from './cdn';
@@ -13,31 +14,63 @@ describe('cdn helpers', () => {
 
   it('builds a dpr-scaled preview url capped at the CDN limit (resize directive only)', () => {
     vi.stubGlobal('devicePixelRatio', 2);
-    try {
-      // Only the resize directive — the CDN applies format/auto + quality itself.
-      expect(cdnPreviewUrl(UC_URL, 800)).toBe(`${UC_URL}-/preview/1600x1600/`);
-      expect(cdnPreviewUrl(UC_URL, 2000)).toContain(`preview/${CDN_MAX_OUTPUT_DIMENSION}x${CDN_MAX_OUTPUT_DIMENSION}`);
-    } finally {
-      vi.unstubAllGlobals();
-    }
+    // Only the resize directive — the CDN applies format/auto + quality itself.
+    expect(cdnPreviewUrl(UC_URL, 800)).toBe(`${UC_URL}-/preview/1600x1600/`);
+    expect(cdnPreviewUrl(UC_URL, 2000)).toContain(`preview/${CDN_MAX_OUTPUT_DIMENSION}x${CDN_MAX_OUTPUT_DIMENSION}`);
   });
 
   it('scales the preview by devicePixelRatio', () => {
     vi.stubGlobal('devicePixelRatio', 1);
-    try {
-      expect(cdnPreviewUrl(UC_URL, 800)).toBe(`${UC_URL}-/preview/800x800/`);
-    } finally {
-      vi.unstubAllGlobals();
-    }
+    expect(cdnPreviewUrl(UC_URL, 800)).toBe(`${UC_URL}-/preview/800x800/`);
   });
 
   it('builds a dpr-scaled centered square crop-to-fill thumbnail', () => {
     vi.stubGlobal('devicePixelRatio', 2);
-    try {
-      // scale_crop (not preview) so a non-square source fills the square tile sharply.
-      expect(cdnSquareThumbUrl(UC_URL, 48)).toBe(`${UC_URL}-/scale_crop/96x96/center/`);
-    } finally {
-      vi.unstubAllGlobals();
-    }
+    // scale_crop (not preview) so a non-square source fills the square tile sharply.
+    expect(cdnSquareThumbUrl(UC_URL, 48)).toBe(`${UC_URL}-/scale_crop/96x96/center/`);
+  });
+
+  describe('for any file, box size and devicePixelRatio', () => {
+    const fileUrl = fc
+      .tuple(
+        fc.constantFrom('https://ucarecdn.com', 'https://1a2b3c4d5e.ucarecd.net', 'https://cdn.example.com'),
+        fc.uuid(),
+      )
+      .map(([origin, uuid]) => `${origin}/${uuid}/`);
+    const cssSize = fc.double({ min: 1, max: 5000, noNaN: true });
+    const dpr = fc.double({ min: 0.25, max: 4, noNaN: true });
+
+    /**
+     * Holds `side` (the n of an n×n directive) to the box: never past the CDN limit, never short of the box's device
+     * pixels (counting a dpr below 1 as 1) unless the limit stops it, and never a whole pixel more.
+     */
+    const expectSideToFit = (side: number, css: number, ratio: number) => {
+      const needed = css * Math.max(ratio, 1);
+      expect(side).toBeLessThanOrEqual(CDN_MAX_OUTPUT_DIMENSION);
+      expect(side).toBeGreaterThanOrEqual(Math.min(needed, CDN_MAX_OUTPUT_DIMENSION));
+      expect(side - 1).toBeLessThan(needed);
+    };
+
+    it('appends one square preview sized to the box', () => {
+      fc.assert(
+        fc.property(fileUrl, cssSize, dpr, (url, css, ratio) => {
+          vi.stubGlobal('devicePixelRatio', ratio);
+          const [, w] = cdnPreviewUrl(url, css).match(/\/-\/preview\/(\d+)x/) ?? [];
+          expect(cdnPreviewUrl(url, css)).toBe(`${url}-/preview/${w}x${w}/`);
+          expectSideToFit(Number(w), css, ratio);
+        }),
+      );
+    });
+
+    it('appends one centred square crop sized to the box', () => {
+      fc.assert(
+        fc.property(fileUrl, cssSize, dpr, (url, css, ratio) => {
+          vi.stubGlobal('devicePixelRatio', ratio);
+          const [, w] = cdnSquareThumbUrl(url, css).match(/\/-\/scale_crop\/(\d+)x/) ?? [];
+          expect(cdnSquareThumbUrl(url, css)).toBe(`${url}-/scale_crop/${w}x${w}/center/`);
+          expectSideToFit(Number(w), css, ratio);
+        }),
+      );
+    });
   });
 });

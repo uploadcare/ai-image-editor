@@ -1,452 +1,470 @@
+import { DEMO_IMAGE_UUID, mintAuthToken } from '@uploadcare/api-emulator';
 import { getPrefixedCdnBaseAsync } from '@uploadcare/cname-prefix/async';
-import { isReadyPoll } from '@uploadcare/upload-client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { UploadcareFile } from '@uploadcare/upload-client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { requestsTo, session } from '../../../../tests/specs/setup';
 import { AiProviderError } from '../model/types';
 import { UploadcareDerivativeApi } from './uploadcareDerivativeApi';
 
-// Keep the real UploadcareFile (used to wrap results) but stub the `isReadyPoll`
-// network call (used by getFileInfo) so it's exercised without the Upload API.
-vi.mock('@uploadcare/upload-client', async (importActual) => {
-  const actual = await importActual<typeof import('@uploadcare/upload-client')>();
-  return { ...actual, isReadyPoll: vi.fn() };
-});
-const mockIsReadyPoll = vi.mocked(isReadyPoll);
-
-function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  });
-}
-
-function readSentBody(init: RequestInit | undefined): Record<string, unknown> {
-  return JSON.parse(init?.body as string) as Record<string, unknown>;
-}
-
-/**
- * A complete `derivative/status/` success frame minus `uuid` and `status` (which
- * every test sets). Merged under each success fixture so the strict dev-schema
- * validates them and the readiness poll ends — tests set only what they assert.
- */
-const SUCCESS_FRAME_DEFAULTS = {
-  file_id: '',
-  size: 0,
-  done: 0,
-  total: 0,
-  original_filename: '',
-  filename: '',
-  mime_type: 'image/png',
-  is_image: true,
-  is_stored: false,
-  is_ready: true,
-  image_info: null,
-  video_info: null,
-  content_info: null,
-  metadata: {},
-} as const;
-
-/**
- * Builds a fetch mock that answers the generate POST with `jobResponse` and
- * then walks through `statuses` on each successive status GET.
- */
-function routedFetch(jobResponse: unknown, statuses: unknown[]): ReturnType<typeof vi.fn<typeof fetch>> {
-  let statusIndex = 0;
-  return vi.fn<typeof fetch>().mockImplementation(async (url, init) => {
-    const method = (init?.method ?? 'GET').toUpperCase();
-    if (method === 'POST') return jsonResponse(jobResponse);
-    const body = statuses[Math.min(statusIndex, statuses.length - 1)];
-    statusIndex += 1;
-    void url;
-    const frame =
-      body && typeof body === 'object' && 'status' in body && body.status === 'success'
-        ? { ...SUCCESS_FRAME_DEFAULTS, ...body }
-        : body;
-    return jsonResponse(frame);
-  });
-}
-
+const PUBLIC_KEY = 'demopublickey';
+const CDN = 'https://cdn.example.com';
 const NO_DELAY = { pollIntervalMs: 0 } as const;
+const GENERATE = 'POST /derivative/image/generate/';
+const EDIT = 'POST /derivative/image/edit/';
+const STATUS = 'GET /derivative/status/';
+
+/** A result's width over its height. */
+const ratioOf = (file: UploadcareFile) =>
+  (file.imageInfo?.width ?? Number.NaN) / (file.imageInfo?.height ?? Number.NaN);
+
+/** Answers nothing, ever: a request to `route` stays in flight until its caller aborts it. */
+const hang = (route: string) => session.on(route, () => new Promise<never>(() => {}));
+
+/** A job that never finishes: every status poll answers `processing`. */
+const neverFinish = () => session.on(STATUS, () => Response.json({ type: 'job', status: 'processing' }));
 
 describe('UploadcareDerivativeApi', () => {
   it('throws when publicKey is missing', () => {
     expect(() => new UploadcareDerivativeApi({ publicKey: '' })).toThrow(/publicKey/);
   });
 
-  it('POSTs the prompt + aspect ratio + pub_key to the derivative endpoint', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk_test', fetch: fetchImpl, ...NO_DELAY });
-    await provider.generate({ prompt: 'a hat', mode: 'generate', aspectRatio: [16, 9] });
+  it('generates an image at the requested aspect ratio', async () => {
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+    const { file } = await provider.generate({ prompt: 'a hat', mode: 'generate', aspectRatio: [16, 9] });
+    expect(ratioOf(file)).toBe(16 / 9);
+  });
 
-    const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-    expect(url).toBe('https://upload.uploadcare.com/derivative/image/generate/');
-    expect(init.method).toBe('POST');
-    expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
-    expect(readSentBody(init)).toMatchObject({
-      pub_key: 'pk_test',
-      prompt: 'a hat',
-      aspect_ratio: [16, 9],
-      filename: 'generated.png',
-    });
+  it('names the result generated.png when no filename is given', async () => {
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+    const { file } = await provider.generate({ prompt: 'x', mode: 'generate' });
+    expect(file.originalFilename).toBe('generated.png');
   });
 
   it('forwards request metadata to the generate endpoint', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     await provider.generate({ prompt: 'x', mode: 'generate', metadata: { source: 'ai-image-editor' } });
-    const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-    expect(readSentBody(init).metadata).toEqual({ source: 'ai-image-editor' });
+    expect((await requestsTo(GENERATE)[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
   });
 
   it('forwards request metadata to the edit endpoint', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-e' }, [{ status: 'success', uuid: 'edited' }]);
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await provider.generate({ prompt: 'x', mode: 'edit', source: 'src', metadata: { source: 'ai-image-editor' } });
-    const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-    expect(url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-    expect(readSentBody(init).metadata).toEqual({ source: 'ai-image-editor' });
-  });
-
-  it('uses 1:1 when aspectRatio is missing or invalid', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await provider.generate({ prompt: 'x', mode: 'generate' });
-    const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-    expect(readSentBody(init).aspect_ratio).toEqual([1, 1]);
-  });
-
-  it('polls the status endpoint with pub_key + job_id until the job succeeds', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-42' }, [
-      { type: 'job', status: 'processing' },
-      { type: 'job', status: 'uploading' },
-      { status: 'success', uuid: 'final-uuid' },
-    ]);
-    const provider = new UploadcareDerivativeApi({
-      publicKey: 'pk',
-      cdnBaseUrl: 'https://cdn.example.com',
-      fetch: fetchImpl,
-      ...NO_DELAY,
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+    await provider.generate({
+      prompt: 'x',
+      mode: 'edit',
+      source: DEMO_IMAGE_UUID,
+      metadata: { source: 'ai-image-editor' },
     });
+    expect((await requestsTo(EDIT)[0].json()).metadata).toEqual({ source: 'ai-image-editor' });
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['not positive', [0, 1]],
+    ['wider than 10:1', [20, 1]],
+  ] as const)('generates a square image when aspectRatio is %s', async (_, aspectRatio) => {
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+    const { file } = await provider.generate({
+      prompt: 'x',
+      mode: 'generate',
+      aspectRatio: aspectRatio && [...aspectRatio],
+    });
+    expect(ratioOf(file)).toBe(1);
+  });
+
+  it('keeps polling through processing, uploading and an unready success until is_ready', async () => {
+    // Oldest first: the emulator's own frames, walked straight to ready.
+    session.use('derivativesInstant');
+    session.on(STATUS, async ({ next }) => Response.json({ ...(await (await next())?.json()), is_ready: false }), {
+      times: 1,
+    });
+    session.on(STATUS, () => Response.json({ type: 'job', status: 'uploading' }), { times: 1 });
+    session.on(STATUS, () => Response.json({ type: 'job', status: 'processing' }), { times: 1 });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, cdnBaseUrl: CDN, ...NO_DELAY });
 
     const result = await provider.generate({ prompt: 'x', mode: 'generate' });
 
-    expect(result.url).toBe('https://cdn.example.com/final-uuid/');
-    // 1 POST + 3 status polls
-    expect(fetchImpl).toHaveBeenCalledTimes(4);
-    const [statusUrl, statusInit] = fetchImpl.mock.calls[1]! as [string, RequestInit];
-    expect(statusUrl).toBe('https://upload.uploadcare.com/derivative/status/?pub_key=pk&job_id=job-42');
-    expect((statusInit?.method ?? 'GET').toUpperCase()).toBe('GET');
+    expect(result.url).toBe(`${CDN}/${result.uuid}/`);
+    // processing, uploading, unready success, ready success: one poll each, none after.
+    expect(requestsTo(STATUS)).toHaveLength(4);
   });
 
   it('throws when the job ends in an error status', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-err' }, [
-      { type: 'job', status: 'processing' },
-      { type: 'job', status: 'error', error_source: 'ai_gateway', error_code: 'content_policy', error: 'blocked' },
-    ]);
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/content_policy|blocked/);
+    session.use('derivativeFailure', { code: 'content_moderated' });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+    await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toMatchObject({
+      name: 'AiProviderError',
+      errorCode: 'content_moderated',
+    });
   });
 
   it('wraps an internal poll timeout as a generation_timeout provider error', async () => {
-    // Never-successful status + a zero timeout: `poll` gives up on its own,
-    // without the caller's signal ever aborting.
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-slow' }, [{ type: 'job', status: 'processing' }]);
+    // A zero timeout: `poll` gives up on its own, without the caller's signal ever aborting.
+    neverFinish();
+    let jobId: string | undefined;
+    session.on('POST /derivative/image/generate/', async ({ next }) => {
+      const answer = await next();
+      jobId = (await answer?.clone().json())?.job_id;
+      return answer;
+    });
     const provider = new UploadcareDerivativeApi({
-      publicKey: 'pk',
-      fetch: fetchImpl,
+      publicKey: PUBLIC_KEY,
       pollIntervalMs: 0,
       pollTimeoutMs: 0,
     });
-    const err = await provider.generate({ prompt: 'x', mode: 'generate' }).catch((e) => e);
-    expect(err).toBeInstanceOf(AiProviderError);
-    expect(err.errorCode).toBe('generation_timeout');
-    expect(err.message).toContain('job-slow');
+    const pending = provider.generate({ prompt: 'x', mode: 'generate' });
+    await expect(pending).rejects.toBeInstanceOf(AiProviderError);
+    await expect(pending).rejects.toMatchObject({ errorCode: 'generation_timeout' });
+    expect(jobId).toEqual(expect.any(String));
+    await expect(pending).rejects.toThrow(jobId);
+  });
+
+  describe('when a status poll fails mid-job', () => {
+    /** The job's status polls, in order. */
+    const statusPolls = () => requestsTo(STATUS);
+
+    /** The job's first poll answers `processing`; the next one answers `failure`. */
+    const failSecondPoll = (failure: () => Response) => {
+      session.on(STATUS, failure, { times: 1 });
+      session.on(STATUS, () => Response.json({ type: 'job', status: 'processing' }), { times: 1 });
+    };
+
+    it('rejects with the status of a 5xx, and polls no more', async () => {
+      failSecondPoll(() => new Response('upstream down', { status: 503, statusText: 'Service Unavailable' }));
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/503 Service Unavailable/);
+      expect(statusPolls()).toHaveLength(2);
+    });
+
+    it('rejects with the network error of a dropped connection, and polls no more', async () => {
+      failSecondPoll(() => Response.error());
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+
+      // fetch's own error, untouched: not a provider error and not a timeout.
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/fetch/i);
+      expect(statusPolls()).toHaveLength(2);
+    });
+
+    it('rejects a status frame that is not a JSON object, and polls no more', async () => {
+      failSecondPoll(() => new Response('<html>Bad gateway</html>', { headers: { 'Content-Type': 'text/html' } }));
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(
+        'Uploadcare generate status failed (200): the response is not a JSON object: <html>Bad gateway</html>',
+      );
+      expect(statusPolls()).toHaveLength(2);
+    });
+  });
+
+  describe('with the default poll options', () => {
+    // The documented defaults: a poll every 1.5s, giving up after 1,000,000ms.
+    const INTERVAL = 1500;
+    const TIMEOUT = 1_000_000;
+
+    // Only the clock is fake: the emulator's requests still need real I/O turns to complete.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+      return () => vi.useRealTimers();
+    });
+
+    /** Starts a generation and tracks whether it has settled. */
+    const start = () => {
+      const run = { settled: false, pending: Promise.resolve() as Promise<unknown> };
+      run.pending = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY })
+        .generate({ prompt: 'x', mode: 'generate' })
+        .finally(() => {
+          run.settled = true;
+        });
+      run.pending.catch(() => {});
+      return run;
+    };
+
+    /** Lets the in-flight request finish, without moving the clock, until the poll sleeps or `run` settles. */
+    const untilIdle = async (run: { settled: boolean }) => {
+      while (vi.getTimerCount() === 0 && !run.settled) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+    };
+
+    it('waits the default interval between status polls', async () => {
+      const polledAt: number[] = [];
+      session.on(STATUS, () => {
+        polledAt.push(Date.now());
+        return Response.json({ type: 'job', status: 'processing' });
+      });
+      const run = start();
+
+      for (let sleeps = 0; sleeps < 3; sleeps++) {
+        await untilIdle(run);
+        await vi.advanceTimersToNextTimerAsync();
+      }
+      await untilIdle(run);
+
+      expect(polledAt.slice(1).map((at, i) => at - polledAt[i])).toEqual([INTERVAL, INTERVAL, INTERVAL]);
+    });
+
+    it('gives up at the default timeout', async () => {
+      neverFinish();
+      const startedAt = Date.now();
+      const run = start();
+
+      for (;;) {
+        await untilIdle(run);
+        if (run.settled) break;
+        await vi.advanceTimersToNextTimerAsync();
+      }
+
+      expect(Date.now() - startedAt).toBe(TIMEOUT);
+      await expect(run.pending).rejects.toMatchObject({ name: 'AiProviderError', errorCode: 'generation_timeout' });
+    });
   });
 
   it('honours baseUrl + cdnBaseUrl overrides for both generate and status', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'xyz' }]);
     const provider = new UploadcareDerivativeApi({
-      publicKey: 'pk',
+      publicKey: PUBLIC_KEY,
       baseUrl: 'https://upload.example.com',
-      cdnBaseUrl: 'https://cdn.example.com',
-      fetch: fetchImpl,
+      cdnBaseUrl: CDN,
       ...NO_DELAY,
     });
     const result = await provider.generate({ prompt: 'x', mode: 'generate' });
-    const [genUrl] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-    const [statusUrl] = fetchImpl.mock.calls[1]! as [string, RequestInit];
-    expect(genUrl).toBe('https://upload.example.com/derivative/image/generate/');
-    expect(statusUrl).toBe('https://upload.example.com/derivative/status/?pub_key=pk&job_id=job-1');
-    expect(result.url).toBe('https://cdn.example.com/xyz/');
+    expect(requestsTo(GENERATE)[0].url).toBe('https://upload.example.com/derivative/image/generate/');
+    expect(requestsTo(STATUS)[0].url).toMatch(
+      new RegExp(`^https://upload\\.example\\.com/derivative/status/\\?pub_key=${PUBLIC_KEY}&job_id=`),
+    );
+    expect(result.url).toBe(`${CDN}/${result.uuid}/`);
   });
 
   it('returns an UploadcareFile on the result (with camelized fields)', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [
-      { status: 'success', uuid: 'final-uuid', original_filename: 'f.png', is_image: true },
-    ]);
     const provider = new UploadcareDerivativeApi({
-      publicKey: 'pk',
-      cdnBaseUrl: 'https://cdn.example.com',
-      fetch: fetchImpl,
+      publicKey: PUBLIC_KEY,
+      cdnBaseUrl: CDN,
       ...NO_DELAY,
     });
-    const result = await provider.generate({ prompt: 'x', mode: 'generate' });
-    expect(result.file.uuid).toBe('final-uuid');
-    expect(result.file.cdnUrl).toBe('https://cdn.example.com/final-uuid/');
+    const result = await provider.generate({ prompt: 'x', mode: 'generate', filename: 'f.png' });
+    expect(result.file.uuid).toBe(result.uuid);
+    expect(result.file.cdnUrl).toBe(`${CDN}/${result.uuid}/`);
     expect(result.file.originalFilename).toBe('f.png');
     expect(result.file.isImage).toBe(true);
-    expect(result.url).toBe('https://cdn.example.com/final-uuid/');
-  });
-
-  it('keeps polling the status until the success frame reports is_ready: true', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [
-      { status: 'success', uuid: 'final-uuid', is_ready: false },
-      { status: 'success', uuid: 'final-uuid', is_ready: true, original_filename: 'ready.png' },
-    ]);
-    const provider = new UploadcareDerivativeApi({
-      publicKey: 'pk',
-      cdnBaseUrl: 'https://cdn.example.com',
-      fetch: fetchImpl,
-      ...NO_DELAY,
-    });
-
-    const result = await provider.generate({ prompt: 'x', mode: 'generate' });
-
-    // 1 POST + 2 status polls: the first `success` frame isn't CDN-ready yet.
-    expect(fetchImpl).toHaveBeenCalledTimes(3);
-    expect(result.file.originalFilename).toBe('ready.png');
-    expect(result.url).toBe('https://cdn.example.com/final-uuid/');
+    expect(result.file.imageInfo).toMatchObject({ width: expect.any(Number), height: expect.any(Number) });
+    expect(result.url).toBe(`${CDN}/${result.uuid}/`);
   });
 
   it('derives the CDN base from the public key when cdnBaseUrl is left at the default', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'final-uuid' }]);
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     const result = await provider.generate({ prompt: 'x', mode: 'generate' });
-    const base = await getPrefixedCdnBaseAsync('pk', 'https://ucarecd.net');
-    expect(result.url).toBe(`${base}/final-uuid/`);
+    const base = await getPrefixedCdnBaseAsync(PUBLIC_KEY, 'https://ucarecd.net');
+    expect(result.url).toBe(`${base}/${result.uuid}/`);
   });
 
   it('surfaces non-2xx generate responses with status text', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response('bad ratio', {
-        status: 400,
-        statusText: 'Bad Request',
-        headers: { 'Content-Type': 'text/plain' },
-      }),
+    session.on(
+      'POST /derivative/image/generate/',
+      () => new Response('upstream failure', { status: 400, statusText: 'Bad Request' }),
     );
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
+    const provider = new UploadcareDerivativeApi({
+      publicKey: PUBLIC_KEY,
+      ...NO_DELAY,
+    });
     await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/400/);
   });
 
-  it('times out when the job never reaches a terminal state', async () => {
-    const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ type: 'job', status: 'processing' }]);
-    const provider = new UploadcareDerivativeApi({
-      publicKey: 'pk',
-      fetch: fetchImpl,
-      pollIntervalMs: 0,
-      pollTimeoutMs: 5,
-    });
-    await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/time/i);
-  });
-
-  it('passes the abort signal to generate and status fetches', async () => {
-    const seen: (AbortSignal | undefined)[] = [];
-    const base = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'a' }]);
-    const fetchImpl = vi.fn<typeof fetch>().mockImplementation((url, init) => {
-      seen.push(init?.signal ?? undefined);
-      return base(url, init);
-    });
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
+  it('cancels a job that is still starting when the caller aborts', async () => {
+    hang('POST /derivative/image/generate/');
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     const controller = new AbortController();
-    await provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
-    expect(seen.length).toBeGreaterThanOrEqual(2);
-    expect(seen.every((s) => s === controller.signal)).toBe(true);
+
+    const pending = provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
+    await vi.waitFor(() => expect(requestsTo(GENERATE)).toHaveLength(1));
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
   });
 
-  it('stops polling when the signal is aborted mid-flight', async () => {
+  it('cancels a status poll in flight when the caller aborts', async () => {
+    hang(STATUS);
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
     const controller = new AbortController();
-    const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
-      const method = (init?.method ?? 'GET').toUpperCase();
-      if (method === 'POST') return jsonResponse({ type: 'job', job_id: 'job-1' });
-      // Abort while "processing": the next poll must never happen.
-      controller.abort();
-      return jsonResponse({ type: 'job', status: 'processing' });
-    });
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
 
-    await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toThrow(
-      /cancel/i,
-    );
-    // 1 POST + exactly 1 status poll, then it bails — no further polling.
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    const pending = provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal });
+    await vi.waitFor(() => expect(requestsTo(STATUS)).toHaveLength(1));
+    controller.abort();
+
+    await expect(pending).rejects.toThrow(/cancel/i);
   });
 
-  it('does not start polling when the signal is already aborted', async () => {
+  it('sends nothing when the signal is already aborted', async () => {
     const controller = new AbortController();
     controller.abort();
-    const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new DOMException('Aborted', 'AbortError'));
-    const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-    await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toThrow();
+    const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+    await expect(provider.generate({ prompt: 'x', mode: 'generate', signal: controller.signal })).rejects.toMatchObject(
+      { name: 'AbortError' },
+    );
+    expect(session.requests).toHaveLength(0);
   });
 
   describe('edit mode', () => {
-    it('POSTs prompt + source uuid to the edit endpoint and resolves the result', async () => {
-      const fetchImpl = routedFetch({ type: 'job', job_id: 'job-e' }, [{ status: 'success', uuid: 'edited-uuid' }]);
+    it('edits the source into a new file at the requested aspect ratio', async () => {
       const provider = new UploadcareDerivativeApi({
-        publicKey: 'pk',
-        cdnBaseUrl: 'https://cdn.example.com',
-        fetch: fetchImpl,
+        publicKey: PUBLIC_KEY,
+        cdnBaseUrl: CDN,
         ...NO_DELAY,
       });
 
       const result = await provider.generate({
         prompt: 'remove the cat',
         mode: 'edit',
-        source: 'src-uuid',
+        source: DEMO_IMAGE_UUID,
         aspectRatio: [16, 9],
       });
 
-      const [url, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect(url).toBe('https://upload.uploadcare.com/derivative/image/edit/');
-      expect(readSentBody(init)).toMatchObject({
-        pub_key: 'pk',
-        prompt: 'remove the cat',
-        source: 'src-uuid',
-        aspect_ratio: [16, 9],
-      });
-      expect(result.url).toBe('https://cdn.example.com/edited-uuid/');
+      expect(requestsTo(EDIT)).toHaveLength(1);
+      expect(result.uuid).not.toBe(DEMO_IMAGE_UUID);
+      expect(ratioOf(result.file)).toBe(16 / 9);
+      expect(result.url).toBe(`${CDN}/${result.uuid}/`);
       expect(result.mode).toBe('edit');
     });
 
-    it('omits aspect_ratio when none is provided', async () => {
-      const fetchImpl = routedFetch({ type: 'job', job_id: 'job-e' }, [{ status: 'success', uuid: 'u' }]);
-      const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
-      await provider.generate({ prompt: 'x', mode: 'edit', source: 'src-uuid' });
-      expect(readSentBody(fetchImpl.mock.calls[0]![1] as RequestInit).aspect_ratio).toBeUndefined();
+    it("keeps the source's dimensions when no aspectRatio is given", async () => {
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
+      const source = await provider.getFileInfo(DEMO_IMAGE_UUID);
+      const { file } = await provider.generate({ prompt: 'x', mode: 'edit', source: DEMO_IMAGE_UUID });
+      expect(file.imageInfo).toMatchObject({ width: source.imageInfo?.width, height: source.imageInfo?.height });
+      // The seeded demo image is not square, so a 1:1 default would show here.
+      expect(ratioOf(file)).not.toBe(1);
     });
 
     it('throws (without any request) when an edit has no source uuid', async () => {
-      const fetchImpl = routedFetch({ type: 'job', job_id: 'j' }, [{ status: 'success', uuid: 'x' }]);
-      const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: fetchImpl, ...NO_DELAY });
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, ...NO_DELAY });
       await expect(provider.generate({ prompt: 'x', mode: 'edit' })).rejects.toThrow(/source/i);
-      expect(fetchImpl).not.toHaveBeenCalled();
+      expect(session.requests).toHaveLength(0);
     });
 
     it('resolveCdnUrl maps a uuid to its CDN URL', async () => {
-      const provider = new UploadcareDerivativeApi({
-        publicKey: 'pk',
-        cdnBaseUrl: 'https://cdn.example.com',
-        fetch: vi.fn<typeof fetch>(),
-        ...NO_DELAY,
-      });
-      expect(await provider.resolveCdnUrl('some-uuid')).toBe('https://cdn.example.com/some-uuid/');
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, cdnBaseUrl: CDN });
+      expect(await provider.resolveCdnUrl('some-uuid')).toBe(`${CDN}/some-uuid/`);
     });
   });
 
   describe('getFileInfo', () => {
-    afterEach(() => mockIsReadyPoll.mockReset());
+    it('waits for the file to be ready and wraps it as an UploadcareFile on the CDN base', async () => {
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, cdnBaseUrl: CDN });
 
-    const fileInfoFixture = {
-      uuid: 'file-uuid',
-      originalFilename: 'portrait.png',
-      isImage: true,
-      mimeType: 'image/png',
-      imageInfo: { width: 800, height: 1200, format: 'PNG' },
-    } as unknown as Awaited<ReturnType<typeof isReadyPoll>>;
+      const file = await provider.getFileInfo(DEMO_IMAGE_UUID);
 
-    it('polls isReadyPoll() and wraps the ready file as an UploadcareFile on the CDN base', async () => {
-      mockIsReadyPoll.mockResolvedValue(fileInfoFixture);
-      const provider = new UploadcareDerivativeApi({
-        publicKey: 'pk',
-        cdnBaseUrl: 'https://cdn.example.com',
-        fetch: vi.fn<typeof fetch>(),
-        ...NO_DELAY,
-      });
-
-      const file = await provider.getFileInfo('file-uuid');
-
-      expect(mockIsReadyPoll).toHaveBeenCalledWith('file-uuid', expect.objectContaining({ publicKey: 'pk' }));
-      expect(file.uuid).toBe('file-uuid');
-      expect(file.originalFilename).toBe('portrait.png');
-      expect(file.cdnUrl).toBe('https://cdn.example.com/file-uuid/');
-      expect(file.imageInfo).toMatchObject({ width: 800, height: 1200 });
+      expect(file.uuid).toBe(DEMO_IMAGE_UUID);
+      expect(file.cdnUrl).toBe(`${CDN}/${DEMO_IMAGE_UUID}/`);
+      expect(file.imageInfo).toMatchObject({ width: expect.any(Number), height: expect.any(Number) });
     });
 
-    it('forwards baseUrl + abort signal to isReadyPoll()', async () => {
-      mockIsReadyPoll.mockResolvedValue(fileInfoFixture);
-      const provider = new UploadcareDerivativeApi({
-        publicKey: 'pk',
-        baseUrl: 'https://upload.example.com',
-        fetch: vi.fn<typeof fetch>(),
-        ...NO_DELAY,
-      });
+    it('honours the abort signal', async () => {
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY });
       const controller = new AbortController();
-      await provider.getFileInfo('file-uuid', controller.signal);
-      expect(mockIsReadyPoll).toHaveBeenCalledWith(
-        'file-uuid',
-        expect.objectContaining({ baseURL: 'https://upload.example.com', signal: controller.signal }),
-      );
+      controller.abort();
+      await expect(provider.getFileInfo(DEMO_IMAGE_UUID, controller.signal)).rejects.toThrow(/cancel/i);
     });
 
-    it('propagates isReadyPoll() failures', async () => {
-      mockIsReadyPoll.mockRejectedValue(new Error('FileNotFound'));
-      const provider = new UploadcareDerivativeApi({ publicKey: 'pk', fetch: vi.fn<typeof fetch>(), ...NO_DELAY });
-      await expect(provider.getFileInfo('missing')).rejects.toThrow(/FileNotFound/);
+    it('propagates a lookup failure', async () => {
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY });
+      // A well-formed uuid the session does not hold: a malformed id would be
+      // refused earlier, as invalid, and never reach the not-found lookup.
+      await expect(provider.getFileInfo('00000000-0000-4000-8000-000000000000')).rejects.toThrow(/not found/i);
     });
   });
 
   describe('authToken', () => {
-    afterEach(() => mockIsReadyPoll.mockReset());
+    // A signed-uploads project refuses every request without a valid Bearer
+    // token, so each call below succeeding is the proof the token got there.
+    beforeEach(() => {
+      session.use('signedUploads');
+    });
 
     it('carries the token on both network paths', async () => {
       // The two paths are independent: `generate`/`edit`/`status` go through
       // the client's own fetch, while `getFileInfo` hands options to
       // upload-client's isReadyPoll. Dropping either assignment would leave
       // half the provider unauthenticated.
-      mockIsReadyPoll.mockResolvedValue({ uuid: 'file-uuid' } as unknown as Awaited<ReturnType<typeof isReadyPoll>>);
-      const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
+      const token = await mintAuthToken();
       const provider = new UploadcareDerivativeApi({
-        publicKey: 'pk',
-        authToken: 'eyJ.first.sig',
-        fetch: fetchImpl,
+        publicKey: PUBLIC_KEY,
+        authToken: token,
         ...NO_DELAY,
       });
 
       await provider.generate({ prompt: 'x', mode: 'generate' });
-      const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect(new Headers(init.headers).get('Authorization')).toBe('Bearer eyJ.first.sig');
+      expect(requestsTo(GENERATE)[0].headers.get('Authorization')).toBe(`Bearer ${token}`);
 
-      await provider.getFileInfo('file-uuid');
-      expect(mockIsReadyPoll).toHaveBeenCalledWith(
-        'file-uuid',
-        expect.objectContaining({ authToken: 'eyJ.first.sig' }),
-      );
+      await expect(provider.getFileInfo(DEMO_IMAGE_UUID)).resolves.toMatchObject({ uuid: DEMO_IMAGE_UUID });
+    });
+
+    it('is refused on both network paths without one', async () => {
+      const provider = new UploadcareDerivativeApi({
+        publicKey: PUBLIC_KEY,
+        ...NO_DELAY,
+      });
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow(/signature/i);
+      await expect(provider.getFileInfo(DEMO_IMAGE_UUID)).rejects.toThrow(/signature/i);
+    });
+
+    it('surfaces a token the API cannot read as AccessTokenInvalidError, without polling', async () => {
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, authToken: 'not-a-jwt', ...NO_DELAY });
+
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toMatchObject({
+        name: 'AiProviderError',
+        errorCode: 'AccessTokenInvalidError',
+      });
+      expect(requestsTo(STATUS)).toHaveLength(0);
+    });
+
+    it('surfaces a token that expires mid-job as AccessTokenExpiredError on the next poll', async () => {
+      // Two minutes past `exp`, beyond the API's 30s clock leeway.
+      const [fresh, expired] = [await mintAuthToken(), await mintAuthToken({ lifetime: -120_000 })];
+      const authToken = vi.fn().mockResolvedValueOnce(fresh).mockResolvedValue(expired);
+      const provider = new UploadcareDerivativeApi({ publicKey: PUBLIC_KEY, authToken, ...NO_DELAY });
+
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toMatchObject({
+        name: 'AiProviderError',
+        errorCode: 'AccessTokenExpiredError',
+      });
+      // The start went through on the fresh token; the first poll, on the expired one, ended the job.
+      expect(requestsTo(STATUS)).toHaveLength(1);
+    });
+
+    it("rejects with the token function's own error and sends nothing when it throws", async () => {
+      const provider = new UploadcareDerivativeApi({
+        publicKey: PUBLIC_KEY,
+        authToken: async () => {
+          throw new Error('token service down');
+        },
+        ...NO_DELAY,
+      });
+
+      await expect(provider.generate({ prompt: 'x', mode: 'generate' })).rejects.toThrow('token service down');
+      expect(session.requests).toHaveLength(0);
     });
 
     it('follows a token that changes, on both network paths', async () => {
       // The provider holds one resolver for its lifetime; whoever owns the
       // token changes what that resolver returns, and nothing is pushed in.
-      mockIsReadyPoll.mockResolvedValue({ uuid: 'file-uuid' } as unknown as Awaited<ReturnType<typeof isReadyPoll>>);
-      const fetchImpl = routedFetch({ type: 'job', job_id: 'job-1' }, [{ status: 'success', uuid: 'abc-123' }]);
-      let token = 'eyJ.first.sig';
+      const [first, second] = [await mintAuthToken({ tokenId: 'first' }), await mintAuthToken({ tokenId: 'second' })];
+      let token = first;
       const provider = new UploadcareDerivativeApi({
-        publicKey: 'pk',
+        publicKey: PUBLIC_KEY,
         authToken: () => token,
-        fetch: fetchImpl,
         ...NO_DELAY,
       });
-
-      token = 'eyJ.second.sig';
+      const tokensSent = (requests: Request[]) =>
+        new Set(requests.map((request) => request.headers.get('Authorization')));
 
       await provider.generate({ prompt: 'x', mode: 'generate' });
-      const [, init] = fetchImpl.mock.calls[0]! as [string, RequestInit];
-      expect(new Headers(init.headers).get('Authorization')).toBe('Bearer eyJ.second.sig');
+      await expect(provider.getFileInfo(DEMO_IMAGE_UUID)).resolves.toMatchObject({ uuid: DEMO_IMAGE_UUID });
+      const beforeRotation = session.requests.length;
 
-      // upload-client is handed the resolver itself and calls it per request,
-      // so what matters is what it resolves to now.
-      await provider.getFileInfo('file-uuid');
-      const [, pollOptions] = mockIsReadyPoll.mock.calls[0]! as [string, { authToken: () => string }];
-      expect(pollOptions.authToken()).toBe('eyJ.second.sig');
+      token = second;
+      await provider.generate({ prompt: 'x', mode: 'generate' });
+      await expect(provider.getFileInfo(DEMO_IMAGE_UUID)).resolves.toMatchObject({ uuid: DEMO_IMAGE_UUID });
+
+      expect(tokensSent(session.requests.slice(0, beforeRotation))).toEqual(new Set([`Bearer ${first}`]));
+      expect(tokensSent(session.requests.slice(beforeRotation))).toEqual(new Set([`Bearer ${second}`]));
     });
   });
 });

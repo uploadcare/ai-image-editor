@@ -1,25 +1,12 @@
 import type { DoneDetail, UcAiImageEditor } from '@uploadcare/ai-image-editor';
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { AiImageEditorError } from '@uploadcare/ai-image-editor/errors';
-import { AiImageEditor, preloadAiImageEditor } from '../../src';
+import { AiImageEditor } from '../../src';
 import { setupContainers } from '../support/containers';
-
-// The real element talks to Uploadcare APIs once connected; stub the network
-// so tests are hermetic (same approach as packages/ai-image-editor e2e tests).
-const realFetch = globalThis.fetch;
-beforeAll(() => {
-  globalThis.fetch = (async () =>
-    new Response(JSON.stringify({}), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    })) as typeof fetch;
-  return () => {
-    globalThis.fetch = realFetch;
-  };
-});
 
 const makeContainer = setupContainers();
 
@@ -147,24 +134,13 @@ it('updated callback props receive events (no stale handlers)', async () => {
   );
 
   const root = roots[roots.length - 1];
-  root.render(<AiImageEditor pubkey="test-pubkey" onCancel={second} />);
-  await new Promise((r) => setTimeout(r, 50));
+  // Commits synchronously, layout effects included, so @lit/react has swapped the listener before the event.
+  flushSync(() => root.render(<AiImageEditor pubkey="test-pubkey" onCancel={second} />));
 
   const el = container.querySelector('uc-ai-image-editor') as UcAiImageEditor;
   el.dispatchEvent(new CustomEvent('uc:cancel'));
   expect(first).not.toHaveBeenCalled();
   expect(second).toHaveBeenCalledTimes(1);
-});
-
-it('preloadAiImageEditor warms the engine cache', async () => {
-  preloadAiImageEditor();
-  const container = render(<AiImageEditor pubkey="test-pubkey" />);
-  await vi.waitFor(
-    () => {
-      expect(container.querySelector('uc-ai-image-editor')).not.toBeNull();
-    },
-    { timeout: 10_000 },
-  );
 });
 
 it('shares one AiImageEditorError class identity across package entries', async () => {

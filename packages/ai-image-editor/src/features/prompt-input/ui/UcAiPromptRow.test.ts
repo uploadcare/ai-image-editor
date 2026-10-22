@@ -19,16 +19,17 @@ const keydown = (el: UcAiPromptRow, init: KeyboardEventInit) =>
 describe('UcAiPromptRow', () => {
   it('renders a multiline textarea inside the composer card', async () => {
     const el = await mount({ placeholder: 'Describe your image' });
-    expect(textarea(el)).toBeTruthy();
+    expect(textarea(el)).toBeInstanceOf(HTMLTextAreaElement);
     expect(el.shadowRoot!.querySelector('input')).toBeNull();
-    expect(el.shadowRoot!.querySelector('.card')).toBeTruthy();
+    // The textarea sits inside the composer card.
+    expect(el.shadowRoot!.querySelector('.card')).toContain(textarea(el));
     expect(textarea(el).placeholder).toBe('Describe your image');
   });
 
   it('exposes slots for chips and the aspect-ratio picker', async () => {
     const el = await mount();
-    expect(el.shadowRoot!.querySelector('slot[name="chips"]')).toBeTruthy();
-    expect(el.shadowRoot!.querySelector('slot[name="aspect-ratio"]')).toBeTruthy();
+    expect(el.shadowRoot!.querySelector('slot[name="chips"]')).not.toBeNull();
+    expect(el.shadowRoot!.querySelector('slot[name="aspect-ratio"]')).not.toBeNull();
   });
 
   it('emits uc:send on Enter when the value is non-empty', async () => {
@@ -100,18 +101,18 @@ describe('UcAiPromptRow', () => {
 
   it('disables the textarea and send button while busy', async () => {
     const el = await mount({ value: 'hi', busy: true });
-    expect(textarea(el).disabled).toBe(true);
-    expect(sendBtn(el)!.disabled).toBe(true);
-    expect(sendBtn(el)!.classList.contains('send--busy')).toBe(true);
+    expect(textarea(el)).toHaveProperty('disabled', true);
+    expect(sendBtn(el)).toHaveProperty('disabled', true);
+    expect(sendBtn(el)!.classList).toContain('send--busy');
   });
 
   it('hides (collapses) the send button when empty and reveals it otherwise', async () => {
     const el = await mount();
-    expect(sendBtn(el)!.hidden).toBe(true);
+    expect(sendBtn(el)).toHaveProperty('hidden', true);
 
     el.value = 'hi';
     await el.updateComplete;
-    expect(sendBtn(el)!.hidden).toBe(false);
+    expect(sendBtn(el)).toHaveProperty('hidden', false);
   });
 
   it('emits uc:send when the send button is clicked', async () => {
