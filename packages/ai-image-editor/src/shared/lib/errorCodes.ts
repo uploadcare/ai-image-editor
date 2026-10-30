@@ -16,6 +16,8 @@ const DERIVATIVE_ERROR_CODES = [
   'canvas_dimension_too_small',
   'source_extends_beyond_canvas',
   'derivative_disabled',
+  // 429: the workspace's 24h request limit. Retrying won't help until a slot frees up.
+  'derivative_quota_exceeded',
   'job_id_required',
   'job_not_found',
   // AI gateway (job status)
@@ -34,9 +36,8 @@ const DERIVATIVE_ERROR_CODES = [
 const UPLOAD_API_ERROR_CODES = [
   // Project / key (rejected before a job exists)
   'ProjectPublicKeyInvalidError',
-  // Auth token. Raised by the upload and file-info requests the editor makes
-  // through `@uploadcare/upload-client`; `derivative/*` does not check the
-  // token today.
+  // Auth token. Raised by `derivative/*` and by the upload and file-info
+  // requests the editor makes through `@uploadcare/upload-client`.
   'AccessTokenInvalidError',
   'AccessTokenExpiredError',
   'ScopeForbiddenError',
