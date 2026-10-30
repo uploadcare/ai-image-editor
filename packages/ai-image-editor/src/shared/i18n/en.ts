@@ -58,6 +58,7 @@ const errorLocale: Record<`ai-image-editor-error-${KnownErrorCode | ClientErrorC
     "This image doesn't fit that aspect ratio. Try one closer to the image's own shape.",
   // Nothing the visitor does will turn this on, so don't send them looking.
   'ai-image-editor-error-derivative_disabled': "Image generation isn't available right now. Please try again later.",
+  'ai-image-editor-error-derivative_quota_exceeded': "Image generation has reached its daily limit. Please try again later.",
   'ai-image-editor-error-job_id_required': 'Something went wrong. Try again.',
   'ai-image-editor-error-job_not_found': 'Something went wrong. Try again.',
   // Project / key: a setup problem, and it reads like the one above because it
