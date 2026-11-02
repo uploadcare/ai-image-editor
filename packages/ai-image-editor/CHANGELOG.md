@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.7](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.6...ai-image-editor-v0.2.7) (2026-11-02)
+
+
+### Bug Fixes
+
+* **ai-image-editor:** clearer error messages, incl. derivative_quota_exceeded ([#109](https://github.com/uploadcare/ai-image-editor/issues/109)) ([cf01114](https://github.com/uploadcare/ai-image-editor/commit/cf011142bbceb36976a7d32adbadf3ddd971416d))
+
 ## [0.2.6](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.5...ai-image-editor-v0.2.6) (2026-10-05)
 
 
