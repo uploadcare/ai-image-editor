@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.8](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.7...ai-image-editor-v0.2.8) (2026-11-02)
+
+
+### Bug Fixes
+
+* **ai-image-editor:** say what derivative_disabled means ([#111](https://github.com/uploadcare/ai-image-editor/issues/111)) ([45715bd](https://github.com/uploadcare/ai-image-editor/commit/45715bd82f30a7b393818305cdc481401ff8e59a))
+
 ## [0.2.7](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.6...ai-image-editor-v0.2.7) (2026-11-02)
 
 
