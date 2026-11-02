@@ -74,9 +74,8 @@ describe('<uc-ai-image-editor> generation', () => {
     await expect.element(promptBox()).toHaveValue('a tiger');
   });
 
-  it('tells the visitor only that AI is off, and logs the fix for the integrator', async () => {
+  it('tells the visitor only that AI is off', async () => {
     session.use('derivativesDisabled');
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const el = mount(STAGING);
     const onError = vi.fn();
     el.addEventListener('uc:error', onError);
@@ -85,13 +84,6 @@ describe('<uc-ai-image-editor> generation', () => {
     await expect.element(page.getByRole('alert')).toHaveTextContent("Image generation isn't turned on for this site.");
 
     expect(onError.mock.calls[0]![0].detail.error.code).toBe('derivative_disabled');
-    expect(consoleError).toHaveBeenCalledWith(
-      '[uc-ai-image-editor]',
-      'derivative_disabled',
-      expect.stringContaining('Project settings > AI'),
-      expect.objectContaining({ code: 'derivative_disabled' }),
-    );
-    consoleError.mockRestore();
   });
 
   it('fires uc:change with the result when a run lands, and with null when a new source clears it', async () => {

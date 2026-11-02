@@ -58,7 +58,7 @@ const errorLocale: Record<`ai-image-editor-error-${KnownErrorCode | ClientErrorC
   'ai-image-editor-error-source_extends_beyond_canvas':
     "This image doesn't fit that aspect ratio. Pick one closer to its shape, or choose Auto.",
   // Nothing the visitor does will turn this on, so it says what's wrong and
-  // nothing more. The fix goes to the console for the integrator.
+  // nothing more.
   'ai-image-editor-error-derivative_disabled': "Image generation isn't turned on for this site.",
   'ai-image-editor-error-derivative_quota_exceeded':
     'Too many images have been generated recently. Please try again later.',
