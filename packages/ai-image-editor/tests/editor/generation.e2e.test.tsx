@@ -65,7 +65,7 @@ describe('<uc-ai-image-editor> generation', () => {
     await sendPrompt('a tiger');
     await expect
       .element(page.getByRole('alert'))
-      .toHaveTextContent("That prompt isn't allowed. Try describing it differently.");
+      .toHaveTextContent("This request was blocked by the content filter. Try describing it differently.");
 
     expect(onError).toHaveBeenCalledOnce();
     expect(onError.mock.calls[0]![0].detail.error.code).toBe('content_moderated');
