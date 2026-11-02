@@ -156,7 +156,9 @@ describe('UploadcareDerivativeApi', () => {
     });
   });
 
-  describe('with the default poll options', () => {
+  // Walking the default timeout takes ~667 real polls through the emulator:
+  // about 1s locally, past vitest's 5s default on a slow CI runner.
+  describe('with the default poll options', { timeout: 30_000 }, () => {
     // The documented defaults: a poll every 1.5s, giving up after 1,000,000ms.
     const INTERVAL = 1500;
     const TIMEOUT = 1_000_000;
