@@ -45,15 +45,15 @@ describe('per-error-code messages', () => {
     expect(everyAuthCodeIsListed).toBe(true);
   });
 
-  it('says the same thing for every auth token failure', () => {
+  it('says the same thing for every auth token failure the visitor cannot act on', () => {
     // They differ only in what the integrator has to fix; the visitor gets one
-    // line, and reloading is the whole of the advice.
+    // line, and reloading is the whole of the advice. A used-up operations
+    // limit is left out: it is about the visitor's own usage, so it says so.
     const messages = new Set(
       [
         'AccessTokenInvalidError',
         'AccessTokenExpiredError',
         'ScopeForbiddenError',
-        'OperationsLimitExceededError',
         'SignatureRequiredError',
         'auth_token_failed',
       ].map((code) => translate(`ai-image-editor-error-${code}` as keyof typeof enLocale)),

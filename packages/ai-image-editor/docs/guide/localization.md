@@ -96,30 +96,31 @@ on the `uc:error` event and in the console, where you can act on it.
 | `ai-image-editor-error` | Something went wrong. Try again. |
 | `ai-image-editor-error-invalid_request` | Something went wrong. Try again. |
 | `ai-image-editor-error-invalid_source` | This image can't be used. Please try a different one. |
-| `ai-image-editor-error-source_not_found` | This image can't be used. Please try a different one. |
+| `ai-image-editor-error-source_not_found` | This image is no longer available. Try uploading it again. |
 | `ai-image-editor-error-source_not_image` | That file isn't an image. Please choose an image. |
 | `ai-image-editor-error-source_url_unavailable` | That image couldn't be loaded. Please try again. |
 | `ai-image-editor-error-invalid_aspect_ratio` | That aspect ratio isn't supported. Please pick another one. |
-| `ai-image-editor-error-canvas_too_large` | This image is too large (over 4 megapixels). Try a smaller one. |
+| `ai-image-editor-error-canvas_too_large` | The result would be too large (over 4 megapixels). Try a different aspect ratio or a smaller image. |
 | `ai-image-editor-error-canvas_dimension_too_small` | This image is too small. Each side must be at least 256 pixels. |
-| `ai-image-editor-error-source_extends_beyond_canvas` | This image doesn't fit that aspect ratio. Try one closer to the image's own shape. |
+| `ai-image-editor-error-source_extends_beyond_canvas` | This image doesn't fit that aspect ratio. Pick one closer to its shape, or choose Auto. |
 | `ai-image-editor-error-derivative_disabled` | Image generation isn't available right now. Please try again later. |
+| `ai-image-editor-error-derivative_quota_exceeded` | Too many images have been generated recently. Please try again later. |
 | `ai-image-editor-error-job_id_required` | Something went wrong. Try again. |
 | `ai-image-editor-error-job_not_found` | Something went wrong. Try again. |
 | `ai-image-editor-error-ProjectPublicKeyInvalidError` | Image generation isn't available right now. Please try again later. |
 | `ai-image-editor-error-AccessTokenInvalidError` | Something went wrong. Please reload the page and try again. |
 | `ai-image-editor-error-AccessTokenExpiredError` | Something went wrong. Please reload the page and try again. |
 | `ai-image-editor-error-ScopeForbiddenError` | Something went wrong. Please reload the page and try again. |
-| `ai-image-editor-error-OperationsLimitExceededError` | Something went wrong. Please reload the page and try again. |
+| `ai-image-editor-error-OperationsLimitExceededError` | You've reached the limit for generating images for now. Please try again later. |
 | `ai-image-editor-error-SignatureRequiredError` | Something went wrong. Please reload the page and try again. |
 | `ai-image-editor-error-auth_token_failed` | Something went wrong. Please reload the page and try again. |
-| `ai-image-editor-error-content_moderated` | That prompt isn't allowed. Try describing it differently. |
+| `ai-image-editor-error-content_moderated` | This request was blocked by the content filter. Try describing it differently. |
 | `ai-image-editor-error-provider_unavailable` | The image service is busy right now. Please try again in a moment. |
-| `ai-image-editor-error-generation_timeout` | The image service is busy right now. Please try again in a moment. |
-| `ai-image-editor-error-RequestThrottledError` | The image service is busy right now. Please try again in a moment. |
+| `ai-image-editor-error-generation_timeout` | Generating took too long. Please try again. |
+| `ai-image-editor-error-RequestThrottledError` | Too many requests at once. Please wait a moment and try again. |
 | `ai-image-editor-error-invalid_input` | Something went wrong. Try again. |
-| `ai-image-editor-error-DownloadFileHTTPClientError` | Something went wrong. Try again. |
-| `ai-image-editor-error-DownloadFileNotFoundError` | Something went wrong. Try again. |
-| `ai-image-editor-error-DownloadFileTaskFailedError` | Something went wrong. Try again. |
+| `ai-image-editor-error-DownloadFileHTTPClientError` | The image couldn't be saved. Please try again. |
+| `ai-image-editor-error-DownloadFileNotFoundError` | The image couldn't be saved. Please try again. |
+| `ai-image-editor-error-DownloadFileTaskFailedError` | The image couldn't be saved. Please try again. |
 
 
