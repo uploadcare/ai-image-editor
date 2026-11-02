@@ -146,6 +146,13 @@ const PREVIEW_WIDTH_STEP = 200;
 
 const previewWidthBucket = (width: number): number => Math.ceil(width / PREVIEW_WIDTH_STEP) * PREVIEW_WIDTH_STEP;
 
+/** How to fix a failure only the integrator can fix. Logged with the error, never shown on screen. */
+const SETUP_HINTS: Partial<Record<string, string>> = {
+  derivative_disabled:
+    "AI isn't enabled for this project. Turn it on in Project settings > AI, and check that your plan includes it: " +
+    'https://uploadcare.com/docs/ai-image-editor/errors/#derivative-disabled',
+};
+
 /**
  * `<uc-ai-image-editor>` — the standalone AI image generate/edit editor.
  *
@@ -917,7 +924,8 @@ export class UcAiImageEditor extends LitElement {
       const error = normalizeError(err);
       // The UI only shows a short message, and a host that doesn't listen for
       // `uc:error` would otherwise lose the failure entirely.
-      console.error('[uc-ai-image-editor]', error.code, error);
+      const hint = SETUP_HINTS[error.code];
+      console.error('[uc-ai-image-editor]', error.code, ...(hint ? [hint] : []), error);
       const detail: ErrorDetail = { error };
       this.dispatchEvent(new CustomEvent('uc:error', { detail, bubbles: true, composed: true }));
     }
