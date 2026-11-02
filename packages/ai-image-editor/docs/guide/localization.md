@@ -103,7 +103,7 @@ on the `uc:error` event and in the console, where you can act on it.
 | `ai-image-editor-error-canvas_too_large` | The result would be too large (over 4 megapixels). Try a different aspect ratio or a smaller image. |
 | `ai-image-editor-error-canvas_dimension_too_small` | This image is too small. Each side must be at least 256 pixels. |
 | `ai-image-editor-error-source_extends_beyond_canvas` | This image doesn't fit that aspect ratio. Pick one closer to its shape, or choose Auto. |
-| `ai-image-editor-error-derivative_disabled` | Image generation isn't available right now. Please try again later. |
+| `ai-image-editor-error-derivative_disabled` | Image generation is disabled for this site. |
 | `ai-image-editor-error-derivative_quota_exceeded` | Too many images have been generated recently. Please try again later. |
 | `ai-image-editor-error-job_id_required` | Something went wrong. Try again. |
 | `ai-image-editor-error-job_not_found` | Something went wrong. Try again. |
