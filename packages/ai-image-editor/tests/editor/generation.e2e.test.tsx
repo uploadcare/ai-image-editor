@@ -81,7 +81,7 @@ describe('<uc-ai-image-editor> generation', () => {
     el.addEventListener('uc:error', onError);
 
     await sendPrompt('a tiger');
-    await expect.element(page.getByRole('alert')).toHaveTextContent("Image generation isn't turned on for this site.");
+    await expect.element(page.getByRole('alert')).toHaveTextContent("Image generation is disabled for this site.");
 
     expect(onError.mock.calls[0]![0].detail.error.code).toBe('derivative_disabled');
   });

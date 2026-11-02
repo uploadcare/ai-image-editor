@@ -59,7 +59,7 @@ const errorLocale: Record<`ai-image-editor-error-${KnownErrorCode | ClientErrorC
     "This image doesn't fit that aspect ratio. Pick one closer to its shape, or choose Auto.",
   // Nothing the visitor does will turn this on, so it says what's wrong and
   // nothing more.
-  'ai-image-editor-error-derivative_disabled': "Image generation isn't turned on for this site.",
+  'ai-image-editor-error-derivative_disabled': "Image generation is disabled for this site.",
   'ai-image-editor-error-derivative_quota_exceeded':
     'Too many images have been generated recently. Please try again later.',
   'ai-image-editor-error-job_id_required': 'Something went wrong. Try again.',

@@ -111,8 +111,8 @@ function throws while a generation is running, it surfaces as
 ### Enabling AI Image Editor {#derivative-disabled}
 
 `derivative_disabled` means AI generation isn't enabled for your project. The
-visitor can't act on it, so the editor only tells them "Image generation isn't
-turned on for this site." Watch for the code on `uc:error` or in the console
+visitor can't act on it, so the editor only tells them "Image generation is
+disabled for this site." Watch for the code on `uc:error` or in the console
 instead.
 During the **public beta**, AI Image Editor is available on all **paid**
 Uploadcare plans. [Upgrade your plan](https://uploadcare.com/pricing/) if
