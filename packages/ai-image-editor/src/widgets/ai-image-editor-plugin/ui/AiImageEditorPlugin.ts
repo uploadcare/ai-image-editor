@@ -1,8 +1,22 @@
 import type { UploaderPlugin } from '@uploadcare/file-uploader';
-import { type AspectRatio, isValidAspectRatio, POPULAR_ASPECT_RATIOS } from '../../../entities/aspect-ratio';
+import {
+  type AspectRatio,
+  isValidAspectRatio,
+  POPULAR_ASPECT_RATIOS,
+  parseAspectRatioList,
+} from '../../../entities/aspect-ratio';
+import type { AiPresets } from '../../../entities/mode';
 import { type AiImageEditorLocale, enLocale, LOCALE_LOADERS } from '../../../shared/i18n';
 import { ICON_EDIT_AI, ICON_GENERATE } from '../../../shared/ui/icons';
-import type { DoneDetail, UcAiImageEditor } from '../../ai-editor';
+import type {
+  CanvasFit,
+  ComposerPlacement,
+  DoneDetail,
+  HistoryPlacement,
+  OutputFilenameResolver,
+  ToolbarPlacement,
+  UcAiImageEditor,
+} from '../../ai-editor';
 import { parseCropPreset } from '../lib/parseCropPreset';
 
 import '../../ai-editor';
@@ -89,6 +103,37 @@ export type AiEditorActivityParams = {
 };
 
 /**
+ * The editor's own options, as `<uc-config>` keys: each `aiEditor*` key sets the
+ * editor option of the same name (`aiEditorPresets` sets `presets`), live, and
+ * `null` leaves the editor's default. As attributes they're kebab-case
+ * (`ai-editor-canvas-fit="full"`).
+ *
+ * Exported so the bundled `.d.ts` keeps it: it drops a type that only the
+ * augmentation below refers to.
+ */
+export type AiImageEditorPluginConfig = {
+  /** The editor's `presets`: quick-prompt chips per mode. Property only. */
+  aiEditorPresets: AiPresets | null;
+  /** The editor's `presetsOnly`: hide the prompt and run a preset on click (default `false`). */
+  aiEditorPresetsOnly: boolean;
+  /** The editor's `outputFilename`: a name, or a function returning one. Property only. */
+  aiEditorOutputFilename: string | OutputFilenameResolver | null;
+  /** The editor's `composerPlacement` (`bottom` / `top`). */
+  aiEditorComposerPlacement: ComposerPlacement | null;
+  /** The editor's `canvasFit` (`available` / `full`). */
+  aiEditorCanvasFit: CanvasFit | null;
+  /** The editor's `historyPlacement` (`composer-above` / `composer-below` / `canvas-top` / `canvas-bottom`). */
+  aiEditorHistoryPlacement: HistoryPlacement | null;
+  /** The editor's `toolbarPlacement` (`bottom` / `top`). */
+  aiEditorToolbarPlacement: ToolbarPlacement | null;
+  /**
+   * The ratios the editor offers, a list like `cropPreset` (`"16:9, 1:1"`).
+   * Takes precedence over the ratios derived from `cropPreset`.
+   */
+  aiEditorAspectRatios: string | null;
+};
+
+/**
  * Augment the file-uploader's type system so plugin-specific config is checked
  * instead of cast: the custom activity params for
  * `setCurrentActivity(AI_IMAGE_EDITOR_ID, params)`, the editor's locale keys so
@@ -104,7 +149,7 @@ declare module '@uploadcare/file-uploader' {
     [AI_IMAGE_EDITOR_ID]: { params: AiEditorActivityParams };
   }
   interface CustomLocaleDefinition extends AiImageEditorLocale {}
-  interface CustomConfig {
+  interface CustomConfig extends AiImageEditorPluginConfig {
     /**
      * Show the **AI Edit** file action on uploaded images (default `true`); set
      * `false` (attribute `use-ai-editor="false"`) to hide it. Mirrors the
@@ -159,6 +204,28 @@ export const AiImageEditorPlugin: UploaderPlugin = {
       toAttribute: (value) => (value ? null : 'false'),
       normalize: (value) => value !== false,
     });
+
+    // The editor's own options (see `AiImageEditorPluginConfig`). The uploader
+    // reflects a config value back onto its attribute with `toString()`, so
+    // objects and functions get no attribute. A removed attribute hands
+    // `fromAttribute` the `defaultValue`, or `''` when that's `null`: so `''`
+    // means unset, and the boolean defaults to `false` rather than `null`.
+    registry.registerConfig({ name: 'aiEditorPresets', defaultValue: null, attribute: false });
+    registry.registerConfig({ name: 'aiEditorOutputFilename', defaultValue: null, attribute: false });
+    registry.registerConfig<boolean>({
+      name: 'aiEditorPresetsOnly',
+      defaultValue: false,
+      fromAttribute: (value) => value === '' || value === 'true',
+    });
+    for (const name of [
+      'aiEditorComposerPlacement',
+      'aiEditorCanvasFit',
+      'aiEditorHistoryPlacement',
+      'aiEditorToolbarPlacement',
+      'aiEditorAspectRatios',
+    ]) {
+      registry.registerConfig({ name, defaultValue: null, fromAttribute: (value) => value || null });
+    }
 
     // English is the always-present synchronous fallback; every other locale
     // loads lazily and is registered with the uploader on demand.
@@ -294,8 +361,20 @@ export const AiImageEditorPlugin: UploaderPlugin = {
         };
         refreshLocale();
 
-        const ratios = aspectRatiosFromCropPreset(config.get('cropPreset') ?? '');
-        if (ratios) editor.aspectRatios = ratios;
+        // `aiEditorAspectRatios` wins; otherwise the ratios come from `cropPreset`.
+        const refreshAspectRatios = () => {
+          const ratios = parseAspectRatioList(config.get('aiEditorAspectRatios') ?? '');
+          editor.aspectRatios = ratios.length > 0 ? ratios : aspectRatiosFromCropPreset(config.get('cropPreset') ?? '');
+        };
+        refreshAspectRatios();
+
+        /** Sets `option` from a config value; `null` puts the editor's own default back. */
+        const forward = <K extends keyof UcAiImageEditor>(option: K) => {
+          const editorDefault = editor[option];
+          return (value: UcAiImageEditor[K] | null) => {
+            editor[option] = value ?? editorDefault;
+          };
+        };
 
         const unsubscribers = [
           config.subscribe('pubkey', refreshProviderConfig),
@@ -307,9 +386,15 @@ export const AiImageEditorPlugin: UploaderPlugin = {
           config.subscribe('metadata', refreshMetadata),
           config.subscribe('localeName', refreshLocale),
           config.subscribe('localeDefinitionOverride', refreshLocale),
-          config.subscribe('cropPreset', (value) => {
-            editor.aspectRatios = aspectRatiosFromCropPreset(value ?? '');
-          }),
+          config.subscribe('cropPreset', refreshAspectRatios),
+          config.subscribe('aiEditorAspectRatios', refreshAspectRatios),
+          config.subscribe('aiEditorPresets', forward('presets')),
+          config.subscribe('aiEditorPresetsOnly', forward('presetsOnly')),
+          config.subscribe('aiEditorOutputFilename', forward('outputFilename')),
+          config.subscribe('aiEditorComposerPlacement', forward('composerPlacement')),
+          config.subscribe('aiEditorCanvasFit', forward('canvasFit')),
+          config.subscribe('aiEditorHistoryPlacement', forward('historyPlacement')),
+          config.subscribe('aiEditorToolbarPlacement', forward('toolbarPlacement')),
         ];
 
         const onDone = (e: Event) => {
