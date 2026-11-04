@@ -64,11 +64,40 @@ form; as HTML attributes they're kebab-case (`base-url`, `cdn-cname`,
 | `secureDeliveryProxyUrlResolver` | | Signs/proxies the CDN URLs the editor renders ([secure delivery](https://uploadcare.com/docs/security/secure-delivery/)). |
 | `authToken` | | Credential for **[Signed Uploads](https://uploadcare.com/docs/security/secure-uploads/)** and **[Signed AI image generation](/guide/integrating#signed-ai-generation)**, two separate settings in the [uploading settings](https://app.uploadcare.com/projects/-/settings/#uploading-signed-ai-generation). Forwarded as the uploader's own `{ getToken, invalidate }` provider, the shape an [`AuthTokenCache`](https://github.com/uploadcare/uploadcare-js-api-clients/tree/master/packages/signed-uploads#caching-the-token-in-the-browser) instance has, rather than the raw value, so the editor shares one token, and one cache, with the uploads around it. |
 
-The plugin also adds one config option of its own:
+The plugin also adds config options of its own. `useAiEditor` toggles the file
+action; the `aiEditor*` keys set the editor's own options, so the editor the
+plugin opens can be configured like a standalone one. They're all optional. The
+`aiEditor*` keys update an open editor live, and leaving one unset keeps the
+editor's default (`aiEditorAspectRatios` falls back to `cropPreset` first).
 
 | Key | Default | Purpose |
 |---|---|---|
 | `useAiEditor` | `true` | Show the **AI Edit** file action on uploaded images. Set `false` (attribute `use-ai-editor="false"`) to hide it. Mirrors `useCloudImageEditor`. |
+| `aiEditorPresets` | | The editor's [`presets`](/api/components): quick-prompt chips per mode, e.g. `{ generate: [{ label: 'Logo', prompt: 'A logo of ' }], edit: [] }`. Property only. |
+| `aiEditorPresetsOnly` | `false` | The editor's [`presetsOnly`](/guide/layout#presets-only-mode): hide the prompt and run a preset on click. |
+| `aiEditorAspectRatios` | | The ratios the editor offers, as a list like `cropPreset` (`"16:9, 1:1"`). Takes precedence over the ones derived from `cropPreset`, for when the AI editor should offer different ratios than the Cloud Image Editor. |
+| `aiEditorOutputFilename` | | The editor's `outputFilename`: a name, or a `(originalFilename, counter) => string` function. Property only. |
+| `aiEditorComposerPlacement` | | The editor's `composerPlacement` (`bottom` / `top`). |
+| `aiEditorCanvasFit` | | The editor's `canvasFit` (`available` / `full`). |
+| `aiEditorHistoryPlacement` | | The editor's `historyPlacement` (`composer-above` / `composer-below` / `canvas-top` / `canvas-bottom`). |
+| `aiEditorToolbarPlacement` | | The editor's `toolbarPlacement` (`bottom` / `top`). Don't use `none` here: the toolbar's **Done** is how the result gets back to the uploader. |
+
+As attributes they're kebab-case:
+
+```html
+<uc-config
+  ctx-name="my-uploader"
+  pubkey="YOUR_PUBLIC_KEY"
+  source-list="local, url, ai-image-editor"
+  ai-editor-presets-only
+  ai-editor-canvas-fit="full"
+  ai-editor-aspect-ratios="16:9, 1:1"
+></uc-config>
+```
+
+```ts
+config.aiEditorPresets = { generate: [{ label: 'Logo', prompt: 'A logo of ' }] }
+```
 
 `aspectRatiosFromCropPreset(cropPreset)` is exported from the plugin entry if you
 want to derive the same ratios yourself.
@@ -84,9 +113,9 @@ unaffected.
 
 ## Typed config
 
-Importing the plugin augments the uploader's config type, so `useAiEditor`
-(and the editor's locale keys) are type-checked on `<uc-config>`, with no casts
-needed. If your project doesn't pick the augmentation up automatically,
+Importing the plugin augments the uploader's config type, so `useAiEditor`, the
+`aiEditor*` keys and the editor's locale keys are type-checked on `<uc-config>`,
+with no casts needed. If your project doesn't pick the augmentation up automatically,
 reference the plugin's types once:
 
 ```ts
