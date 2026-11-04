@@ -1,6 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
+import type * as UploaderModule from '@uploadcare/file-uploader';
 import type { UcAiImageEditor } from '../src/index';
+import type { AiImageEditorPluginConfig } from '../src/plugin';
 import { session } from './emulator';
 import { cleanup, getCtxName } from './test-renderer';
 
@@ -55,8 +57,18 @@ async function openModal() {
   await page.getByText('Upload files', { exact: true }).click();
 }
 
+/** Opens the plugin's editor from the Generate image source and answers it. */
+async function openGenerateEditor(config: Config): Promise<UcAiImageEditor> {
+  addSource(config, 'ai-image-editor');
+  await openModal();
+  await page.getByText('Generate image').click();
+  return openedEditor('generate');
+}
+
+let UC: typeof UploaderModule;
+
 beforeAll(async () => {
-  const UC = await import('@uploadcare/file-uploader');
+  UC = await import('@uploadcare/file-uploader');
   UC.defineComponents(UC);
   // The uploader bundles only English by default; define its German locale so
   // switching `localeName` to "de" doesn't throw "Locale de is not defined".
@@ -154,6 +166,105 @@ describe('AiImageEditorPlugin', () => {
     };
     await expect.element(editorButton('Generate now')).toBeVisible();
     cleanup();
+  });
+
+  describe("forwards the aiEditor* keys to the editor's options", () => {
+    /** One key and the editor option it sets; the second value proves the forwarding is live. */
+    type ForwardCase = {
+      option: keyof UcAiImageEditor;
+      via: 'attribute' | 'property';
+      values: [unknown, unknown];
+      /** What the editor gets for each value, when that isn't the value itself. */
+      expected?: [unknown, unknown];
+    };
+
+    /** Every key; a new one doesn't compile until it has a case. */
+    const KEYS = {
+      aiEditorPresets: {
+        option: 'presets',
+        via: 'property',
+        values: [{ generate: [{ label: 'Logo', prompt: 'A logo of ' }] }, { edit: [] }],
+      },
+      aiEditorPresetsOnly: { option: 'presetsOnly', via: 'attribute', values: ['', 'false'], expected: [true, false] },
+      aiEditorOutputFilename: {
+        option: 'outputFilename',
+        via: 'property',
+        values: ['result.png', (name: string | undefined, counter: number) => `${name}-${counter}`],
+      },
+      aiEditorComposerPlacement: { option: 'composerPlacement', via: 'attribute', values: ['top', 'bottom'] },
+      aiEditorCanvasFit: { option: 'canvasFit', via: 'attribute', values: ['full', 'available'] },
+      aiEditorHistoryPlacement: {
+        option: 'historyPlacement',
+        via: 'attribute',
+        values: ['canvas-top', 'canvas-bottom'],
+      },
+      aiEditorAspectRatios: {
+        option: 'aspectRatios',
+        via: 'attribute',
+        values: ['16:9, 1:1', '4:5'],
+        expected: [
+          [
+            [16, 9],
+            [1, 1],
+          ],
+          [[4, 5]],
+        ],
+      },
+    } satisfies Record<keyof AiImageEditorPluginConfig, ForwardCase>;
+
+    const setKey = (config: Config, key: string, via: ForwardCase['via'], value: unknown) => {
+      if (via === 'attribute' && value === null) config.removeAttribute(UC.toKebabCase(key));
+      else if (via === 'attribute') config.setAttribute(UC.toKebabCase(key), value as string);
+      else (config as unknown as Record<string, unknown>)[key] = value;
+    };
+
+    const editorDefault = (option: keyof UcAiImageEditor) =>
+      (document.createElement('uc-ai-image-editor') as UcAiImageEditor)[option];
+
+    it.each(Object.entries(KEYS))(
+      '%s sets the option before opening, live, and gives the default back once cleared',
+      async (key, forwardCase) => {
+        const { option, via, values } = forwardCase;
+        const expected = 'expected' in forwardCase ? forwardCase.expected : values;
+        const { AiImageEditorPlugin } = await import('../src/plugin');
+        const { config } = await renderUploader([AiImageEditorPlugin]);
+        setKey(config, key, via, values[0]);
+
+        const editor = await openGenerateEditor(config);
+        // The first value isn't the default, so clearing it has to change something.
+        expect(expected[0]).not.toEqual(editorDefault(option));
+        expect(editor[option]).toEqual(expected[0]);
+        setKey(config, key, via, values[1]);
+        await vi.waitFor(() => expect(editor[option]).toEqual(expected[1]));
+        setKey(config, key, via, values[0]);
+        await vi.waitFor(() => expect(editor[option]).toEqual(expected[0]));
+        setKey(config, key, via, null);
+        await vi.waitFor(() => expect(editor[option]).toEqual(editorDefault(option)));
+        cleanup();
+      },
+    );
+
+    it('prefers aiEditorAspectRatios over cropPreset, and falls back to it', async () => {
+      const { AiImageEditorPlugin } = await import('../src/plugin');
+      const { config } = await renderUploader([AiImageEditorPlugin]);
+      config.setAttribute('crop-preset', '4:3');
+      config.setAttribute('ai-editor-aspect-ratios', '16:9, 1:1');
+      const editor = await openGenerateEditor(config);
+      const explicit = [
+        [16, 9],
+        [1, 1],
+      ];
+
+      expect(editor.aspectRatios).toEqual(explicit);
+      // A later cropPreset change doesn't override them.
+      config.setAttribute('crop-preset', '3:2');
+      await vi.waitFor(() => expect((config as unknown as { cropPreset: unknown }).cropPreset).toBe('3:2'));
+      await new Promise(requestAnimationFrame);
+      expect(editor.aspectRatios).toEqual(explicit);
+      config.removeAttribute('ai-editor-aspect-ratios');
+      await vi.waitFor(() => expect(editor.aspectRatios).toEqual([[3, 2]]));
+      cleanup();
+    });
   });
 
   it('lazily switches the editor locale when the uploader localeName changes', async () => {

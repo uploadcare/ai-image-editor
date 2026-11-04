@@ -1,1 +1,6 @@
-export { type AiEditorActivityParams, AiImageEditorPlugin, aspectRatiosFromCropPreset } from './ui/AiImageEditorPlugin';
+export {
+  type AiEditorActivityParams,
+  type AiImageEditorPluginConfig,
+  AiImageEditorPlugin,
+  aspectRatiosFromCropPreset,
+} from './ui/AiImageEditorPlugin';
