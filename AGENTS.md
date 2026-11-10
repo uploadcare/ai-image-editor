@@ -55,6 +55,27 @@ Two invariants that are easy to break:
   on every token change, and `willUpdate` only rebuilds when a token appears or
   disappears.
 
+## The plugin's `aiEditor*` config keys
+
+The File Uploader plugin forwards the editor's own options as `aiEditor*`
+`<uc-config>` keys (`AiImageEditorPluginConfig` in
+`packages/ai-image-editor/src/widgets/ai-image-editor-plugin/ui/AiImageEditorPlugin.ts`).
+When you expose another one, register it in `setup`, subscribe it in the
+activity, add a case to the forwarding table in
+`packages/ai-image-editor/tests/plugin.e2e.test.ts` (it won't compile without
+one), and a row to `docs/guide/plugin.md` and its Fern mirror. Two uploader
+behaviours shape the registrations:
+
+- It reflects a config value back onto its attribute with `toString()`, and
+  never calls `toAttribute`. Objects and functions need `attribute: false`.
+- Removing an attribute hands `fromAttribute` the key's `defaultValue`, or `''`
+  when that's `null`. So `''` means unset, and a boolean key defaults to
+  `false` (a `null` default would arrive as `''`, i.e. present).
+
+The config type is exported from the plugin entry because the bundled
+`plugin.d.ts` drops a type that only the `declare module` augmentation refers
+to.
+
 ## Never hardcode a version in the guides
 
 **CDN examples use the `%AI_IMAGE_EDITOR_VERSION%` placeholder**, substituted
