@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.9](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.8...ai-image-editor-v0.2.9) (2026-11-10)
+
+
+### Features
+
+* **ai-image-editor:** forward the editor's options from the File Uploader plugin ([#113](https://github.com/uploadcare/ai-image-editor/issues/113)) ([2e66088](https://github.com/uploadcare/ai-image-editor/commit/2e66088d21d486e5ab3e5646ebd1b1d92a66f6f0))
+
 ## [0.2.8](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.7...ai-image-editor-v0.2.8) (2026-11-02)
 
 
