@@ -39,6 +39,7 @@
     "site:build": "npm run docs:build && npm run playground:build",
     "playground:build": "vite build --mode demo --outDir ../docs/.vitepress/dist/playground --base ${DOCS_BASE:-/ai-image-editor/}playground/",
     "docs:preview": "vitepress preview docs",
+    "docs:check-links": "node scripts/check-docs-links.mjs",
     "typecheck": "tsc --noEmit",
     "lint:lit": "lit-analyzer './src/**/*.ts' --strict --rules.no-unknown-attribute off"
   },

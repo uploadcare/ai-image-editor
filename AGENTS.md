@@ -160,3 +160,8 @@ the Fern pages. Every property row in `components.md` links to its section on
 the Fern Options page via `OPTION_SECTIONS` in `build-cem-docs.mjs`; when you
 add an option, add its Fern section and its name there. Fern links back to this
 site only for the API reference and the demo/playground.
+
+`npm run docs:check-links -w @uploadcare/ai-image-editor` (after `docs:build`)
+fetches every `uploadcare.com/docs` link in the built site, the READMEs and the
+package homepages, and fails on a missing page or `#anchor`. The `docs links`
+workflow runs it every Monday and on demand.
