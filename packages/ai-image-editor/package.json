@@ -104,6 +104,6 @@
     "access": "public"
   },
   "customElements": "docs/api/custom-elements.json",
-  "homepage": "https://uploadcare.github.io/ai-image-editor/",
+  "homepage": "https://uploadcare.com/docs/ai-image-editor/",
   "bugs": "https://github.com/uploadcare/ai-image-editor/issues"
 }
