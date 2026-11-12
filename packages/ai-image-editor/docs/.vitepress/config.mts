@@ -1,8 +1,47 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { defineConfig } from 'vitepress';
 
 // The guides live in Uploadcare's docs (uploadcare/fern-docs); this site keeps
 // the generated API reference and the demo/playground.
+const DOCS = 'https://uploadcare.com/docs/';
+
+// The guides this site used to host, and where each one lives now. Published
+// READMEs (and older package versions, for good) still link the old URLs, so
+// each gets a stub that forwards to the Fern page, keeping the #anchor: the
+// guides' anchors carried over to Fern.
+const MOVED_GUIDES: Record<string, string> = {
+  'getting-started': `${DOCS}ai-image-editor/quickstart/`,
+  integrating: `${DOCS}ai-image-editor/integrating/`,
+  react: `${DOCS}ai-image-editor/react/`,
+  plugin: `${DOCS}file-uploader/ai-image-editor/`,
+  layout: `${DOCS}ai-image-editor/layout/`,
+  theming: `${DOCS}ai-image-editor/theming/`,
+  localization: `${DOCS}ai-image-editor/localization/`,
+  errors: `${DOCS}ai-image-editor/errors/`,
+};
+
+const redirectPage = (to: string) => `<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Moved to the Uploadcare docs</title>
+<link rel="canonical" href="${to}">
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="0; url=${to}">
+<script>location.replace(${JSON.stringify(to)} + location.hash)</script>
+<p>This guide moved to <a href="${to}">${to}</a>.</p>
+</html>
+`;
+
 export default defineConfig({
+  // Written as plain files (GitHub Pages serves /guide/x from guide/x.html),
+  // so they exist only in a built site, not in `docs:dev`.
+  async buildEnd({ outDir }) {
+    await mkdir(join(outDir, 'guide'), { recursive: true });
+    await Promise.all(
+      Object.entries(MOVED_GUIDES).map(([page, to]) => writeFile(join(outDir, 'guide', `${page}.html`), redirectPage(to))),
+    );
+  },
   title: '@uploadcare/ai-image-editor',
   description: 'AI image generation & editing web component for Uploadcare.',
   // Served as a GitHub Pages project site at https://uploadcare.github.io/ai-image-editor/.
