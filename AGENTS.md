@@ -156,7 +156,9 @@ generated from this repo: the API reference (`npm run docs:api`: typedoc for
 the TypeScript surface, and `docs/api/components.md` built from the
 `@property` JSDoc by `scripts/build-cem-docs.mjs`; both gitignored, so edit the
 source, not the output) and the demo/playground. Its links to guides point at
-the Fern pages. Every property row in `components.md` links to its section on
+the Fern pages. The old `/guide/*` URLs are redirect stubs written at build
+time (`MOVED_GUIDES` in `docs/.vitepress/config.mts`) that forward to the
+Fern page and keep the `#anchor`, because published READMEs still link them. Every property row in `components.md` links to its section on
 the Fern Options page via `OPTION_SECTIONS` in `build-cem-docs.mjs`; when you
 add an option, add its Fern section and its name there. Fern links back to this
 site only for the API reference and the demo/playground.

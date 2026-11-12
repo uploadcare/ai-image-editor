@@ -94,7 +94,7 @@ request at [hello@uploadcare.com][uc-email-hello].
 [docs-react-props]: https://uploadcare.com/docs/ai-image-editor/react/#props
 [docs-react-events]: https://uploadcare.com/docs/ai-image-editor/react/#events
 [docs-react-ssr]: https://uploadcare.com/docs/ai-image-editor/react/
-[docs-react-preloading]: https://uploadcare.com/docs/ai-image-editor/react/
+[docs-react-preloading]: https://uploadcare.com/docs/ai-image-editor/react/#preloading
 [docs-api]: https://uploadcare.github.io/ai-image-editor/api/components
 [docs-layout]: https://uploadcare.com/docs/ai-image-editor/layout/
 [uc-email-bounty]: mailto:bugbounty@uploadcare.com
