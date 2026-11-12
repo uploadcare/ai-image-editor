@@ -175,7 +175,7 @@ const previewWidthBucket = (width: number): number => Math.ceil(width / PREVIEW_
  * @cssprop [--uc-ai-transition] - Base transition timing.
  * @cssprop [--uc-ai-dot-grid-color] - Colour of the shimmer dot grid.
  *
- * @see The theming guide for the full token list.
+ * @see https://uploadcare.com/docs/ai-image-editor/theming/ for the full token list.
  */
 @customElement('uc-ai-image-editor')
 export class UcAiImageEditor extends LitElement {

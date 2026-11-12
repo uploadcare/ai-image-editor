@@ -69,6 +69,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://uploadcare.github.io/ai-image-editor/guide/react",
+  "homepage": "https://uploadcare.com/docs/ai-image-editor/react/",
   "bugs": "https://github.com/uploadcare/ai-image-editor/issues"
 }

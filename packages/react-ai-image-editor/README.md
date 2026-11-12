@@ -9,7 +9,7 @@
 </p>
 <p align="center">
   <a href="https://uploadcare.com/?ref=react-ai-image-editor">Website</a> •
-  <a href="https://uploadcare.github.io/ai-image-editor/">Docs</a> •
+  <a href="https://uploadcare.com/docs/ai-image-editor/">Docs</a> •
   <a href="https://uploadcare.com/blog?ref=react-ai-image-editor">Blog</a> •
   <a href="https://twitter.com/Uploadcare?ref=react-ai-image-editor">Twitter</a>
 </p>
@@ -89,14 +89,14 @@ prior to any public disclosure.
 Issues and PRs are welcome. You can provide your feedback or drop us a support
 request at [hello@uploadcare.com][uc-email-hello].
 
-[docs]: https://uploadcare.github.io/ai-image-editor/
-[docs-react]: https://uploadcare.github.io/ai-image-editor/guide/react
-[docs-react-props]: https://uploadcare.github.io/ai-image-editor/guide/react#props
-[docs-react-events]: https://uploadcare.github.io/ai-image-editor/guide/react#events
-[docs-react-ssr]: https://uploadcare.github.io/ai-image-editor/guide/react#ssr-next-js
-[docs-react-preloading]: https://uploadcare.github.io/ai-image-editor/guide/react#preloading
+[docs]: https://uploadcare.com/docs/ai-image-editor/
+[docs-react]: https://uploadcare.com/docs/ai-image-editor/react/
+[docs-react-props]: https://uploadcare.com/docs/ai-image-editor/react/#props
+[docs-react-events]: https://uploadcare.com/docs/ai-image-editor/react/#events
+[docs-react-ssr]: https://uploadcare.com/docs/ai-image-editor/react/
+[docs-react-preloading]: https://uploadcare.com/docs/ai-image-editor/react/
 [docs-api]: https://uploadcare.github.io/ai-image-editor/api/components
-[docs-layout]: https://uploadcare.github.io/ai-image-editor/guide/layout
+[docs-layout]: https://uploadcare.com/docs/ai-image-editor/layout/
 [uc-email-bounty]: mailto:bugbounty@uploadcare.com
 [uc-email-hello]: mailto:hello@uploadcare.com
 [npm-img]: https://img.shields.io/npm/v/@uploadcare/react-ai-image-editor.svg

@@ -21,6 +21,22 @@ const TYPE_LINKS = {
   Metadata: 'https://uploadcare.com/docs/file-metadata/',
 };
 
+const DOCS = 'https://uploadcare.com/docs/ai-image-editor/';
+
+// Properties with their own section on the Options page of the Uploadcare docs
+// (uploadcare/fern-docs), anchored by the kebab-case name. Add one here when
+// its section ships; an unlisted property just isn't linked.
+const OPTION_SECTIONS = new Set([
+  'pubkey', 'sourceUuid', 'sourceFileInfo', 'outputFilename', 'metadata', 'baseUrl',
+  'cdnCname', 'cdnCnamePrefixed', 'authToken', 'cacheAuthToken',
+  'secureDeliveryProxyUrlResolver', 'aspectRatios', 'localeName',
+  'localeDefinitionOverride', 'presets', 'presetsOnly', 'composerPlacement', 'canvasFit',
+  'sizing', 'historyPlacement', 'toolbarPlacement',
+]);
+const kebab = (name) => name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+const propCell = (name) =>
+  OPTION_SECTIONS.has(name) ? `[${cell(name)}](${DOCS}options/#${kebab(name)})` : cell(name);
+
 const manifest = JSON.parse(await readFile(MANIFEST, 'utf8'));
 const decl = manifest.modules.flatMap((m) => m.declarations ?? []).find((d) => d.tagName);
 if (!decl) throw new Error('No custom element found in the manifest');
@@ -61,7 +77,7 @@ body += '### Properties & attributes\n\n';
 body += '| Property | Attribute | Type | Default | Description |\n| --- | --- | --- | --- | --- |\n';
 for (const p of props) {
   const attr = attrByField.get(p.name);
-  body += `| ${cell(p.name)} | ${attr ? cell(attr) : '—'} | ${typeCell(p.type?.text)} | ${p.default ? cell(p.default) : ''} | ${desc(p.description)} |\n`;
+  body += `| ${propCell(p.name)} | ${attr ? cell(attr) : '—'} | ${typeCell(p.type?.text)} | ${p.default ? cell(p.default) : ''} | ${desc(p.description)} |\n`;
 }
 
 if (decl.events?.length) {
@@ -89,7 +105,10 @@ pageClass: api-wide
 # Components
 
 The web-component API for \`<${decl.tagName}>\` — attributes, properties, events,
-slots, and CSS custom properties.
+slots, and CSS custom properties. A linked property has its own section, with
+examples, on the [Options](${DOCS}options/) page of the Uploadcare docs. See
+[Error handling](${DOCS}errors/) for what \`uc:error\` carries and
+[Theming](${DOCS}theming/) for using the CSS custom properties.
 
 ${body}`;
 

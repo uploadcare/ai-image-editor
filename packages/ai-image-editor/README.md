@@ -9,7 +9,7 @@
 </p>
 <p align="center">
   <a href="https://uploadcare.com/?ref=ai-image-editor">Website</a> •
-  <a href="https://uploadcare.github.io/ai-image-editor/">Docs</a> •
+  <a href="https://uploadcare.com/docs/ai-image-editor/">Docs</a> •
   <a href="https://uploadcare.com/blog?ref=ai-image-editor">Blog</a> •
   <a href="https://twitter.com/Uploadcare?ref=ai-image-editor">Twitter</a>
 </p>
@@ -108,15 +108,15 @@ prior to any public disclosure.
 Issues and PRs are welcome. You can provide your feedback or drop us a support
 request at [hello@uploadcare.com][uc-email-hello].
 
-[docs]: https://uploadcare.github.io/ai-image-editor/
-[docs-getting-started]: https://uploadcare.github.io/ai-image-editor/guide/getting-started
-[docs-integrating]: https://uploadcare.github.io/ai-image-editor/guide/integrating
-[docs-react]: https://uploadcare.github.io/ai-image-editor/guide/react
-[docs-plugin]: https://uploadcare.github.io/ai-image-editor/guide/plugin
-[docs-ssr]: https://uploadcare.github.io/ai-image-editor/guide/integrating#bundlers-ssr
-[docs-layout]: https://uploadcare.github.io/ai-image-editor/guide/layout
-[docs-theming]: https://uploadcare.github.io/ai-image-editor/guide/theming
-[docs-l10n]: https://uploadcare.github.io/ai-image-editor/guide/localization
+[docs]: https://uploadcare.com/docs/ai-image-editor/
+[docs-getting-started]: https://uploadcare.com/docs/ai-image-editor/quickstart/
+[docs-integrating]: https://uploadcare.com/docs/ai-image-editor/integrating/
+[docs-react]: https://uploadcare.com/docs/ai-image-editor/react/
+[docs-plugin]: https://uploadcare.com/docs/file-uploader/ai-image-editor/
+[docs-ssr]: https://uploadcare.com/docs/ai-image-editor/integrating/#bundlers-ssr
+[docs-layout]: https://uploadcare.com/docs/ai-image-editor/layout/
+[docs-theming]: https://uploadcare.com/docs/ai-image-editor/theming/
+[docs-l10n]: https://uploadcare.com/docs/ai-image-editor/localization/
 [docs-api]: https://uploadcare.github.io/ai-image-editor/api/
 [uc-email-bounty]: mailto:bugbounty@uploadcare.com
 [uc-email-hello]: mailto:hello@uploadcare.com

@@ -1,27 +1,8 @@
-import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitepress';
 
-const { version } = JSON.parse(
-  readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
-);
-
+// The guides live in Uploadcare's docs (uploadcare/fern-docs); this site keeps
+// the generated API reference and the demo/playground.
 export default defineConfig({
-  vite: {
-    plugins: [
-      {
-        // Substitute %AI_IMAGE_EDITOR_VERSION% in markdown (works inside code
-        // fences too) with the current package version, so docs never pin a
-        // stale release.
-        name: 'ai-image-editor-version',
-        enforce: 'pre',
-        transform(code, id) {
-          if (id.endsWith('.md') && code.includes('%AI_IMAGE_EDITOR_VERSION%')) {
-            return code.replaceAll('%AI_IMAGE_EDITOR_VERSION%', version);
-          }
-        },
-      },
-    ],
-  },
   title: '@uploadcare/ai-image-editor',
   description: 'AI image generation & editing web component for Uploadcare.',
   // Served as a GitHub Pages project site at https://uploadcare.github.io/ai-image-editor/.
@@ -41,7 +22,7 @@ export default defineConfig({
     },
     siteTitle: 'AI Image Editor',
     nav: [
-      { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Guides', link: 'https://uploadcare.com/docs/ai-image-editor/' },
       // { text: 'Demo', link: '/demo' },
       { text: 'API', link: '/api/' },
       // Built by `playground:build` into `<dist>/playground/`, not a VitePress
@@ -69,21 +50,6 @@ export default defineConfig({
         'Built by <a href="https://uploadcare.com">Uploadcare</a> · <a href="https://uploadcare.com/docs/">Docs</a>',
     },
     sidebar: {
-      '/guide/': [
-        {
-          text: 'Guide',
-          items: [
-            { text: 'Getting started', link: '/guide/getting-started' },
-            { text: 'Integrating into your app', link: '/guide/integrating' },
-            { text: 'React', link: '/guide/react' },
-            { text: 'File Uploader plugin', link: '/guide/plugin' },
-            { text: 'UI & layout', link: '/guide/layout' },
-            { text: 'Theming', link: '/guide/theming' },
-            { text: 'Localization', link: '/guide/localization' },
-            { text: 'Error handling', link: '/guide/errors' },
-          ],
-        },
-      ],
       '/api/': [
         {
           text: 'API reference',

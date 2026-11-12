@@ -9,7 +9,7 @@
 </p>
 <p align="center">
   <a href="https://uploadcare.com/?ref=ai-image-editor">Website</a> •
-  <a href="https://uploadcare.github.io/ai-image-editor/">Docs</a> •
+  <a href="https://uploadcare.com/docs/ai-image-editor/">Docs</a> •
   <a href="https://uploadcare.com/blog?ref=ai-image-editor">Blog</a> •
   <a href="https://twitter.com/Uploadcare?ref=ai-image-editor">Twitter</a>
 </p>
@@ -21,7 +21,7 @@
 
 AI image generation and editing for Uploadcare: a framework-agnostic web
 component (with a File Uploader plugin sub-export) and a React wrapper. Full
-documentation: **[uploadcare.github.io/ai-image-editor][docs]**.
+documentation: **[uploadcare.com/docs/ai-image-editor][docs]**.
 
 ## Packages
 
@@ -48,11 +48,11 @@ request at [hello@uploadcare.com][uc-email-hello].
 
 MIT
 
-[docs]: https://uploadcare.github.io/ai-image-editor/
-[docs-getting-started]: https://uploadcare.github.io/ai-image-editor/guide/getting-started
-[docs-plugin]: https://uploadcare.github.io/ai-image-editor/guide/plugin
-[docs-react]: https://uploadcare.github.io/ai-image-editor/guide/react
-[docs-react-ssr]: https://uploadcare.github.io/ai-image-editor/guide/react#ssr-next-js
+[docs]: https://uploadcare.com/docs/ai-image-editor/
+[docs-getting-started]: https://uploadcare.com/docs/ai-image-editor/quickstart/
+[docs-plugin]: https://uploadcare.com/docs/file-uploader/ai-image-editor/
+[docs-react]: https://uploadcare.com/docs/ai-image-editor/react/
+[docs-react-ssr]: https://uploadcare.com/docs/ai-image-editor/react/
 [uc-email-bounty]: mailto:bugbounty@uploadcare.com
 [uc-email-hello]: mailto:hello@uploadcare.com
 [npm-core-img]: https://img.shields.io/npm/v/@uploadcare/ai-image-editor.svg

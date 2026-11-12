@@ -8,7 +8,7 @@ hero:
 
     - theme: alt
       text: Get started
-      link: /guide/getting-started
+      link: https://uploadcare.com/docs/ai-image-editor/quickstart/
     - theme: alt
       text: API reference
       link: /api/
