@@ -79,6 +79,6 @@ export default defineConfig(({ command, mode }) => {
         },
       },
     },
-    plugins: [dts({ bundleTypes: true, insertTypesEntry: true, exclude: ['**/*.dev.ts', '**/*.test.ts'] })],
+    plugins: [dts({ bundleTypes: true, insertTypesEntry: true, exclude: ['**/*.dev.ts', '**/*.test.ts', 'tests/**'] })],
   };
 });

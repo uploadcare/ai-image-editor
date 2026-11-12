@@ -60,6 +60,10 @@ jobs:
       # react-ai-image-editor's types resolve against the built ai-image-editor dist
       - run: npm run build -w @uploadcare/ai-image-editor
 
+      # Test-only declarations (e.g. tests/test-renderer.ts's `vitest/browser` augmentation) must not ship
+      - name: Published types are free of test code
+        run: '! grep -n vitest packages/ai-image-editor/dist/*.d.ts'
+
       - run: npm run typecheck
 
   test:
