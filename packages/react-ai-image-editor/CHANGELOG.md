@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.10](https://github.com/uploadcare/ai-image-editor/compare/react-ai-image-editor-v0.2.9...react-ai-image-editor-v0.2.10) (2026-11-12)
+
+
+### Miscellaneous Chores
+
+* **react-ai-image-editor:** Synchronize ai-image-editor versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @uploadcare/ai-image-editor bumped from ^0.2.9 to ^0.2.10
+
 ## [0.2.9](https://github.com/uploadcare/ai-image-editor/compare/react-ai-image-editor-v0.2.8...react-ai-image-editor-v0.2.9) (2026-11-10)
 
 
