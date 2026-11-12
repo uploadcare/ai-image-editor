@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.10](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.9...ai-image-editor-v0.2.10) (2026-11-12)
+
+
+### Bug Fixes
+
+* **ai-image-editor:** keep test declarations out of the published types ([#117](https://github.com/uploadcare/ai-image-editor/issues/117)) ([5169524](https://github.com/uploadcare/ai-image-editor/commit/51695247687c721ea4844ffbc3482253e44a649f))
+
 ## [0.2.9](https://github.com/uploadcare/ai-image-editor/compare/ai-image-editor-v0.2.8...ai-image-editor-v0.2.9) (2026-11-10)
 
 
