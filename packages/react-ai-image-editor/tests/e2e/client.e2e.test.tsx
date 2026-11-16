@@ -93,9 +93,9 @@ it('delivers uc:done, uc:cancel and uc:error events to callbacks', async () => {
   expect(onError).toHaveBeenCalledWith(error);
 });
 
-it('delivers uc:send to onSend', async () => {
-  const onSend = vi.fn();
-  const container = render(<AiImageEditor pubkey="test-pubkey" onSend={onSend} />);
+it('delivers uc:generation-start to onGenerationStart', async () => {
+  const onGenerationStart = vi.fn();
+  const container = render(<AiImageEditor pubkey="test-pubkey" onGenerationStart={onGenerationStart} />);
 
   await vi.waitFor(
     () => {
@@ -105,8 +105,8 @@ it('delivers uc:send to onSend', async () => {
   );
 
   const el = container.querySelector('uc-ai-image-editor') as UcAiImageEditor;
-  el.dispatchEvent(new CustomEvent('uc:send', { detail: { prompt: 'a tiger', mode: 'generate' } }));
-  expect(onSend).toHaveBeenCalledWith({ prompt: 'a tiger', mode: 'generate' });
+  el.dispatchEvent(new CustomEvent('uc:generation-start', { detail: { prompt: 'a tiger', mode: 'generate' } }));
+  expect(onGenerationStart).toHaveBeenCalledWith({ prompt: 'a tiger', mode: 'generate' });
 });
 
 it('delivers uc:change results to onChange', async () => {
