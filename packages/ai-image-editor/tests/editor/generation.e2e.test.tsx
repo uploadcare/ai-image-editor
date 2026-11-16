@@ -81,7 +81,7 @@ describe('<uc-ai-image-editor> generation', () => {
     el.addEventListener('uc:error', onError);
 
     await sendPrompt('a tiger');
-    await expect.element(page.getByRole('alert')).toHaveTextContent("Image generation is disabled for this site.");
+    await expect.element(page.getByRole('alert')).toHaveTextContent('Image generation is disabled for this site.');
 
     expect(onError.mock.calls[0]![0].detail.error.code).toBe('derivative_disabled');
   });
@@ -100,6 +100,31 @@ describe('<uc-ai-image-editor> generation', () => {
     expect(onStart).toHaveBeenCalledOnce();
     expect(onStart.mock.calls[0]![0].detail).toEqual({ prompt: 'a tiger', mode: 'generate' });
     expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('fires uc:generation-start once when a second send arrives while the metadata resolves', async () => {
+    const el = mount(STAGING);
+    // The metadata callback runs only for an edit, with the source's file info.
+    el.sourceUuid = SAMPLE_UUID;
+    el.sourceFileInfo = { uuid: SAMPLE_UUID } as NonNullable<typeof el.sourceFileInfo>;
+    const onStart = vi.fn();
+    el.addEventListener('uc:generation-start', onStart);
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    el.metadata = async () => {
+      await gate;
+      return {};
+    };
+
+    await sendPrompt('a tiger');
+    await sendPrompt('a tiger');
+    expect(onStart).not.toHaveBeenCalled();
+    release();
+    await expectCanvasToShow(await generatedUuid());
+
+    expect(onStart).toHaveBeenCalledOnce();
   });
 
   it('fires uc:change with the result when a run lands, and with null when a new source clears it', async () => {
