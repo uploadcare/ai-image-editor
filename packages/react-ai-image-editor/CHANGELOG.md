@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.11](https://github.com/uploadcare/ai-image-editor/compare/react-ai-image-editor-v0.2.10...react-ai-image-editor-v0.2.11) (2026-11-16)
+
+
+### Features
+
+* public uc:generation-start event, and cdn-url 6.25.1 ([#119](https://github.com/uploadcare/ai-image-editor/issues/119)) ([38aaf01](https://github.com/uploadcare/ai-image-editor/commit/38aaf01214c8d6ed96a21cb56fe0706e3fa0ce48))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @uploadcare/ai-image-editor bumped from ^0.2.10 to ^0.2.11
+
 ## [0.2.10](https://github.com/uploadcare/ai-image-editor/compare/react-ai-image-editor-v0.2.9...react-ai-image-editor-v0.2.10) (2026-11-12)
 
 
