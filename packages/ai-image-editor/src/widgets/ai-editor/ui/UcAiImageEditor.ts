@@ -7,8 +7,8 @@ import {
   type AspectRatio,
   type AspectRatioOption,
   type AspectRatioValue,
-  AUTO_RATIO,
   aspectRatioValueEquals,
+  AUTO_RATIO,
   DEFAULT_GENERATE_RATIO,
   isConcreteRatio,
   isValidAspectRatio,
@@ -27,8 +27,8 @@ import {
   LOCALE_LOADERS,
   translate,
 } from '../../../shared/i18n';
-import { AuthTokenController } from '../../../shared/lib/AuthTokenController';
 import { afterNextPaint } from '../../../shared/lib/afterNextPaint';
+import { AuthTokenController } from '../../../shared/lib/AuthTokenController';
 import { cdnPreviewUrl } from '../../../shared/lib/cdn';
 import { HistoryStorageController } from '../../../shared/lib/HistoryStorageController';
 import { SecureUrlController } from '../../../shared/lib/SecureUrlController';
@@ -40,11 +40,11 @@ import '../../../features/preset-chips';
 import '../../../shared/ui/canvas';
 import '../../../shared/ui/footer';
 import type { AspectRatioSelectDetail } from '../../../features/aspect-ratio-select';
-import type { PresetSelectDetail } from '../../../features/preset-chips';
 import type { HistorySelectDetail } from '../../../features/prompt-history';
 import type { PromptInputDetail, UcAiPromptRow } from '../../../features/prompt-input';
-import type { FrameRatioDetail, ShimmerConfig, UcAiCanvas } from '../../../shared/ui/canvas';
+import type { PresetSelectDetail } from '../../../features/preset-chips';
 import { DEFAULT_FRAME_RATIO } from '../../../shared/ui/canvas';
+import type { FrameRatioDetail, ShimmerConfig, UcAiCanvas } from '../../../shared/ui/canvas';
 import styles from './ai-editor.css?inline';
 
 export type { HistoryEntry } from '../../../features/generation';
@@ -78,7 +78,8 @@ export type ChangeDetail = {
 
 /**
  * Detail of the `uc:generation-start` event: the prompt and mode of the generation that is
- * starting. The run then ends in `uc:change` (a result) or `uc:error`.
+ * starting. The run then ends in `uc:change` (a result) or `uc:error`; one cut short by a new source,
+ * a start-over or the editor leaving the page ends in neither.
  */
 export type GenerationStartDetail = {
   prompt: string;
@@ -894,8 +895,8 @@ export class UcAiImageEditor extends LitElement {
     const parentUuid = mode === 'edit' ? this._currentSourceUuid : null;
     const metadata = await this._resolveMetadata();
     // A second send while the metadata resolved is not a run: `run()` takes one at a time, so only the first is
-    // announced.
-    if (this._gen.busy) return;
+    // announced. Nor is one whose editor left the page meanwhile.
+    if (this._gen.busy || !this.isConnected) return;
     const detail: GenerationStartDetail = { prompt, mode };
     this.dispatchEvent(new CustomEvent('uc:generation-start', { detail, bubbles: true, composed: true }));
     try {

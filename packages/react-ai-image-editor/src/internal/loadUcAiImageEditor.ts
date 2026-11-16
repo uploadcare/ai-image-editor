@@ -8,6 +8,7 @@ export type AdapterEvents = {
   onUcCancel: EventName<CustomEvent<void>>;
   onUcError: EventName<CustomEvent<ErrorDetail>>;
   onUcChange: EventName<CustomEvent<ChangeDetail>>;
+  onUcGenerationStart: EventName<CustomEvent<GenerationStartDetail>>;
 };
 
 export type AdapterComponent = ReturnType<typeof createComponent<UcAiImageEditor, AdapterEvents>>;

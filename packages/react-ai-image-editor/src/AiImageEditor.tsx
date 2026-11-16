@@ -39,7 +39,10 @@ export type AiImageEditorProps = Partial<ElementOptions> & {
    */
   onChange?: (result: DoneDetail | null) => void;
   onCancel?: () => void;
-  /** A generation started. It ends in `onChange` (a result) or `onError`. */
+  /**
+   * A generation started. It ends in `onChange` (a result) or `onError`; one cut short by a new source, a
+   * start-over or an unmount ends in neither.
+   */
   onGenerationStart?: (detail: GenerationStartDetail) => void;
   onError?: (error: AiImageEditorError) => void;
 };

@@ -61,12 +61,16 @@ describe('<uc-ai-image-editor> generation', () => {
     const el = mount(STAGING);
     const onError = vi.fn();
     el.addEventListener('uc:error', onError);
+    const onStart = vi.fn();
+    el.addEventListener('uc:generation-start', onStart);
 
     await sendPrompt('a tiger');
     await expect
       .element(page.getByRole('alert'))
       .toHaveTextContent('This request was blocked by the content filter. Try describing it differently.');
 
+    // A run that fails was still announced.
+    expect(onStart).toHaveBeenCalledOnce();
     expect(onError).toHaveBeenCalledOnce();
     expect(onError.mock.calls[0]![0].detail.error.code).toBe('content_moderated');
     await expect.element(canvasImage()).not.toBeInTheDocument();
@@ -81,7 +85,7 @@ describe('<uc-ai-image-editor> generation', () => {
     el.addEventListener('uc:error', onError);
 
     await sendPrompt('a tiger');
-    await expect.element(page.getByRole('alert')).toHaveTextContent('Image generation is disabled for this site.');
+    await expect.element(page.getByRole('alert')).toHaveTextContent("Image generation is disabled for this site.");
 
     expect(onError.mock.calls[0]![0].detail.error.code).toBe('derivative_disabled');
   });
@@ -113,18 +117,22 @@ describe('<uc-ai-image-editor> generation', () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    el.metadata = async () => {
+    const metadata = vi.fn(async () => {
       await gate;
       return {};
-    };
+    });
+    el.metadata = metadata;
 
     await sendPrompt('a tiger');
     await sendPrompt('a tiger');
+    // Both sends got as far as the metadata; neither is a run yet.
+    expect(metadata).toHaveBeenCalledTimes(2);
     expect(onStart).not.toHaveBeenCalled();
     release();
     await expectCanvasToShow(await generatedUuid());
 
     expect(onStart).toHaveBeenCalledOnce();
+    expect(onStart.mock.calls[0]![0].detail).toEqual({ prompt: 'a tiger', mode: 'edit' });
   });
 
   it('fires uc:change with the result when a run lands, and with null when a new source clears it', async () => {
