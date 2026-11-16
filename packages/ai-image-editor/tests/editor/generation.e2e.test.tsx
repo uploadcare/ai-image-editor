@@ -61,12 +61,16 @@ describe('<uc-ai-image-editor> generation', () => {
     const el = mount(STAGING);
     const onError = vi.fn();
     el.addEventListener('uc:error', onError);
+    const onStart = vi.fn();
+    el.addEventListener('uc:generation-start', onStart);
 
     await sendPrompt('a tiger');
     await expect
       .element(page.getByRole('alert'))
       .toHaveTextContent('This request was blocked by the content filter. Try describing it differently.');
 
+    // A run that fails was still announced.
+    expect(onStart).toHaveBeenCalledOnce();
     expect(onError).toHaveBeenCalledOnce();
     expect(onError.mock.calls[0]![0].detail.error.code).toBe('content_moderated');
     await expect.element(canvasImage()).not.toBeInTheDocument();
@@ -84,6 +88,51 @@ describe('<uc-ai-image-editor> generation', () => {
     await expect.element(page.getByRole('alert')).toHaveTextContent("Image generation is disabled for this site.");
 
     expect(onError.mock.calls[0]![0].detail.error.code).toBe('derivative_disabled');
+  });
+
+  it('fires uc:generation-start once as a run starts, with its prompt and mode', async () => {
+    const el = mount(STAGING);
+    const onStart = vi.fn();
+    el.addEventListener('uc:generation-start', onStart);
+    // The prompt row's own event stays inside the editor.
+    const onSend = vi.fn();
+    el.addEventListener('uc:send', onSend);
+
+    await sendPrompt('a tiger');
+    await expectCanvasToShow(await generatedUuid());
+
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(onStart.mock.calls[0]![0].detail).toEqual({ prompt: 'a tiger', mode: 'generate' });
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('fires uc:generation-start once when a second send arrives while the metadata resolves', async () => {
+    const el = mount(STAGING);
+    // The metadata callback runs only for an edit, with the source's file info.
+    el.sourceUuid = SAMPLE_UUID;
+    el.sourceFileInfo = { uuid: SAMPLE_UUID } as NonNullable<typeof el.sourceFileInfo>;
+    const onStart = vi.fn();
+    el.addEventListener('uc:generation-start', onStart);
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const metadata = vi.fn(async () => {
+      await gate;
+      return {};
+    });
+    el.metadata = metadata;
+
+    await sendPrompt('a tiger');
+    await sendPrompt('a tiger');
+    // Both sends got as far as the metadata; neither is a run yet.
+    expect(metadata).toHaveBeenCalledTimes(2);
+    expect(onStart).not.toHaveBeenCalled();
+    release();
+    await expectCanvasToShow(await generatedUuid());
+
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(onStart.mock.calls[0]![0].detail).toEqual({ prompt: 'a tiger', mode: 'edit' });
   });
 
   it('fires uc:change with the result when a run lands, and with null when a new source clears it', async () => {

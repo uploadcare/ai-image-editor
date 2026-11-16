@@ -26,7 +26,8 @@ type WrapperOnlyProps =
   | 'onCancel'
   | 'onChange'
   | 'onDone'
-  | 'onError';
+  | 'onError'
+  | 'onGenerationStart';
 
 /** Element members reachable as props. */
 type ElementProps = Exclude<keyof AiImageEditorProps, WrapperOnlyProps>;

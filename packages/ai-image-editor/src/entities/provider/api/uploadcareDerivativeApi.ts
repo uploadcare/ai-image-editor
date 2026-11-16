@@ -119,7 +119,7 @@ export class UploadcareDerivativeApi implements AiProvider {
    * the editor produced.
    */
   async resolveCdnUrl(uuid: string): Promise<string> {
-    return serializeCdnUrl({ origin: await this.getCdnBase(), uuid });
+    return serializeCdnUrl({ cdnBase: await this.getCdnBase(), uuid });
   }
 
   /**

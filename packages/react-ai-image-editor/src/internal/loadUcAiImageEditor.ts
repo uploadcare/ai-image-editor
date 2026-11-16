@@ -1,5 +1,5 @@
 import { createComponent, type EventName } from '@lit/react';
-import type { ChangeDetail, DoneDetail, ErrorDetail, UcAiImageEditor } from '@uploadcare/ai-image-editor';
+import type { ChangeDetail, DoneDetail, ErrorDetail, GenerationStartDetail, UcAiImageEditor } from '@uploadcare/ai-image-editor';
 import React from 'react';
 
 /** Event props of the adapter component; handlers receive the CustomEvent. */
@@ -8,6 +8,7 @@ export type AdapterEvents = {
   onUcCancel: EventName<CustomEvent<void>>;
   onUcError: EventName<CustomEvent<ErrorDetail>>;
   onUcChange: EventName<CustomEvent<ChangeDetail>>;
+  onUcGenerationStart: EventName<CustomEvent<GenerationStartDetail>>;
 };
 
 export type AdapterComponent = ReturnType<typeof createComponent<UcAiImageEditor, AdapterEvents>>;
@@ -33,6 +34,7 @@ export function loadUcAiImageEditor(): Promise<AdapterComponent> {
           events: {
             onUcDone: 'uc:done' as EventName<CustomEvent<DoneDetail>>,
             onUcCancel: 'uc:cancel' as EventName<CustomEvent<void>>,
+            onUcGenerationStart: 'uc:generation-start' as EventName<CustomEvent<GenerationStartDetail>>,
             onUcError: 'uc:error' as EventName<CustomEvent<ErrorDetail>>,
             onUcChange: 'uc:change' as EventName<CustomEvent<ChangeDetail>>,
           },

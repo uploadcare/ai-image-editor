@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@lit-labs/motion": "^1.1.0",
-    "@uploadcare/cdn-url": "6.20.0-alpha.6",
+    "@uploadcare/cdn-url": "6.25.1",
     "@uploadcare/cname-prefix": "^6.21.0",
     "@uploadcare/signed-uploads": "^6.23.0",
     "@uploadcare/upload-client": "^6.23.0",

@@ -4,6 +4,7 @@ export {
   type ChangeDetail,
   type DoneDetail,
   type ErrorDetail,
+  type GenerationStartDetail,
   type HistoryPlacement,
   type MetadataCallback,
   type OutputFilenameResolver,

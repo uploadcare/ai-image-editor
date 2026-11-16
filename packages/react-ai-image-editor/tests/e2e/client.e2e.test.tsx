@@ -93,6 +93,22 @@ it('delivers uc:done, uc:cancel and uc:error events to callbacks', async () => {
   expect(onError).toHaveBeenCalledWith(error);
 });
 
+it('delivers uc:generation-start to onGenerationStart', async () => {
+  const onGenerationStart = vi.fn();
+  const container = render(<AiImageEditor pubkey="test-pubkey" onGenerationStart={onGenerationStart} />);
+
+  await vi.waitFor(
+    () => {
+      expect(container.querySelector('uc-ai-image-editor')).not.toBeNull();
+    },
+    { timeout: 10_000 },
+  );
+
+  const el = container.querySelector('uc-ai-image-editor') as UcAiImageEditor;
+  el.dispatchEvent(new CustomEvent('uc:generation-start', { detail: { prompt: 'a tiger', mode: 'generate' } }));
+  expect(onGenerationStart).toHaveBeenCalledWith({ prompt: 'a tiger', mode: 'generate' });
+});
+
 it('delivers uc:change results to onChange', async () => {
   const onChange = vi.fn();
   const container = render(<AiImageEditor pubkey="test-pubkey" onChange={onChange} />);
