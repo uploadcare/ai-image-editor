@@ -77,6 +77,15 @@ export type ChangeDetail = {
 };
 
 /**
+ * Detail of the `uc:send` event: the prompt and mode of the generation that is
+ * starting. The run then ends in `uc:change` (a result) or `uc:error`.
+ */
+export type SendDetail = {
+  prompt: string;
+  mode: AiEditorMode;
+};
+
+/**
  * Resolves the filename given to a generated/edited result. Receives the source
  * image's original filename (`undefined` when generating from scratch) and the
  * 1-based counter of this generation within the session's history (the first is
@@ -159,6 +168,9 @@ const previewWidthBucket = (width: number): number => Math.ceil(width / PREVIEW_
  *   result (the Done button). `detail` carries the result `url`, `uuid`,
  *   `prompt`, `mode`, optional `aspectRatio`, and the `file` object.
  * @fires uc:cancel - Fired when the user cancels (the Cancel button). No detail.
+ * @fires uc:send - A `CustomEvent<SendDetail>` fired when a generation starts
+ *   (the send button, Enter, or a preset chip in presets-only mode). `detail`
+ *   carries the `prompt` and `mode`. Lets a host show its own busy state.
  * @fires uc:change - A `CustomEvent<ChangeDetail>` fired whenever the current
  *   generation result changes (finished generation, history selection, or
  *   reset — then `detail.result` is `null`). Lets a host drive its own chrome
@@ -876,6 +888,8 @@ export class UcAiImageEditor extends LitElement {
     const provider = this._provider;
     if (!prompt || !provider) return;
     const mode = this._mode;
+    const send: SendDetail = { prompt, mode };
+    this.dispatchEvent(new CustomEvent('uc:send', { detail: send, bubbles: true, composed: true }));
     // The result's parent is whatever image is on the canvas now (an edit chains
     // off it; a generate has none). Captured before the run, since a produced
     // result becomes the new `_currentSourceUuid`.
@@ -941,7 +955,9 @@ export class UcAiImageEditor extends LitElement {
     this._prompt = e.detail.value;
   }
 
-  private _onSend(): void {
+  private _onSend(e: Event): void {
+    // The prompt row's own event stops here; the editor announces the run itself, for every way one starts.
+    e.stopPropagation();
     void this._generate();
   }
 

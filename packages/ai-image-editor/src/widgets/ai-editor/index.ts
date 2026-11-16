@@ -7,6 +7,7 @@ export {
   type HistoryPlacement,
   type MetadataCallback,
   type OutputFilenameResolver,
+  type SendDetail,
   type Sizing,
   type ToolbarPlacement,
   UcAiImageEditor,

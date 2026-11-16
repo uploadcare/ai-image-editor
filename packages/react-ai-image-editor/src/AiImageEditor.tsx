@@ -1,6 +1,6 @@
 'use client';
 
-import type { ChangeDetail, DoneDetail, ErrorDetail, UcAiImageEditor } from '@uploadcare/ai-image-editor';
+import type { ChangeDetail, DoneDetail, ErrorDetail, SendDetail, UcAiImageEditor } from '@uploadcare/ai-image-editor';
 // value import from the side-effect-free subpath: the main entry registers
 // custom elements at module scope and must never load during SSR
 import { AiImageEditorError } from '@uploadcare/ai-image-editor/errors';
@@ -39,6 +39,8 @@ export type AiImageEditorProps = Partial<ElementOptions> & {
    */
   onChange?: (result: DoneDetail | null) => void;
   onCancel?: () => void;
+  /** A generation started. It ends in `onChange` (a result) or `onError`. */
+  onSend?: (detail: SendDetail) => void;
   onError?: (error: AiImageEditorError) => void;
 };
 
@@ -49,6 +51,7 @@ export const AiImageEditor: FC<AiImageEditorProps> = ({
   onChange,
   onDone,
   onCancel,
+  onSend,
   onError,
   ...props
 }) => {
@@ -67,10 +70,11 @@ export const AiImageEditor: FC<AiImageEditorProps> = ({
     () => ({
       onUcDone: (e: CustomEvent<DoneDetail>) => onDone?.(e.detail),
       onUcCancel: () => onCancel?.(),
+      onUcSend: (e: CustomEvent<SendDetail>) => onSend?.(e.detail),
       onUcError: (e: CustomEvent<ErrorDetail>) => onError?.(e.detail.error),
       onUcChange: (e: CustomEvent<ChangeDetail>) => onChange?.(e.detail.result),
     }),
-    [onDone, onCancel, onError, onChange],
+    [onDone, onCancel, onSend, onError, onChange],
   );
 
   if (state.status !== 'ready') {

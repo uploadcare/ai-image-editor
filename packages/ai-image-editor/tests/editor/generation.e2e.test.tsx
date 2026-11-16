@@ -86,6 +86,18 @@ describe('<uc-ai-image-editor> generation', () => {
     expect(onError.mock.calls[0]![0].detail.error.code).toBe('derivative_disabled');
   });
 
+  it('fires uc:send once as a run starts, with its prompt and mode', async () => {
+    const el = mount(STAGING);
+    const onSend = vi.fn();
+    el.addEventListener('uc:send', onSend);
+
+    await sendPrompt('a tiger');
+    await expectCanvasToShow(await generatedUuid());
+
+    expect(onSend).toHaveBeenCalledOnce();
+    expect(onSend.mock.calls[0]![0].detail).toEqual({ prompt: 'a tiger', mode: 'generate' });
+  });
+
   it('fires uc:change with the result when a run lands, and with null when a new source clears it', async () => {
     const el = mount(STAGING);
     const onChange = vi.fn();
